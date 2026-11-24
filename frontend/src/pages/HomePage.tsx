@@ -50,7 +50,20 @@ export function HomePage() {
     <div className="safe-top px-5 pt-5">
       {/* Cabeçalho com navegação de datas */}
       <header className="mb-4 flex items-center justify-between">
-        <div>
+        <div className="flex min-w-0 items-center gap-3">
+          {/* Mascote: dá uma "flexionada" ao tocar */}
+          <motion.img
+            src="/mascote.png"
+            alt=""
+            width={52}
+            height={52}
+            className="size-13 shrink-0 rounded-full shadow-[0_4px_14px_-4px_rgba(155,63,168,0.45)]"
+            initial={{ scale: 0.6, rotate: -12, opacity: 0 }}
+            animate={{ scale: 1, rotate: 0, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 14 }}
+            whileTap={{ scale: 1.15, rotate: [0, -10, 10, -6, 0] }}
+          />
+          <div className="min-w-0">
           <p className="text-sm text-muted">Oi, {user?.name.split(' ')[0]} 💜</p>
           <div className="relative">
             <button onClick={() => dateInput.current?.showPicker?.()} className="text-2xl font-bold first-letter:uppercase">
@@ -64,6 +77,7 @@ export function HomePage() {
               value={date}
               onChange={(e) => e.target.value && setDate(e.target.value)}
             />
+          </div>
           </div>
         </div>
         <div className="flex gap-2">

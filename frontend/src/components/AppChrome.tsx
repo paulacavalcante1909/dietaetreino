@@ -52,7 +52,7 @@ export function InstallBanner() {
           className="safe-top fixed inset-x-0 top-0 z-[55] flex justify-center px-3 pt-3"
         >
           <div className="flex w-full max-w-lg items-center gap-3 rounded-2xl bg-surface p-3 shadow-xl ring-1 ring-line">
-            <img src="/logo.svg" alt="" className="size-10 rounded-xl" />
+            <img src="/logo.png" alt="" className="size-10 rounded-xl" />
             <p className="min-w-0 flex-1 text-sm">
               {event ? (
                 <>Instale o app para abrir direto da tela inicial.</>

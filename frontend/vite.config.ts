@@ -13,7 +13,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: false, // registrado em src/lib/pwa.ts (verifica atualização ao abrir o app)
-      includeAssets: ['favicon.svg', 'logo.svg'],
+      includeAssets: ['favicon.png', 'logo.png', 'mascote.png', 'apple-touch-icon.png'],
       manifest: {
         name: 'Dieta & Treino',
         short_name: 'Dieta & Treino',
@@ -23,11 +23,11 @@ export default defineConfig({
         display: 'standalone',
         orientation: 'portrait',
         background_color: '#FBF7FC',
-        theme_color: '#CC6CD7',
+        theme_color: '#F8CCDB',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
-          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: 'icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {

@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import { useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react'
 
 export function Logo({ size = 48 }: { size?: number }) {
-  return <img src="/logo.svg" width={size} height={size} alt="Dieta & Treino" className="rounded-[22%]" />
+  return <img src="/logo.png" width={size} height={size} alt="Dieta & Treino" className="rounded-[22%] shadow-[0_6px_20px_-8px_rgba(155,63,168,0.5)]" />
 }
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
