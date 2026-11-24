@@ -4,11 +4,15 @@ import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  define: {
+    __APP_BUILD__: JSON.stringify(new Date().toISOString()),
+  },
   plugins: [
     react(),
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: false, // registrado em src/lib/pwa.ts (verifica atualização ao abrir o app)
       includeAssets: ['favicon.svg', 'logo.svg'],
       manifest: {
         name: 'Dieta & Treino',
@@ -27,6 +31,9 @@ export default defineConfig({
         ],
       },
       workbox: {
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
         navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {

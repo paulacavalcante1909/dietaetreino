@@ -5,6 +5,8 @@ import { Alert, Button, Card, Field, PasswordField } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import type { User } from '../lib/types'
+import { useToast } from '../components/Toast'
+import { APP_VERSION, checkForUpdate, hardRefresh } from '../lib/pwa'
 
 function Section({ title, children, open, onToggle }: { title: string; children: ReactNode; open: boolean; onToggle: () => void }) {
   return (
@@ -121,6 +123,8 @@ export function SettingsPage() {
         </form>
       </Section>
 
+      <AppVersionCard />
+
       <Link to="/termos" className="block">
         <Card className="flex items-center justify-between !py-4">
           <span className="font-medium">Termos e privacidade</span>
@@ -143,5 +147,46 @@ export function SettingsPage() {
         </form>
       </Section>
     </div>
+  )
+}
+
+/** Versão instalada + atualizar manualmente (o app também atualiza sozinho ao abrir). */
+function AppVersionCard() {
+  const toast = useToast()
+  const [busy, setBusy] = useState<'check' | 'reset' | null>(null)
+
+  const check = async () => {
+    setBusy('check')
+    try {
+      const found = await checkForUpdate()
+      toast({ text: found ? 'Versão nova encontrada, atualizando…' : 'Você já está na versão mais recente ✓' })
+    } catch {
+      toast({ text: 'Sem conexão. Tente de novo com internet.' })
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const reset = async () => {
+    if (!confirm('Apagar o cache do app e recarregar? Seu login e seus dados continuam salvos.')) return
+    setBusy('reset')
+    await hardRefresh()
+  }
+
+  return (
+    <Card className="!py-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="font-medium">Versão do app</p>
+          <p className="text-xs text-muted">{APP_VERSION} · atualiza sozinho ao abrir</p>
+        </div>
+        <button onClick={check} disabled={!!busy} className="shrink-0 rounded-full bg-soft px-4 py-2 text-sm font-semibold text-primary disabled:opacity-50">
+          {busy === 'check' ? 'Buscando…' : 'Buscar atualização'}
+        </button>
+      </div>
+      <button onClick={reset} disabled={!!busy} className="mt-3 text-xs font-medium text-muted underline underline-offset-2">
+        Problemas? Limpar cache e recarregar
+      </button>
+    </Card>
   )
 }
