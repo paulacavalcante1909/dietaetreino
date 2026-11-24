@@ -7,6 +7,8 @@ import { Button, Card } from '../components/ui'
 import { api } from '../lib/api'
 import { isoDate, parseIso } from '../lib/date'
 import type { Checkin, CheckinStats } from '../lib/types'
+import { SessionSummary } from '../components/SessionSummary'
+import { durationLabel } from '../lib/run'
 
 const WEEKDAYS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
 
@@ -74,8 +76,8 @@ export function CheckinsPage() {
         <div className="mb-4 grid grid-cols-3 gap-2 text-center">
           {[
             ['🔥', stats.streak, stats.streak === 1 ? 'dia seguido' : 'dias seguidos'],
-            ['📅', stats.month_days, 'no mês'],
-            ['🏆', stats.total_days, 'no total'],
+            ['📅', stats.month_count, stats.month_count === 1 ? 'check-in no mês' : 'check-ins no mês'],
+            ['🏆', stats.total_count, 'no total'],
           ].map(([icon, v, l]) => (
             <Card key={String(l)} className="!p-3">
               <p className="text-xl font-bold text-primary">
@@ -133,6 +135,7 @@ export function CheckinsPage() {
             <img src={c.photo_url} alt={`Check-in ${c.workout_name}`} loading="lazy" className="size-full object-cover" />
             <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/70 to-transparent px-2 pt-6 pb-1.5 text-left text-[11px] font-semibold text-white">
               {parseIso(c.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} · {c.workout_name}
+              {c.session && <span className="block font-normal text-white/85">⏱️ {durationLabel(c.session.duration_seconds)}</span>}
             </span>
           </button>
         ))}
@@ -147,6 +150,7 @@ export function CheckinsPage() {
               {new Date(open.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
             </p>
             <img src={open.photo_url} alt={`Foto do check-in ${open.workout_name}`} className="w-full rounded-2xl object-cover" />
+            {open.session && <SessionSummary session={open.session} />}
             {open.note && <p className="rounded-2xl bg-soft p-3 text-sm">{open.note}</p>}
             <Button variant="danger" onClick={() => remove(open)}>Excluir check-in</Button>
           </div>

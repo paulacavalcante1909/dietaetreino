@@ -123,13 +123,23 @@ export function HomePage() {
               </motion.div>
 
               <motion.div variants={item} className="space-y-3 pb-6">
-                <h2 className="px-1 pt-2 font-semibold">Refeições</h2>
+                <div className="flex items-center justify-between px-1 pt-2">
+                  <h2 className="font-semibold">Refeições do dia</h2>
+                  <Link
+                    to="/refeicoes"
+                    aria-label="Editar refeições (renomear, reordenar, ocultar)"
+                    title="Editar refeições"
+                    className="flex size-9 items-center justify-center rounded-full text-primary transition-colors hover:bg-soft active:scale-90"
+                  >
+                    <svg className="size-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden>
+                      <path d="M12 20h9" />
+                      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
+                    </svg>
+                  </Link>
+                </div>
                 {day.meals.map((m) => (
                   <MealCard key={m.id} meal={m} date={date} onEdit={setEditing} onChange={load} />
                 ))}
-                <p className="pt-1 text-center text-xs text-muted">
-                  <Link to="/refeicoes" className="text-primary">Organizar refeições</Link>
-                </p>
               </motion.div>
             </motion.div>
           </motion.div>

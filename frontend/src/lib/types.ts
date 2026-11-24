@@ -149,6 +149,7 @@ export interface Workout {
   name: string
   position: number
   items: WorkoutItem[]
+  last_done_on?: string | null
 }
 
 export interface Checkin {
@@ -159,13 +160,35 @@ export interface Checkin {
   note: string | null
   photo_url: string
   created_at: string
+  session: WorkoutSessionData | null
 }
 
 export interface CheckinStats {
   streak: number
-  month_days: number
-  total_days: number
+  month_count: number
+  total_count: number
   today: boolean
+}
+
+export interface SessionExercise {
+  name: string
+  muscle_group: string | null
+  image: string | null
+  sets: number
+  reps: string
+  sets_done: number
+  done: boolean
+}
+
+export interface WorkoutSessionData {
+  id: number
+  workout_id: number | null
+  workout_name: string
+  date: string
+  started_at: string
+  finished_at: string
+  duration_seconds: number
+  exercises: SessionExercise[]
 }
 
 export interface Weight {

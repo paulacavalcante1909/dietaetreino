@@ -24,12 +24,18 @@ class Recipe extends Model
         return $this->hasMany(RecipeItem::class)->orderBy('position')->orderBy('id');
     }
 
-    /** Totais da receita inteira, calculados a partir dos alimentos atuais. */
-    public function totals(): array
+    /**
+     * Totais da receita inteira, calculados a partir dos alimentos atuais.
+     * $items permite calcular com ingredientes ajustados (sem alterar a receita).
+     */
+    public function totals(?iterable $items = null): array
     {
-        $this->loadMissing('items.food', 'items.portion');
+        if ($items === null) {
+            $this->loadMissing('items.food', 'items.portion');
+            $items = $this->items;
+        }
         $t = ['kcal' => 0, 'carbs' => 0, 'protein' => 0, 'fat' => 0, 'sodium' => 0, 'amount' => 0];
-        foreach ($this->items as $item) {
+        foreach ($items as $item) {
             if (! $item->food) {
                 continue;
             }
@@ -43,12 +49,12 @@ class Recipe extends Model
         return array_map(fn ($v) => round($v, 1), $t);
     }
 
-    /** Valores de UMA porção. */
-    public function perServing(): array
+    /** Valores de UMA porção (opcionalmente com ingredientes ajustados). */
+    public function perServing(?iterable $items = null): array
     {
         $s = $this->servings > 0 ? $this->servings : 1;
 
-        return array_map(fn ($v) => round($v / $s, 1), $this->totals());
+        return array_map(fn ($v) => round($v / $s, 1), $this->totals($items));
     }
 
     public function summary(): array

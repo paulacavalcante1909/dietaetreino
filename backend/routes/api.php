@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CheckinController;
 use App\Http\Controllers\Api\ExerciseController;
 use App\Http\Controllers\Api\WorkoutController;
+use App\Http\Controllers\Api\WorkoutSessionController;
 use App\Http\Controllers\Api\DayController;
 use App\Http\Controllers\Api\EntryController;
 use App\Http\Controllers\Api\FoodController;
@@ -84,6 +85,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/workouts/{workout}', [WorkoutController::class, 'update']);
     Route::delete('/workouts/{workout}', [WorkoutController::class, 'destroy']);
     Route::post('/workouts/{workout}/duplicate', [WorkoutController::class, 'duplicate']);
+    Route::post('/workout-sessions', [WorkoutSessionController::class, 'store']);
+    Route::get('/workout-sessions/{session}', [WorkoutSessionController::class, 'show']);
     Route::get('/checkins', [CheckinController::class, 'index']);
     Route::post('/checkins', [CheckinController::class, 'store'])->middleware('throttle:20,1');
     Route::delete('/checkins/{checkin}', [CheckinController::class, 'destroy']);

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Exercise;
 use App\Models\Workout;
+use App\Models\WorkoutSession;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -14,10 +15,19 @@ class WorkoutController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $workouts = Workout::where('user_id', $request->user()->id)
+        $userId = $request->user()->id;
+        $workouts = Workout::where('user_id', $userId)
             ->with('items.exercise')
             ->orderBy('position')->orderBy('id')
             ->get();
+
+        // Última vez que cada treino foi executado (para "Feito hoje ✓" na ficha)
+        $last = WorkoutSession::where('user_id', $userId)
+            ->whereIn('workout_id', $workouts->pluck('id'))
+            ->selectRaw('workout_id, MAX(date) as last_done_on')
+            ->groupBy('workout_id')
+            ->pluck('last_done_on', 'workout_id');
+        $workouts->each(fn ($w) => $w->setAttribute('last_done_on', $last[$w->id] ?? null));
 
         return response()->json(['workouts' => $workouts]);
     }

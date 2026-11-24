@@ -28,17 +28,20 @@ class DiaryEntry extends Model
         return $this->belongsTo(Food::class)->withTrashed();
     }
 
-    /** Snapshot a partir de uma receita: quantity = nº de porções. */
-    public function fillFromRecipe(Recipe $recipe, float $servings): static
+    /**
+     * Snapshot a partir de uma receita: quantity = nº de porções.
+     * $items = ingredientes ajustados só para este registro (a receita original não muda).
+     */
+    public function fillFromRecipe(Recipe $recipe, float $servings, ?iterable $items = null): static
     {
-        $per = $recipe->perServing();
+        $per = $recipe->perServing($items);
         $grams = rtrim(rtrim(number_format($per['amount'], 1, ',', ''), '0'), ',');
 
         $this->fill([
             'food_id' => null,
             'recipe_id' => $recipe->id,
             'portion_id' => null,
-            'name' => $recipe->name,
+            'name' => mb_substr($recipe->name.($items !== null ? ' (ajustada)' : ''), 0, 190),
             'brand' => 'Receita',
             'quantity' => $servings,
             'unit_label' => "1 porção ({$grams} g)",

@@ -5,7 +5,8 @@ import { useToast } from '../components/Toast'
 import { Alert, Button, Spinner } from '../components/ui'
 import { api, ApiError, apiUpload } from '../lib/api'
 import { compressImage } from '../lib/image'
-import type { Workout } from '../lib/types'
+import type { Workout, WorkoutSessionData } from '../lib/types'
+import { SessionSummary } from '../components/SessionSummary'
 import { letter } from './WorkoutsPage'
 
 /** Check-in: escolher o treino da ficha + foto do dia (câmera ou galeria). */
@@ -15,6 +16,8 @@ export function CheckinPage() {
   const [params] = useSearchParams()
   const [workouts, setWorkouts] = useState<Workout[] | null>(null)
   const [workoutId, setWorkoutId] = useState<number | null>(Number(params.get('treino')) || null)
+  const sessionId = Number(params.get('sessao')) || null
+  const [session, setSession] = useState<WorkoutSessionData | null>(null)
   const [photo, setPhoto] = useState<Blob | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [note, setNote] = useState('')
@@ -30,6 +33,11 @@ export function CheckinPage() {
       setWorkoutId((id) => id ?? r.workouts[0]?.id ?? null)
     })
   }, [])
+
+  // Vindo de "Iniciar treino": mostra o resumo e vincula ao check-in
+  useEffect(() => {
+    if (sessionId) api<{ session: WorkoutSessionData }>(`/workout-sessions/${sessionId}`).then((r) => setSession(r.session)).catch(() => {})
+  }, [sessionId])
 
   useEffect(() => () => {
     if (preview) URL.revokeObjectURL(preview)
@@ -51,6 +59,7 @@ export function CheckinPage() {
     setError(null)
     const form = new FormData()
     form.append('workout_id', String(workoutId))
+    if (session && session.workout_id === workoutId) form.append('session_id', String(session.id))
     form.append('photo', photo, 'checkin.jpg')
     if (note.trim()) form.append('note', note.trim())
     try {
@@ -87,6 +96,12 @@ export function CheckinPage() {
           {error && <Alert>{error.field('photo') ?? error.message}</Alert>}
 
           <div>
+            {session && (
+              <div className="mb-4">
+                <p className="mb-2 text-sm font-medium text-muted">Seu treino de hoje</p>
+                <SessionSummary session={session} />
+              </div>
+            )}
             <p className="mb-2 text-sm font-medium text-muted">Qual treino você fez?</p>
             <div className="flex flex-wrap gap-2">
               {workouts.map((w) => (

@@ -25,7 +25,7 @@ export function FoodSearch({ withRecipes, onPickFood, onPickRecipe, onScan, onQu
     { key: 'buscar', label: 'Buscar' },
     { key: 'recentes', label: 'Recentes' },
     { key: 'favoritos', label: 'Favoritos' },
-    ...(withRecipes ? [{ key: 'receitas' as Tab, label: 'Receitas' }] : []),
+    ...(withRecipes ? [{ key: 'receitas' as Tab, label: 'Refeições prontas' }] : []),
     { key: 'meus', label: 'Meus alimentos' },
   ]
   const [tab, setTab] = useState<Tab>('buscar')
@@ -198,7 +198,7 @@ function FoodList({ foods, onPick }: { foods: FoodLite[]; onPick: (f: FoodLite) 
 
 function RecipeList({ recipes, loading, onPick }: { recipes: RecipeSummary[] | null; loading: boolean; onPick?: (r: RecipeSummary) => void }) {
   if (loading && !recipes) return <ListSkeleton />
-  if (!recipes?.length) return <p className="py-8 text-center text-sm text-muted">Você ainda não tem receitas. Crie uma em Ajustes → Receitas.</p>
+  if (!recipes?.length) return <p className="py-8 text-center text-sm text-muted">Salve combinações que você repete (ex.: “Café padrão”) ou receitas, e adicione com um toque.</p>
   return (
     <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] bg-surface shadow-[0_2px_12px_-4px_rgba(31,23,36,0.08)]">
       {recipes.map((r) => (

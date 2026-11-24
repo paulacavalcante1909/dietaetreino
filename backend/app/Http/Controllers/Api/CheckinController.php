@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Checkin;
 use App\Models\Workout;
+use App\Models\WorkoutSession;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,6 +25,7 @@ class CheckinController extends Controller
         $user = $request->user();
 
         $checkins = Checkin::where('user_id', $user->id)
+            ->with('session')
             ->whereBetween('date', [$start->toDateString(), $start->endOfMonth()->toDateString()])
             ->orderByDesc('date')->orderByDesc('id')
             ->get();
@@ -40,6 +42,7 @@ class CheckinController extends Controller
         $user = $request->user();
         $data = $request->validate([
             'workout_id' => ['required', 'integer'],
+            'session_id' => ['nullable', 'integer'],
             'photo' => ['required', 'image', 'mimes:jpeg,png,webp,heic,heif', 'max:12288'],
             'note' => ['nullable', 'string', 'max:280'],
             'date' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:today'],
@@ -50,10 +53,14 @@ class CheckinController extends Controller
         ]);
 
         $workout = Workout::where('user_id', $user->id)->findOrFail($data['workout_id']);
+        $sessionId = isset($data['session_id'])
+            ? WorkoutSession::where('user_id', $user->id)->whereKey($data['session_id'])->value('id')
+            : null;
         $path = $this->storePhoto($data['photo'], $user->id);
 
         $checkin = new Checkin([
             'workout_id' => $workout->id,
+            'session_id' => $sessionId,
             'workout_name' => $workout->name,
             'date' => $data['date'] ?? now()->toDateString(),
             'photo_path' => $path,
@@ -62,7 +69,7 @@ class CheckinController extends Controller
         $checkin->user_id = $user->id;
         $checkin->save();
 
-        return response()->json(['checkin' => $checkin], 201);
+        return response()->json(['checkin' => $checkin->load('session')], 201);
     }
 
     public function destroy(Request $request, Checkin $checkin): JsonResponse
@@ -97,14 +104,12 @@ class CheckinController extends Controller
         $scale = min(1, 1600 / max($w, $h));
         if ($scale < 1) {
             $resized = imagescale($img, (int) round($w * $scale), (int) round($h * $scale), IMG_BICUBIC);
-            imagedestroy($img);
             $img = $resized;
         }
 
         ob_start();
         imagejpeg($img, null, 82);
         $jpeg = ob_get_clean();
-        imagedestroy($img);
 
         $path = "checkins/{$userId}/".Str::uuid().'.jpg';
         Storage::disk('local')->put($path, $jpeg);
@@ -130,12 +135,14 @@ class CheckinController extends Controller
             $day = $day->subDay();
         }
 
-        $inMonth = count(array_filter($dates, fn ($d) => str_starts_with($d, $monthStart->format('Y-m'))));
+        // Mês e total contam TODOS os check-ins (2 no mesmo dia = 2); a sequência conta dias
+        $all = Checkin::where('user_id', $userId);
+        $inMonth = (clone $all)->whereBetween('date', [$monthStart->toDateString(), $monthStart->endOfMonth()->toDateString()])->count();
 
         return [
             'streak' => $streak,
-            'month_days' => $inMonth,
-            'total_days' => count($dates),
+            'month_count' => $inMonth,
+            'total_count' => $all->count(),
             'today' => isset($set[CarbonImmutable::today()->toDateString()]),
         ];
     }

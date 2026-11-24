@@ -21,7 +21,7 @@ export function RecipesPage() {
         <button onClick={() => navigate(-1)} aria-label="Voltar" className="flex size-10 items-center justify-center rounded-full bg-surface text-2xl text-primary shadow-sm">
           ‹
         </button>
-        <h1 className="text-xl font-bold">Receitas</h1>
+        <h1 className="text-xl font-bold">Refeições prontas</h1>
       </header>
 
       {!recipes && <div className="h-40 animate-pulse rounded-2xl bg-soft" />}
@@ -55,7 +55,7 @@ export function RecipesPage() {
       </div>
 
       <Link to="/receitas/nova" className="mt-6 block rounded-2xl bg-primary py-4 text-center font-semibold text-white shadow-[0_6px_20px_-8px_rgba(155,63,168,0.7)] active:scale-[0.98]">
-        + Nova receita
+        + Nova refeição pronta
       </Link>
     </div>
   )

@@ -19,6 +19,7 @@ import { SettingsPage } from './pages/SettingsPage'
 import { CheckinPage } from './pages/CheckinPage'
 import { CheckinsPage } from './pages/CheckinsPage'
 import { WorkoutPage } from './pages/WorkoutPage'
+import { WorkoutSessionPage } from './pages/WorkoutSessionPage'
 import { WorkoutsPage } from './pages/WorkoutsPage'
 
 /** Exige login; sem meta definida, manda para o onboarding. */
@@ -70,6 +71,7 @@ export default function App() {
             <Route path="/receitas/nova" element={<Private><RecipeEditorPage /></Private>} />
             <Route path="/receitas/:id" element={<Private><RecipeEditorPage /></Private>} />
             <Route path="/treinos/:id" element={<Private><WorkoutPage /></Private>} />
+            <Route path="/treinos/:id/iniciar" element={<Private><WorkoutSessionPage /></Private>} />
             <Route path="/checkin" element={<Private><CheckinPage /></Private>} />
             <Route path="/checkins" element={<Private><CheckinsPage /></Private>} />
 

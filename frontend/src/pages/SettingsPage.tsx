@@ -89,7 +89,7 @@ export function SettingsPage() {
 
       <Link to="/receitas" className="block">
         <Card className="flex items-center justify-between !py-4 transition-transform active:scale-[0.98]">
-          <span className="font-medium">Receitas</span>
+          <span className="font-medium">Refeições prontas</span>
           <span className="text-muted">›</span>
         </Card>
       </Link>

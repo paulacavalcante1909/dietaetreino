@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { LazyBarcodeScanner as BarcodeScanner } from '../components/LazyBarcodeScanner'
 import { FoodSearch } from '../components/FoodSearch'
 import { FoodSheet, type FoodTarget } from '../components/FoodSheet'
-import { RecipeSheet } from '../components/RecipeSheet'
+import { RecipeSheet, type RecipeAdjustment } from '../components/RecipeSheet'
 import { useToast } from '../components/Toast'
 import { api } from '../lib/api'
 import { isoDate } from '../lib/date'
@@ -38,9 +38,9 @@ export function AddFoodPage() {
     goHome()
   }
 
-  const addRecipe = async (servings: number) => {
-    await api('/entries', { method: 'POST', body: { date, meal_id: mealId, recipe_id: recipe!.id, quantity: servings } })
-    toast({ text: `Receita “${recipe!.name}” adicionada ✓` })
+  const addRecipe = async (servings: number, items: RecipeAdjustment[] | null) => {
+    await api('/entries', { method: 'POST', body: { date, meal_id: mealId, recipe_id: recipe!.id, quantity: servings, ...(items ? { items } : {}) } })
+    toast({ text: `“${recipe!.name}”${items ? ' (ajustada)' : ''} adicionada ✓` })
     goHome()
   }
 
@@ -97,7 +97,7 @@ export function AddFoodPage() {
           + Cadastrar alimento
         </button>
         <Link to="/receitas/nova" className="rounded-2xl border-2 border-dashed border-line py-4 text-center text-sm font-semibold text-primary">
-          + Nova receita
+          + Refeição pronta
         </Link>
       </div>
 

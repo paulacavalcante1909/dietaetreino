@@ -3,12 +3,18 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 
 class Checkin extends Model
 {
-    protected $fillable = ['workout_id', 'workout_name', 'date', 'photo_path', 'note'];
+    protected $fillable = ['workout_id', 'session_id', 'workout_name', 'date', 'photo_path', 'note'];
+
+    public function session(): BelongsTo
+    {
+        return $this->belongsTo(WorkoutSession::class, 'session_id');
+    }
 
     protected $hidden = ['user_id', 'photo_path', 'updated_at'];
 

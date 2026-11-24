@@ -7,6 +7,8 @@ use App\Models\DiaryEntry;
 use App\Models\Food;
 use App\Models\FoodPortion;
 use App\Models\Recipe;
+use App\Models\RecipeItem;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -25,14 +27,20 @@ class EntryController extends Controller
             'recipe_id' => ['required_without:food_id', 'nullable', 'integer'],
             'quantity' => ['required', 'numeric', 'gt:0', 'max:10000'],
             'portion_id' => ['nullable', 'integer'],
-        ]);
+            // Ingredientes ajustados só para este registro (opcional, apenas com recipe_id)
+            'items' => ['nullable', 'array', 'min:1', 'max:50'],
+            'items.*.food_id' => ['required', 'integer'],
+            'items.*.portion_id' => ['nullable', 'integer'],
+            'items.*.quantity' => ['required', 'numeric', 'gt:0', 'max:10000'],
+        ], ['items.min' => 'A refeição precisa de pelo menos um ingrediente.']);
 
         $entry = new DiaryEntry(['date' => $data['date'], 'meal_id' => $data['meal_id']]);
         $entry->user_id = $user->id;
 
         if (! empty($data['recipe_id'])) {
             $recipe = Recipe::where('user_id', $user->id)->findOrFail($data['recipe_id']);
-            $entry->fillFromRecipe($recipe, (float) $data['quantity']);
+            $items = isset($data['items']) ? $this->adjustedItems($user, $data['items']) : null;
+            $entry->fillFromRecipe($recipe, (float) $data['quantity'], $items);
         } else {
             $food = Food::visibleTo($user)->findOrFail($data['food_id']);
             $entry->fillFromFood($food, (float) $data['quantity'], $this->portion($food, $data['portion_id'] ?? null));
@@ -115,6 +123,19 @@ class EntryController extends Controller
             $entry->{$k} = round($entry->{$k} * $f, 1);
         }
         $entry->quantity = $quantity;
+    }
+
+    /** Monta itens de receita em memória (não salvos) a partir do ajuste enviado. */
+    private function adjustedItems(User $user, array $items): array
+    {
+        return array_map(function ($i) use ($user) {
+            $food = Food::withTrashed()->visibleTo($user)->with('portions')->findOrFail($i['food_id']);
+            $item = new RecipeItem(['food_id' => $food->id, 'quantity' => $i['quantity']]);
+            $item->setRelation('food', $food);
+            $item->setRelation('portion', ! empty($i['portion_id']) ? $food->portions->firstWhere('id', $i['portion_id']) : null);
+
+            return $item;
+        }, $items);
     }
 
     private function portion(Food $food, ?int $id): ?FoodPortion

@@ -4,6 +4,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { ExerciseImage } from '../components/ExerciseImage'
 import { Button, Card } from '../components/ui'
 import { api } from '../lib/api'
+import { isoDate } from '../lib/date'
+import { loadRun } from '../lib/run'
 import type { Checkin, CheckinStats, Workout } from '../lib/types'
 
 /** Aba Treinos: check-in do dia + fichas (Treino A, B, C…). */
@@ -13,6 +15,10 @@ export function WorkoutsPage() {
   const [stats, setStats] = useState<CheckinStats | null>(null)
   const [todayCheckin, setTodayCheckin] = useState<Checkin | null>(null)
   const [creating, setCreating] = useState(false)
+  const [running] = useState(() => {
+    const r = loadRun()
+    return r && r.phase !== 'prep' ? r : null
+  })
 
   useEffect(() => {
     api<{ workouts: Workout[] }>('/workouts').then((r) => setWorkouts(r.workouts))
@@ -34,6 +40,21 @@ export function WorkoutsPage() {
     <div className="safe-top space-y-4 px-5 pt-6 pb-6">
       <h1 className="text-2xl font-bold">Treinos</h1>
 
+      {/* Treino em andamento (salvo no aparelho) */}
+      {running && (
+        <Link to={`/treinos/${running.workoutId}/iniciar`} className="flex items-center gap-3 rounded-[var(--radius-card)] bg-ink p-4 text-white shadow-lg active:scale-[0.98]">
+          <span className="relative flex size-3">
+            <span className="absolute inline-flex size-full animate-ping rounded-full bg-orchid opacity-75" />
+            <span className="relative inline-flex size-3 rounded-full bg-orchid" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-xs text-white/70">{running.phase === 'finished' ? 'Treino finalizado' : 'Treino em andamento'}</span>
+            <span className="block truncate font-semibold">{running.workoutName}</span>
+          </span>
+          <span className="font-semibold text-orchid">Abrir ›</span>
+        </Link>
+      )}
+
       {/* Check-in do dia */}
       <Card className="overflow-hidden !p-0">
         <div className="bg-gradient-to-br from-orchid to-violet p-5 text-white">
@@ -47,8 +68,8 @@ export function WorkoutsPage() {
           {stats && (
             <div className="mt-4 grid grid-cols-3 gap-2 text-center">
               <Stat value={stats.streak} label={stats.streak === 1 ? 'dia seguido' : 'dias seguidos'} icon="🔥" />
-              <Stat value={stats.month_days} label="no mês" icon="📅" />
-              <Stat value={stats.total_days} label="no total" icon="🏆" />
+              <Stat value={stats.month_count} label={stats.month_count === 1 ? 'check-in no mês' : 'check-ins no mês'} icon="📅" />
+              <Stat value={stats.total_count} label="no total" icon="🏆" />
             </div>
           )}
         </div>
@@ -80,28 +101,39 @@ export function WorkoutsPage() {
         <Reorder.Group axis="y" values={workouts} onReorder={setWorkouts} className="space-y-2">
           {workouts.map((w) => (
             <Reorder.Item key={w.id} value={w} onDragEnd={saveOrder}>
-              <motion.button
-                onClick={() => navigate(`/treinos/${w.id}`)}
-                whileTap={{ scale: 0.98 }}
-                className="flex w-full items-center gap-3 rounded-[var(--radius-card)] bg-surface p-3 text-left shadow-[0_2px_12px_-4px_rgba(31,23,36,0.08)]"
-              >
-                <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-orchid to-violet text-lg font-bold text-white">
-                  {letter(w.name)}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold">{w.name}</p>
-                  <p className="truncate text-sm text-muted">
-                    {w.items.length} {w.items.length === 1 ? 'exercício' : 'exercícios'}
-                  </p>
-                </div>
-                <div className="flex -space-x-3">
-                  {w.items.slice(0, 3).map((i) => (
-                    <div key={i.id} className="rounded-2xl ring-2 ring-white">
-                      <ExerciseImage image={i.exercise.image} name={i.exercise.name} size={36} animate={false} />
-                    </div>
-                  ))}
-                </div>
-              </motion.button>
+              <div className="overflow-hidden rounded-[var(--radius-card)] bg-surface shadow-[0_2px_12px_-4px_rgba(31,23,36,0.08)]">
+                <motion.button onClick={() => navigate(`/treinos/${w.id}`)} whileTap={{ scale: 0.98 }} className="flex w-full items-center gap-3 p-3 text-left">
+                  <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-orchid to-violet text-lg font-bold text-white">
+                    {letter(w.name)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold">{w.name}</p>
+                    <p className="truncate text-sm text-muted">
+                      {w.items.length} {w.items.length === 1 ? 'exercício' : 'exercícios'}
+                    </p>
+                    {w.last_done_on === isoDate() && (
+                      <span className="mt-1 inline-block rounded-full bg-orchid/15 px-2 py-0.5 text-xs font-semibold text-primary">Feito hoje ✓</span>
+                    )}
+                  </div>
+                  <div className="flex -space-x-3">
+                    {w.items.slice(0, 3).map((i) => (
+                      <div key={i.id} className="rounded-2xl ring-2 ring-white">
+                        <ExerciseImage image={i.exercise.image} name={i.exercise.name} size={36} animate={false} />
+                      </div>
+                    ))}
+                  </div>
+                </motion.button>
+                {w.items.length > 0 && (
+                  <div className="px-3 pb-3">
+                    <Link
+                      to={`/treinos/${w.id}/iniciar`}
+                      className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary font-semibold text-white active:scale-[0.98]"
+                    >
+                      ▶ {running?.workoutId === w.id ? 'Continuar treino' : 'Iniciar treino'}
+                    </Link>
+                  </div>
+                )}
+              </div>
             </Reorder.Item>
           ))}
         </Reorder.Group>
