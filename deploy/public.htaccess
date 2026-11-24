@@ -1,0 +1,52 @@
+# Dieta & Treino — .htaccess de produção (vai para public/.htaccess)
+# Mesmo domínio: o PWA (index.html) e a API Laravel (/api → index.php).
+
+Options -MultiViews -Indexes
+DirectoryIndex index.html
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Força HTTPS (câmera e instalação do PWA exigem)
+    RewriteCond %{HTTPS} !=on
+    RewriteCond %{HTTP:X-Forwarded-Proto} !https
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+    # Repassa o token (Authorization: Bearer) para o PHP
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # API e health check → Laravel
+    RewriteRule ^(api(/.*)?|up)$ index.php [L]
+
+    # Arquivos e pastas que existem (JS, CSS, imagens, ícones) → servidos direto
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Demais rotas do app (/treinos, /progresso…) → PWA
+    RewriteRule ^ index.html [L]
+</IfModule>
+
+<IfModule mod_headers.c>
+    # Arquivos com hash no nome: cache longo
+    <FilesMatch "-[A-Za-z0-9_-]{8}\.(js|css)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+    # Service worker e página: sempre revalidar (atualizações chegam rápido)
+    <FilesMatch "^(sw\.js|registerSW\.js|index\.html|manifest\.webmanifest)$">
+        Header set Cache-Control "no-cache"
+    </FilesMatch>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "camera=(self), geolocation=(), microphone=()"
+</IfModule>
+
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/webp "access plus 30 days"
+    ExpiresByType image/png "access plus 30 days"
+    ExpiresByType image/svg+xml "access plus 30 days"
+</IfModule>
+
+AddType application/manifest+json .webmanifest

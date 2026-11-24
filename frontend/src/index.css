@@ -1,0 +1,66 @@
+@import 'tailwindcss';
+
+@theme {
+  /* Paleta fornecida */
+  --color-orchid: #cc6cd7;
+  --color-lavender: #a86bd6;
+  --color-pink: #d66baa;
+  --color-violet: #856bd6;
+  --color-coral: #d66c6b;
+
+  /* Complementos para contraste */
+  --color-primary: #9b3fa8;
+  --color-primary-hover: #86348f;
+  --color-water: #6b8bd6;
+  --color-bg: #fbf7fc;
+  --color-surface: #ffffff;
+  --color-ink: #1f1724;
+  --color-muted: #6b6072;
+  --color-line: #ece3ef;
+  --color-soft: #f5ecf7;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --radius-card: 1.25rem;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+/* Inputs numéricos sem setinhas */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+/* margin para não sobrescrever o padding (pt-*) dos utilitários */
+.safe-top {
+  margin-top: env(safe-area-inset-top);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

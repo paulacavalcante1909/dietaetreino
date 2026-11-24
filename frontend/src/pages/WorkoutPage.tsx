@@ -1,0 +1,266 @@
+import { AnimatePresence, motion, Reorder } from 'framer-motion'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { ExerciseImage } from '../components/ExerciseImage'
+import { ExercisePicker } from '../components/ExercisePicker'
+import { Sheet } from '../components/Sheet'
+import { useToast } from '../components/Toast'
+import { Alert, Button, Field, Spinner } from '../components/ui'
+import { api, ApiError } from '../lib/api'
+import type { Exercise, Workout, WorkoutItem } from '../lib/types'
+
+const REPS_SUGGESTIONS = ['8', '10', '12', '15', '8-12', 'até a falha', '30 s']
+
+type Item = WorkoutItem & { key: string }
+const withKeys = (items: WorkoutItem[]): Item[] => items.map((i, n) => ({ ...i, key: `${i.id ?? 'n'}-${n}-${Math.random()}` }))
+
+/** Ver um treino da ficha; no modo edição: renomear, adicionar/reordenar/editar exercícios. */
+export function WorkoutPage() {
+  const { id } = useParams()
+  const [params, setParams] = useSearchParams()
+  const editing = params.get('editar') === '1'
+  const navigate = useNavigate()
+  const toast = useToast()
+
+  const [workout, setWorkout] = useState<Workout | null>(null)
+  const [name, setName] = useState('')
+  const [items, setItems] = useState<Item[]>([])
+  const [picking, setPicking] = useState(false)
+  const [editIndex, setEditIndex] = useState<number | null>(null)
+  const [pending, setPending] = useState<Exercise | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<ApiError | null>(null)
+  const [viewing, setViewing] = useState<Item | null>(null)
+
+  useEffect(() => {
+    api<{ workout: Workout }>(`/workouts/${id}`).then((r) => {
+      setWorkout(r.workout)
+      setName(r.workout.name)
+      setItems(withKeys(r.workout.items))
+    })
+  }, [id])
+
+  const setEditing = (on: boolean) => setParams(on ? { editar: '1' } : {}, { replace: true })
+
+  const save = async () => {
+    setSaving(true)
+    setError(null)
+    try {
+      const r = await api<{ workout: Workout }>(`/workouts/${id}`, {
+        method: 'PUT',
+        body: { name: name.trim(), items: items.map((i) => ({ exercise_id: i.exercise_id, sets: i.sets, reps: i.reps, notes: i.notes })) },
+      })
+      setWorkout(r.workout)
+      setItems(withKeys(r.workout.items))
+      setEditing(false)
+      toast({ text: 'Treino salvo ✓' })
+    } catch (e) {
+      setError(e as ApiError)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const cancel = () => {
+    if (!workout) return
+    setName(workout.name)
+    setItems(withKeys(workout.items))
+    setEditing(false)
+  }
+
+  const duplicate = async () => {
+    const r = await api<{ workout: Workout }>(`/workouts/${id}/duplicate`, { method: 'POST' })
+    toast({ text: 'Treino duplicado ✓' })
+    navigate(`/treinos/${r.workout.id}`, { replace: true })
+  }
+
+  const remove = async () => {
+    if (!confirm(`Excluir “${workout?.name}”? Seus check-ins continuam no histórico.`)) return
+    await api(`/workouts/${id}`, { method: 'DELETE' })
+    toast({ text: 'Treino excluído' })
+    navigate('/treinos', { replace: true })
+  }
+
+  if (!workout) return <Spinner />
+
+  return (
+    <div className="safe-top mx-auto max-w-lg px-5 pt-4 pb-28">
+      <header className="mb-5 flex items-center gap-3">
+        <button onClick={() => (editing ? cancel() : navigate('/treinos'))} aria-label="Voltar" className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface text-2xl text-primary shadow-sm">
+          ‹
+        </button>
+        {editing ? (
+          <input aria-label="Nome do treino" value={name} onChange={(e) => setName(e.target.value)} className="min-w-0 flex-1 rounded-xl border border-line bg-surface px-3 py-2 text-xl font-bold outline-none focus:border-orchid" />
+        ) : (
+          <h1 className="min-w-0 flex-1 truncate text-xl font-bold">{workout.name}</h1>
+        )}
+        {!editing && (
+          <button onClick={() => setEditing(true)} className="rounded-full bg-soft px-4 py-2 text-sm font-semibold text-primary">
+            Editar
+          </button>
+        )}
+      </header>
+
+      {error && <div className="mb-3"><Alert>{error.field('name') ?? error.message}</Alert></div>}
+
+      {items.length === 0 && (
+        <p className="py-10 text-center text-sm text-muted">{editing ? 'Adicione os exercícios deste treino.' : 'Nenhum exercício ainda. Toque em Editar.'}</p>
+      )}
+
+      {editing ? (
+        <Reorder.Group axis="y" values={items} onReorder={setItems} className="space-y-2">
+          {items.map((it, idx) => (
+            <Reorder.Item key={it.key} value={it} className="touch-none">
+              <div className="flex items-center gap-3 rounded-2xl bg-surface p-2 pr-3 shadow-[0_2px_12px_-4px_rgba(31,23,36,0.08)]">
+                <span className="cursor-grab pl-1 text-lg text-muted select-none" aria-hidden>⋮⋮</span>
+                <ExerciseImage image={it.exercise.image} name={it.exercise.name} size={48} animate={false} />
+                <button onClick={() => setEditIndex(idx)} className="min-w-0 flex-1 text-left">
+                  <p className="truncate text-sm font-medium">{it.exercise.name}</p>
+                  <p className="text-xs font-semibold text-primary">{it.sets} × {it.reps}</p>
+                </button>
+                <button aria-label="Remover" onClick={() => setItems((l) => l.filter((_, j) => j !== idx))} className="text-xl text-muted">×</button>
+              </div>
+            </Reorder.Item>
+          ))}
+        </Reorder.Group>
+      ) : (
+        <ol className="space-y-3">
+          {items.map((it, idx) => (
+            <motion.li key={it.key} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.04 }}>
+              <button onClick={() => setViewing(it)} className="flex w-full items-center gap-3 rounded-[var(--radius-card)] bg-surface p-3 text-left shadow-[0_2px_12px_-4px_rgba(31,23,36,0.08)] active:scale-[0.99]">
+                <ExerciseImage image={it.exercise.image} name={it.exercise.name} size={72} />
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-muted">{idx + 1}º exercício</p>
+                  <p className="font-semibold leading-snug">{it.exercise.name}</p>
+                  <p className="mt-1 inline-block rounded-full bg-orchid/15 px-2.5 py-0.5 text-sm font-bold text-primary">
+                    {it.sets} × {it.reps}
+                  </p>
+                  {it.notes && <p className="mt-1 text-xs text-muted">📝 {it.notes}</p>}
+                </div>
+              </button>
+            </motion.li>
+          ))}
+        </ol>
+      )}
+
+      {editing && (
+        <div className="mt-4 space-y-3">
+          <button onClick={() => setPicking(true)} className="w-full rounded-2xl border-2 border-dashed border-line py-4 text-sm font-semibold text-primary">
+            + Adicionar exercício
+          </button>
+          <div className="grid grid-cols-2 gap-3">
+            <Button variant="ghost" onClick={duplicate}>Duplicar</Button>
+            <Button variant="danger" onClick={remove}>Excluir treino</Button>
+          </div>
+        </div>
+      )}
+
+      {/* Barra de ação fixa */}
+      <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/90 backdrop-blur-lg">
+        <div className="mx-auto max-w-lg px-5 py-3">
+          {editing ? (
+            <Button onClick={save} loading={saving} disabled={!name.trim()}>Salvar treino</Button>
+          ) : (
+            <Link to={`/checkin?treino=${workout.id}`} className="flex h-12 w-full items-center justify-center rounded-2xl bg-primary font-semibold text-white shadow-[0_6px_20px_-8px_rgba(155,63,168,0.7)] active:scale-[0.98]">
+              📸 Fazer check-in deste treino
+            </Link>
+          )}
+        </div>
+      </div>
+
+      <ExercisePicker
+        open={picking}
+        onClose={() => setPicking(false)}
+        onPick={(e) => {
+          setPicking(false)
+          setPending(e)
+        }}
+      />
+
+      {/* Séries/repetições: novo exercício ou edição */}
+      <SetsSheet
+        item={pending ? { exercise_id: pending.id, exercise: pending, sets: 3, reps: '12', notes: null } : editIndex !== null ? items[editIndex] : null}
+        isNew={!!pending}
+        onClose={() => {
+          setPending(null)
+          setEditIndex(null)
+        }}
+        onSave={(it) => {
+          if (pending) setItems((l) => [...l, ...withKeys([it])])
+          else setItems((l) => l.map((x, j) => (j === editIndex ? { ...x, ...it } : x)))
+          setPending(null)
+          setEditIndex(null)
+        }}
+      />
+
+      <Sheet open={!!viewing} onClose={() => setViewing(null)} title={viewing?.exercise.name}>
+        {viewing && (
+          <div className="space-y-4">
+            {viewing.exercise.image ? (
+              <div className="grid grid-cols-2 gap-2">
+                {[0, 1].map((i) => (
+                  <img key={i} src={`${viewing.exercise.image}/${i}.webp`} alt={i === 0 ? 'Posição inicial' : 'Posição final'} className="aspect-square w-full rounded-2xl bg-white object-cover" />
+                ))}
+              </div>
+            ) : (
+              <ExerciseImage image={null} name={viewing.exercise.name} size={96} />
+            )}
+            <p className="text-center text-2xl font-bold text-primary">
+              {viewing.sets} séries × {viewing.reps}
+            </p>
+            {viewing.notes && <p className="rounded-2xl bg-soft p-3 text-sm">📝 {viewing.notes}</p>}
+          </div>
+        )}
+      </Sheet>
+    </div>
+  )
+}
+
+function SetsSheet({ item, isNew, onClose, onSave }: { item: WorkoutItem | null; isNew: boolean; onClose: () => void; onSave: (i: WorkoutItem) => void }) {
+  const [sets, setSets] = useState(3)
+  const [reps, setReps] = useState('12')
+  const [notes, setNotes] = useState('')
+
+  useEffect(() => {
+    if (!item) return
+    setSets(item.sets)
+    setReps(item.reps)
+    setNotes(item.notes ?? '')
+  }, [item])
+
+  return (
+    <Sheet open={!!item} onClose={onClose} title={item?.exercise.name}>
+      {item && (
+        <div className="space-y-5">
+          <div>
+            <p className="mb-2 text-sm font-medium text-muted">Séries</p>
+            <div className="flex items-center justify-center gap-4">
+              <button aria-label="Menos séries" onClick={() => setSets((s) => Math.max(1, s - 1))} className="flex size-14 items-center justify-center rounded-2xl bg-soft text-2xl font-semibold text-primary active:scale-90">−</button>
+              <AnimatePresence mode="popLayout" initial={false}>
+                <motion.span key={sets} initial={{ y: -12, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 12, opacity: 0 }} className="w-16 text-center text-4xl font-bold">
+                  {sets}
+                </motion.span>
+              </AnimatePresence>
+              <button aria-label="Mais séries" onClick={() => setSets((s) => Math.min(10, s + 1))} className="flex size-14 items-center justify-center rounded-2xl bg-soft text-2xl font-semibold text-primary active:scale-90">+</button>
+            </div>
+          </div>
+          <div>
+            <p className="mb-2 text-sm font-medium text-muted">Repetições</p>
+            <div className="mb-2 flex flex-wrap gap-2">
+              {REPS_SUGGESTIONS.map((r) => (
+                <button key={r} onClick={() => setReps(r)} className={`rounded-full px-3.5 py-2 text-sm font-medium transition-colors ${reps === r ? 'bg-primary text-white' : 'bg-soft'}`}>
+                  {r}
+                </button>
+              ))}
+            </div>
+            <Field label="Ou digite" name="reps" maxLength={20} value={reps} onChange={(e) => setReps(e.target.value)} />
+          </div>
+          <Field label="Observação (opcional)" name="notes" maxLength={200} placeholder="ex.: drop-set na última série" value={notes} onChange={(e) => setNotes(e.target.value)} />
+          <Button onClick={() => onSave({ ...item, sets, reps: reps.trim() || '12', notes: notes.trim() || null })}>
+            {isNew ? `Adicionar ${sets} × ${reps || '12'}` : 'Salvar'}
+          </Button>
+        </div>
+      )}
+    </Sheet>
+  )
+}

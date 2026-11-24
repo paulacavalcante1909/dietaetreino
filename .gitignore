@@ -1,0 +1,15 @@
+# Dependências e builds
+frontend/node_modules/
+frontend/dist/
+backend/vendor/
+deploy/release/
+
+# Segredos e configurações locais
+backend/.env
+deploy/deploy.config
+deploy/.env.production
+*.local
+
+# Dados locais
+backend/storage/app/private/
+backend/storage/logs/*.log

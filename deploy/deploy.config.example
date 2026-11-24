@@ -1,0 +1,14 @@
+# Copie para deploy/deploy.config e preencha (este arquivo fica só no seu computador).
+
+# Acesso SSH ao cPanel
+SSH_USER=cpaneluser
+SSH_HOST=seudominio.com.br
+SSH_PORT=22
+# Chave exclusiva deste projeto (não usa as outras chaves do computador)
+SSH_KEY=~/.ssh/id_ed25519_dietaetreino
+
+# Pasta do app no servidor (o subdomínio aponta para $REMOTE_DIR/public)
+REMOTE_DIR=dietaetreino
+
+# PHP 8.3 do cPanel (EasyApache). Se `php -v` no SSH já mostrar 8.3, pode usar só "php".
+PHP_BIN=/opt/cpanel/ea-php83/root/usr/bin/php

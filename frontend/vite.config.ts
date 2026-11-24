@@ -1,0 +1,47 @@
+import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+import { defineConfig } from 'vite'
+import { VitePWA } from 'vite-plugin-pwa'
+
+export default defineConfig({
+  plugins: [
+    react(),
+    tailwindcss(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.svg', 'logo.svg'],
+      manifest: {
+        name: 'Dieta & Treino',
+        short_name: 'Dieta & Treino',
+        description: 'Registre sua alimentação e seus treinos com poucos toques.',
+        lang: 'pt-BR',
+        start_url: '/',
+        display: 'standalone',
+        orientation: 'portrait',
+        background_color: '#FBF7FC',
+        theme_color: '#CC6CD7',
+        icons: [
+          { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
+      },
+      workbox: {
+        navigateFallbackDenylist: [/^\/api\//],
+        runtimeCaching: [
+          {
+            // API nunca vem do cache: dados sempre do servidor
+            urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
+            handler: 'NetworkOnly',
+          },
+        ],
+      },
+    }),
+  ],
+  server: {
+    port: 5173,
+    proxy: {
+      '/api': 'http://localhost:8000',
+    },
+  },
+})
