@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react'
+import { useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react'
 
 export function Logo({ size = 48 }: { size?: number }) {
   return <img src="/logo.svg" width={size} height={size} alt="Dieta & Treino" className="rounded-[22%]" />
@@ -32,9 +32,40 @@ interface FieldProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string
   error?: string
   suffix?: string
+  /** Elemento no fim do campo (ex.: botão de mostrar senha). */
+  trailing?: ReactNode
 }
 
-export function Field({ label, error, suffix, id, className = '', ...rest }: FieldProps) {
+/** Campo de senha com botão de olho para mostrar/ocultar. */
+export function PasswordField(props: Omit<FieldProps, 'type' | 'trailing'>) {
+  const [visible, setVisible] = useState(false)
+  return (
+    <Field
+      {...props}
+      type={visible ? 'text' : 'password'}
+      autoCapitalize="none"
+      autoCorrect="off"
+      spellCheck={false}
+      trailing={
+        <button
+          type="button"
+          onClick={() => setVisible((v) => !v)}
+          aria-label={visible ? 'Ocultar senha' : 'Mostrar senha'}
+          aria-pressed={visible}
+          className="-mr-2 flex size-10 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:text-primary"
+        >
+          <svg className="size-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden>
+            <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+            <circle cx="12" cy="12" r="3" />
+            {visible && <path d="M3 3l18 18" />}
+          </svg>
+        </button>
+      }
+    />
+  )
+}
+
+export function Field({ label, error, suffix, trailing, id, className = '', ...rest }: FieldProps) {
   const inputId = id ?? rest.name
   return (
     <label htmlFor={inputId} className={`block ${className}`}>
@@ -46,6 +77,7 @@ export function Field({ label, error, suffix, id, className = '', ...rest }: Fie
       >
         <input id={inputId} className="w-full min-w-0 bg-transparent text-base outline-none placeholder:text-muted/50" {...rest} />
         {suffix && <span className="ml-2 shrink-0 text-sm text-muted">{suffix}</span>}
+        {trailing}
       </div>
       {error && (
         <motion.span initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="mt-1 block text-sm text-[#b0403f]">

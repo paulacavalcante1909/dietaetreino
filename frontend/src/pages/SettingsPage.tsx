@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { Alert, Button, Card, Field } from '../components/ui'
+import { Alert, Button, Card, Field, PasswordField } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import type { User } from '../lib/types'
@@ -113,8 +113,8 @@ export function SettingsPage() {
 
       <Section title="Alterar senha" open={open === 'password'} onToggle={() => toggle('password')}>
         <form onSubmit={pwdForm.submit} className="space-y-3">
-          <Field label="Senha atual" name="current_password" type="password" autoComplete="current-password" required value={pwd.current_password} onChange={(e) => setPwd({ ...pwd, current_password: e.target.value })} error={pwdForm.error?.field('current_password')} />
-          <Field label="Nova senha" name="new_password" type="password" autoComplete="new-password" minLength={8} required value={pwd.password} onChange={(e) => setPwd({ ...pwd, password: e.target.value })} error={pwdForm.error?.field('password')} />
+          <PasswordField label="Senha atual" name="current_password" autoComplete="current-password" required value={pwd.current_password} onChange={(e) => setPwd({ ...pwd, current_password: e.target.value })} error={pwdForm.error?.field('current_password')} />
+          <PasswordField label="Nova senha" name="new_password" autoComplete="new-password" minLength={8} required value={pwd.password} onChange={(e) => setPwd({ ...pwd, password: e.target.value })} error={pwdForm.error?.field('password')} />
           <Button type="submit" loading={pwdForm.loading}>
             {pwdForm.done ? 'Senha alterada ✓' : 'Alterar senha'}
           </Button>
@@ -136,7 +136,7 @@ export function SettingsPage() {
         <form onSubmit={delForm.submit} className="space-y-3">
           <p className="text-sm text-muted">Isso apaga sua conta e todos os seus dados para sempre. Não dá para desfazer.</p>
           {delForm.error && !delForm.error.field('password') && <Alert>{delForm.error.message}</Alert>}
-          <Field label="Confirme sua senha" name="delete_password" type="password" required value={delPwd} onChange={(e) => setDelPwd(e.target.value)} error={delForm.error?.field('password')} />
+          <PasswordField label="Confirme sua senha" name="delete_password" required value={delPwd} onChange={(e) => setDelPwd(e.target.value)} error={delForm.error?.field('password')} />
           <Button type="submit" variant="danger" loading={delForm.loading}>
             Excluir minha conta
           </Button>

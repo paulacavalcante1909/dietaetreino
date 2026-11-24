@@ -1,0 +1,25 @@
+# Dieta & Treino — .htaccess da RAIZ do app (vai para a pasta do subdomínio)
+#
+# Proteção: se a "raiz do documento" do subdomínio no cPanel for a pasta do app
+# (e não a subpasta public/), tudo é redirecionado internamente para public/.
+# Assim .env, código-fonte, storage (fotos) e vendor nunca ficam acessíveis.
+
+Options -Indexes
+
+# Bloqueio explícito de arquivos sensíveis na raiz
+<FilesMatch "^(\.env.*|artisan|composer\.(json|lock)|package\.json|phpunit\.xml|README\.md|vite\.config\.js)$">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # HTTPS aqui (antes do desvio para public/), para o endereço não ganhar "/public"
+    RewriteCond %{HTTPS} !=on
+    RewriteCond %{HTTP:X-Forwarded-Proto} !https
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+    # Já está em public/? deixa o public/.htaccess cuidar
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>

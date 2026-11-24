@@ -20,9 +20,11 @@ SSH="ssh $SSH_OPTS ${SSH_USER}@${SSH_HOST}"
 SEED=${1:-}
 
 echo "▶ Enviando arquivos para ${SSH_HOST}:${REMOTE_DIR}"
-# Preserva no servidor: .env e storage/ (fotos dos check-ins, logs)
+# Preserva no servidor: .env, storage/ (fotos dos check-ins, logs) e arquivos do cPanel
+# (.well-known = validação do certificado HTTPS/AutoSSL; cgi-bin; error_log)
 rsync -az --delete -e "ssh $SSH_OPTS" \
   --exclude '.env' --exclude 'storage/' \
+  --exclude '.well-known/' --exclude 'cgi-bin/' --exclude 'error_log' \
   "$ROOT/deploy/release/" "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}/"
 
 # 1º deploy: envia o .env de produção local se o servidor ainda não tiver um

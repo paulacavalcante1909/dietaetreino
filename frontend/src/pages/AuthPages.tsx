@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Alert, Button, Field, Logo } from '../components/ui'
+import { Alert, Button, Field, PasswordField, Logo } from '../components/ui'
 import { ApiError } from '../lib/api'
 import { useAuth } from '../lib/auth'
 
@@ -49,7 +49,7 @@ export function LoginPage() {
       <form onSubmit={submit} className="space-y-4">
         {error && !error.field('email') && !error.field('password') && <Alert>{error.message}</Alert>}
         <Field label="E-mail" name="email" type="email" autoComplete="email" inputMode="email" required value={email} onChange={(e) => setEmail(e.target.value)} error={error?.field('email')} />
-        <Field label="Senha" name="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} error={error?.field('password')} />
+        <PasswordField label="Senha" name="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} error={error?.field('password')} />
         <Button type="submit" loading={loading} className="mt-2">
           Entrar
         </Button>
@@ -93,10 +93,9 @@ export function RegisterPage() {
         {error && !fieldErrors.some((f) => error.field(f)) && <Alert>{error.message}</Alert>}
         <Field label="Nome" name="name" autoComplete="given-name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} error={error?.field('name')} />
         <Field label="E-mail" name="email" type="email" autoComplete="email" inputMode="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} error={error?.field('email')} />
-        <Field
+        <PasswordField
           label="Senha"
           name="password"
-          type="password"
           autoComplete="new-password"
           placeholder="Mínimo de 8 caracteres"
           required

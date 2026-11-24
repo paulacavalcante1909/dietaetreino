@@ -31,5 +31,6 @@ echo "▶ 4/4 Juntando o PWA na pasta public"
 cp -r "$ROOT/frontend/dist/." "$OUT/public/"
 cp "$ROOT/deploy/public.htaccess" "$OUT/public/.htaccess"
 cp "$ROOT/deploy/user.ini" "$OUT/public/.user.ini"
+cp "$ROOT/deploy/root.htaccess" "$OUT/.htaccess"   # proteção se a raiz do subdomínio for a pasta do app
 
 du -sh "$OUT" | awk '{print "✔ Pronto: deploy/release (" $1 ")"}'
