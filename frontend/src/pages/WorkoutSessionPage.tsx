@@ -338,7 +338,8 @@ function ActiveView({ run, setRun }: { run: RunState; setRun: SetRun }) {
             onFinishExercise={() => finishExercise(run.current!)}
             onAdjustRest={(delta) => setRun((r) => ({ ...r, restEndsAt: r.restEndsAt ? Math.max(Date.now(), r.restEndsAt + delta * 1000) : r.restEndsAt }))}
             onSkipRest={() => setRun((r) => ({ ...r, restEndsAt: null }))}
-            onRestDefault={(s) => setRun((r) => ({ ...r, restSeconds: s }))}
+            // Trocar o descanso padrão durante um descanso recomeça a contagem com o novo tempo
+            onRestDefault={(s) => setRun((r) => ({ ...r, restSeconds: s, restEndsAt: r.restEndsAt && r.restEndsAt > Date.now() ? Date.now() + s * 1000 : r.restEndsAt }))}
             onClose={() => setRun((r) => ({ ...r, current: null }))}
           />
         )}
