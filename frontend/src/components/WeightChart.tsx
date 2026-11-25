@@ -110,7 +110,7 @@ export function WeightChart({ data }: { data: Weight[] }) {
 
       {h && (
         <div
-          className="pointer-events-none absolute -top-2 rounded-xl bg-ink px-3 py-1.5 text-xs whitespace-nowrap text-white shadow-lg"
+          className="pointer-events-none absolute -top-2 rounded-xl bg-scrim px-3 py-1.5 text-xs whitespace-nowrap text-white shadow-lg"
           style={{ left: `${(h.x / W) * 100}%`, transform: `translateX(${h.x > W * 0.7 ? '-100%' : h.x < W * 0.3 ? '0' : '-50%'})` }}
         >
           <span className="font-bold">{kg(h.d.kg)} kg</span> · {shortDate(h.d.date)}

@@ -200,7 +200,7 @@ function WeightSheet({ weight, onClose, onSaved }: { weight: Weight | 'new' | nu
           />
           <span className="text-xl font-semibold text-muted">kg</span>
         </div>
-        {error?.field('kg') && <p className="-mt-2 text-center text-sm text-[#b0403f]">{error.field('kg')}</p>}
+        {error?.field('kg') && <p className="-mt-2 text-center text-sm text-danger">{error.field('kg')}</p>}
         <Field label="Data" name="weight_date" type="date" max={isoDate()} value={date} onChange={(e) => setDate(e.target.value)} error={error?.field('date')} />
         <Button type="submit" loading={busy === 'save'} disabled={!(num(value) > 0)}>
           Salvar

@@ -68,7 +68,7 @@ export function BarcodeScanner({ open, onClose, onDetected }: Props) {
   return (
     <AnimatePresence>
       {open && (
-        <motion.div className="fixed inset-0 z-50 flex flex-col bg-ink" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+        <motion.div className="fixed inset-0 z-50 flex flex-col bg-scrim" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
           <div className="safe-top flex items-center justify-between px-5 pt-4 pb-3 text-white">
             <h2 className="text-lg font-bold">Ler código de barras</h2>
             <button onClick={onClose} aria-label="Fechar" className="flex size-10 items-center justify-center rounded-full bg-white/10 text-xl">
@@ -92,7 +92,7 @@ export function BarcodeScanner({ open, onClose, onDetected }: Props) {
           </div>
 
           <form onSubmit={submitManual} className="safe-bottom space-y-3 rounded-t-[1.75rem] bg-surface px-5 pt-5 pb-6">
-            {error && <p className="text-sm text-[#b0403f]">{error}</p>}
+            {error && <p className="text-sm text-danger">{error}</p>}
             <Field label="Ou digite o código" name="ean" inputMode="numeric" placeholder="ex.: 7891000100103" value={manual} onChange={(e) => setManual(e.target.value.replace(/\D/g, '').slice(0, 14))} />
             <Button type="submit" variant="ghost" disabled={!/^\d{8,14}$/.test(manual)}>
               Buscar código

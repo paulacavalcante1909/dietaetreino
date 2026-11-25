@@ -6,7 +6,7 @@ const Scanner = lazy(() => import('./BarcodeScanner').then((m) => ({ default: m.
 export function LazyBarcodeScanner(props: { open: boolean; onClose: () => void; onDetected: (ean: string) => void }) {
   if (!props.open) return null
   return (
-    <Suspense fallback={<div className="fixed inset-0 z-50 bg-ink/80" />}>
+    <Suspense fallback={<div className="fixed inset-0 z-50 bg-scrim/80" />}>
       <Scanner {...props} />
     </Suspense>
   )

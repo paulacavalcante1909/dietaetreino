@@ -42,7 +42,7 @@ export function WorkoutsPage() {
 
       {/* Treino em andamento (salvo no aparelho) */}
       {running && (
-        <Link to={`/treinos/${running.workoutId}/iniciar`} className="flex items-center gap-3 rounded-[var(--radius-card)] bg-ink p-4 text-white shadow-lg active:scale-[0.98]">
+        <Link to={`/treinos/${running.workoutId}/iniciar`} className="flex items-center gap-3 rounded-[var(--radius-card)] bg-scrim p-4 text-white shadow-lg active:scale-[0.98]">
           <span className="relative flex size-3">
             <span className="absolute inline-flex size-full animate-ping rounded-full bg-orchid opacity-75" />
             <span className="relative inline-flex size-3 rounded-full bg-orchid" />

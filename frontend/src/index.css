@@ -18,6 +18,8 @@
   --color-muted: #6b6072;
   --color-line: #ece3ef;
   --color-soft: #f5ecf7;
+  --color-scrim: #1f1724; /* fundo sempre escuro: avisos, leitor de código, sombra de painéis */
+  --color-danger: #b0403f; /* texto de erro legível no tema */
 
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --radius-card: 1.25rem;
@@ -63,4 +65,55 @@ input[type='number'] {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ───────────────────────── Temas ─────────────────────────
+   Coelhinha (padrão, definido no @theme acima) · Onça · Escuro.
+   O app usa só variáveis (--color-*), então trocar o tema = trocar estes valores.
+   --color-scrim = fundo sempre escuro (avisos, leitor de código, sombra de painéis)
+   --color-danger = texto de erro/alerta legível em cada tema */
+[data-theme='onca'] {
+  --color-orchid: #d4955a; /* calorias: caramelo */
+  --color-lavender: #e2b26f; /* carboidratos: dourado */
+  --color-pink: #e8919c; /* proteínas: rosa do top */
+  --color-violet: #8b5a3c; /* gorduras: marrom das manchas */
+  --color-coral: #cf6b5b; /* sódio / alerta */
+  --color-primary: #96582f;
+  --color-primary-hover: #7f4a27;
+  --color-water: #6f9bc8;
+  --color-bg: #fdf6ee;
+  --color-surface: #ffffff;
+  --color-ink: #3a2418;
+  --color-muted: #7b6252;
+  --color-line: #efe0cf;
+  --color-soft: #f8ead9;
+  --color-scrim: #3a2418;
+  --color-danger: #a8402f;
+}
+
+[data-theme='dark'] {
+  /* Ratão: grafite + vermelho da regata */
+  color-scheme: dark;
+  --color-orchid: #e5484d; /* calorias: vermelho */
+  --color-lavender: #9fb0c4; /* carboidratos: cinza-azulado */
+  --color-pink: #f2838a; /* proteínas: vermelho claro */
+  --color-violet: #c9ced6; /* gorduras: cinza claro */
+  --color-coral: #ffa36b; /* sódio / alerta: laranja */
+  --color-primary: #d6343a;
+  --color-primary-hover: #e5484d;
+  --color-water: #6ea8fe;
+  --color-bg: #141518;
+  --color-surface: #1f2125;
+  --color-ink: #eef0f3;
+  --color-muted: #a3a8b1;
+  --color-line: #363a41;
+  --color-soft: #2a2d33;
+  --color-scrim: #000000;
+  --color-danger: #ff8f8f;
+}
+
+/* Transição suave ao trocar de tema (só cores) */
+html.theme-switching,
+html.theme-switching * {
+  transition: background-color 0.35s ease, border-color 0.35s ease, color 0.35s ease, fill 0.35s ease, stroke 0.35s ease !important;
 }

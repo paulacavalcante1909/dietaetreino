@@ -128,7 +128,7 @@ export function CheckinPage() {
                       setPhoto(null)
                       setPreview(null)
                     }}
-                    className="absolute top-3 right-3 rounded-full bg-ink/60 px-3 py-1.5 text-sm font-semibold text-white backdrop-blur"
+                    className="absolute top-3 right-3 rounded-full bg-scrim/60 px-3 py-1.5 text-sm font-semibold text-white backdrop-blur"
                   >
                     Trocar foto
                   </button>

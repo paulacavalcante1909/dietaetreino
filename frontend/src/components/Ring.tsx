@@ -47,7 +47,7 @@ export function Bar({ label, value, max, unit, color }: { label: string; value: 
     <div>
       <div className="mb-1.5 flex items-baseline justify-between text-sm">
         <span className="font-medium">{label}</span>
-        <span className={over ? 'font-medium text-[#b0403f]' : 'text-muted'}>
+        <span className={over ? 'font-medium text-danger' : 'text-muted'}>
           {fmt(value)} / {fmt(max)} {unit}
         </span>
       </div>

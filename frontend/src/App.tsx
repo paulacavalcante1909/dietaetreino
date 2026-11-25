@@ -4,6 +4,7 @@ import { Layout } from './components/Layout'
 import { ToastProvider } from './components/Toast'
 import { Spinner } from './components/ui'
 import { AuthProvider, useAuth } from './lib/auth'
+import { ThemeProvider } from './lib/theme'
 import { AddFoodPage } from './pages/AddFoodPage'
 import { LoginPage, RegisterPage } from './pages/AuthPages'
 import { FoodFormPage } from './pages/FoodFormPage'
@@ -49,6 +50,7 @@ function ScrollToTop() {
 export default function App() {
   return (
     <ErrorBoundary>
+    <ThemeProvider>
     <AuthProvider>
       <ToastProvider>
         <BrowserRouter>
@@ -87,6 +89,7 @@ export default function App() {
         </BrowserRouter>
       </ToastProvider>
     </AuthProvider>
+    </ThemeProvider>
     </ErrorBoundary>
   )
 }

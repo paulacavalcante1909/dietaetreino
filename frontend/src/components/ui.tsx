@@ -1,8 +1,10 @@
 import { motion } from 'framer-motion'
+import { useTheme } from '../lib/theme'
 import { useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react'
 
 export function Logo({ size = 48 }: { size?: number }) {
-  return <img src="/logo.png" width={size} height={size} alt="Dieta & Treino" className="rounded-[22%] shadow-[0_6px_20px_-8px_rgba(155,63,168,0.5)]" />
+  const { theme } = useTheme()
+  return <img src={`${theme.assets}/logo.png`} width={size} height={size} alt="Dieta & Treino" className="rounded-[22%] shadow-[0_6px_20px_-8px_rgba(155,63,168,0.5)]" />
 }
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -14,7 +16,7 @@ export function Button({ variant = 'primary', loading, children, className = '',
   const styles = {
     primary: 'bg-primary text-white hover:bg-primary-hover shadow-[0_6px_20px_-8px_rgba(155,63,168,0.7)]',
     ghost: 'bg-soft text-primary hover:bg-line',
-    danger: 'bg-coral/10 text-[#b0403f] hover:bg-coral/20',
+    danger: 'bg-coral/10 text-danger hover:bg-coral/20',
   }[variant]
 
   return (
@@ -80,7 +82,7 @@ export function Field({ label, error, suffix, trailing, id, className = '', ...r
         {trailing}
       </div>
       {error && (
-        <motion.span initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="mt-1 block text-sm text-[#b0403f]">
+        <motion.span initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="mt-1 block text-sm text-danger">
           {error}
         </motion.span>
       )}
@@ -97,7 +99,7 @@ export function Alert({ children }: { children: ReactNode }) {
     <motion.div
       initial={{ opacity: 0, height: 0 }}
       animate={{ opacity: 1, height: 'auto' }}
-      className="rounded-2xl bg-coral/10 px-4 py-3 text-sm text-[#b0403f]"
+      className="rounded-2xl bg-coral/10 px-4 py-3 text-sm text-danger"
       role="alert"
     >
       {children}

@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { Component, useEffect, useState, type ReactNode } from 'react'
+import { useTheme } from '../lib/theme'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -10,6 +11,7 @@ const DISMISS_KEY = 'dt_install_dismissed'
 
 /** Convite para instalar o app (Android/desktop) ou instruções no iPhone. */
 export function InstallBanner() {
+  const { theme } = useTheme()
   const [event, setEvent] = useState<BeforeInstallPromptEvent | null>(null)
   const [ios, setIos] = useState(false)
   const [hidden, setHidden] = useState(() => !!localStorage.getItem(DISMISS_KEY))
@@ -52,7 +54,7 @@ export function InstallBanner() {
           className="safe-top fixed inset-x-0 top-0 z-[55] flex justify-center px-3 pt-3"
         >
           <div className="flex w-full max-w-lg items-center gap-3 rounded-2xl bg-surface p-3 shadow-xl ring-1 ring-line">
-            <img src="/logo.png" alt="" className="size-10 rounded-xl" />
+            <img src={`${theme.assets}/logo.png`} alt="" className="size-10 rounded-xl" />
             <p className="min-w-0 flex-1 text-sm">
               {event ? (
                 <>Instale o app para abrir direto da tela inicial.</>
@@ -96,7 +98,7 @@ export function OfflineBanner() {
           initial={{ y: -40 }}
           animate={{ y: 0 }}
           exit={{ y: -40 }}
-          className="fixed inset-x-0 top-0 z-[60] bg-ink py-2 text-center text-sm text-white"
+          className="fixed inset-x-0 top-0 z-[60] bg-scrim py-2 text-center text-sm text-white"
           role="status"
         >
           Você está sem internet. Os registros voltam a salvar quando a conexão voltar.

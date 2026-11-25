@@ -8,6 +8,7 @@ import { useToast } from '../components/Toast'
 import { Alert, Button, Card, Field } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import { useAuth } from '../lib/auth'
+import { useTheme } from '../lib/theme'
 import { addDays, dayLabel, isoDate } from '../lib/date'
 import { entryQtyLabel, num } from '../lib/nutrition'
 import type { DayData, DayMeal, Entry, WaterLog, WeightSummary } from '../lib/types'
@@ -16,6 +17,7 @@ const container = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } 
 const item = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0, transition: { duration: 0.28 } } }
 
 export function HomePage() {
+  const { theme } = useTheme()
   const { user } = useAuth()
   const [params, setParams] = useSearchParams()
   const date = params.get('data') ?? isoDate()
@@ -54,7 +56,8 @@ export function HomePage() {
         <div className="flex min-w-0 items-center gap-3">
           {/* Mascote: dá uma "flexionada" ao tocar */}
           <motion.img
-            src="/mascote.png"
+            key={theme.id}
+            src={`${theme.assets}/mascote.png`}
             alt=""
             width={52}
             height={52}
@@ -65,7 +68,7 @@ export function HomePage() {
             whileTap={{ scale: 1.15, rotate: [0, -10, 10, -6, 0] }}
           />
           <div className="min-w-0">
-          <p className="text-sm text-muted">Oi, {user?.name.split(' ')[0]} 💜</p>
+          <p className="text-sm text-muted">Oi, {user?.name.split(' ')[0]} {theme.heart}</p>
           <div className="relative">
             <button onClick={() => dateInput.current?.showPicker?.()} className="text-2xl font-bold first-letter:uppercase">
               {dayLabel(date)}

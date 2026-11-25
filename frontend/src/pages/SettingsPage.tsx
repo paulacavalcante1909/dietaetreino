@@ -7,6 +7,7 @@ import { useAuth } from '../lib/auth'
 import type { User } from '../lib/types'
 import { useToast } from '../components/Toast'
 import { APP_VERSION, checkForUpdate, hardRefresh } from '../lib/pwa'
+import { THEMES, useTheme } from '../lib/theme'
 
 function Section({ title, children, open, onToggle }: { title: string; children: ReactNode; open: boolean; onToggle: () => void }) {
   return (
@@ -81,6 +82,8 @@ export function SettingsPage() {
   return (
     <div className="safe-top space-y-3 px-5 pt-6 pb-6">
       <h1 className="mb-2 text-2xl font-bold">Ajustes</h1>
+
+      <ThemePicker />
 
       <Link to="/metas" className="block">
         <Card className="flex items-center justify-between !py-4 transition-transform active:scale-[0.98]">
@@ -187,6 +190,42 @@ function AppVersionCard() {
       <button onClick={reset} disabled={!!busy} className="mt-3 text-xs font-medium text-muted underline underline-offset-2">
         Problemas? Limpar cache e recarregar
       </button>
+    </Card>
+  )
+}
+
+/** Escolha do tema: cores, mascote, logo e favicon. */
+function ThemePicker() {
+  const { theme, setTheme } = useTheme()
+  return (
+    <Card className="!p-4">
+      <p className="mb-3 font-medium">Tema</p>
+      <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Tema do app">
+        {THEMES.map((t) => {
+          const active = t.id === theme.id
+          return (
+            <button
+              key={t.id}
+              role="radio"
+              aria-checked={active}
+              onClick={() => setTheme(t.id)}
+              className={`relative overflow-hidden rounded-2xl border-2 p-2 text-left transition-all active:scale-95 ${active ? 'border-primary shadow-md' : 'border-line'}`}
+              style={{ background: t.preview.bg }}
+            >
+              <img src={`${t.assets}/mascote.png`} alt="" className="mx-auto size-14 rounded-full" />
+              <div className="mt-2 flex justify-center gap-1" aria-hidden>
+                <span className="h-1.5 w-5 rounded-full" style={{ background: t.preview.accent }} />
+                <span className="h-1.5 w-3 rounded-full" style={{ background: t.preview.accent2 }} />
+              </div>
+              <p className="mt-1.5 text-center text-xs font-semibold" style={{ color: t.id === 'dark' ? '#eef0f3' : '#3a2418' }}>
+                {t.name}
+              </p>
+              {active && <span className="absolute top-1.5 right-1.5 flex size-5 items-center justify-center rounded-full bg-primary text-[10px] text-white">✓</span>}
+            </button>
+          )
+        })}
+      </div>
+      <p className="mt-2 text-xs text-muted">Muda cores, mascote e o ícone da aba. O ícone do app instalado continua o mesmo.</p>
     </Card>
   )
 }

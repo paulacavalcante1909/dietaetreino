@@ -114,7 +114,7 @@ export function RegisterPage() {
             .
           </span>
         </label>
-        {error?.field('terms') && <p className="text-sm text-[#b0403f]">{error.field('terms')}</p>}
+        {error?.field('terms') && <p className="text-sm text-danger">{error.field('terms')}</p>}
         <Button type="submit" loading={loading} className="mt-2">
           Criar conta
         </Button>

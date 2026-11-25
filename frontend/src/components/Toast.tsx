@@ -33,7 +33,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               initial={{ opacity: 0, y: -20, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10 }}
-              className="pointer-events-auto flex max-w-sm items-center gap-4 rounded-2xl bg-ink px-4 py-3 text-sm text-white shadow-xl"
+              className="pointer-events-auto flex max-w-sm items-center gap-4 rounded-2xl bg-scrim px-4 py-3 text-sm text-white shadow-xl"
               role="status"
             >
               <span>{toast.text}</span>
