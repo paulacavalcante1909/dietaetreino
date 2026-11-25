@@ -27,6 +27,9 @@ export interface RunState {
   restEndsAt: number | null // fim do descanso atual
   restSeconds: number // descanso padrão entre séries
   sessionId: number | null // salvo no servidor
+  timerKey?: string | null // cardio: exercício com cronômetro ativo/pausado
+  timerEndsAt?: number | null // cardio: fim do cronômetro em andamento
+  timerLeftMs?: number | null // cardio: tempo restante quando pausado
 }
 
 const KEY = 'dt_run'

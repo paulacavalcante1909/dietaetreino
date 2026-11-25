@@ -4,9 +4,10 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { ExerciseImage } from '../components/ExerciseImage'
 import { ExercisePicker } from '../components/ExercisePicker'
 import { Ring } from '../components/Ring'
-import { Sheet } from '../components/Sheet'
+import { SetsSheet } from '../components/SetsSheet'
+import { isTimed, minutesOf, prescription } from '../lib/workout'
 import { useToast } from '../components/Toast'
-import { Alert, Button, Field, Spinner } from '../components/ui'
+import { Alert, Button, Spinner } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import {
   clearRun, clock, durationLabel, loadRun, newRun, REST_OPTIONS, restDoneAlert, unlockAudio, useNow, useRun, useWakeLock,
@@ -14,7 +15,6 @@ import {
 } from '../lib/run'
 import type { Exercise, Workout, WorkoutSessionData } from '../lib/types'
 
-const REPS_SUGGESTIONS = ['8', '10', '12', '15', '8-12', 'até a falha', '30 s']
 const restLabel = (s: number) => (s < 60 ? `${s} s` : s % 60 ? `${Math.floor(s / 60)} min ${s % 60} s` : `${s / 60} min`)
 
 /**
@@ -114,7 +114,7 @@ function PrepView({ run, setRun }: { run: RunState; setRun: SetRun }) {
               <ExerciseImage image={it.exercise.image} name={it.exercise.name} size={48} animate={false} />
               <button onClick={() => setEditing({ item: it, index: idx })} className="min-w-0 flex-1 text-left">
                 <p className="truncate text-sm font-medium">{it.exercise.name}</p>
-                <p className="text-xs font-semibold text-primary">{it.sets} × {it.reps}</p>
+                <p className="text-xs font-semibold text-primary">{prescription(it)}</p>
               </button>
               <button aria-label={`Tirar ${it.exercise.name} de hoje`} onClick={() => setItems(run.items.filter((_, j) => j !== idx))} className="text-xl text-muted">×</button>
             </div>
@@ -146,9 +146,12 @@ function PrepView({ run, setRun }: { run: RunState; setRun: SetRun }) {
         }}
       />
       <SetsSheet
-        edit={editing}
+        item={editing?.item ?? null}
+        isNew={editing?.index === null}
+        saveLabel={editing && editing.index !== null ? 'Salvar para hoje' : undefined}
         onClose={() => setEditing(null)}
-        onSave={(it) => {
+        onSave={(v) => {
+          const it = { ...editing!.item, sets: v.sets, reps: v.reps, setsDone: Math.min(editing!.item.setsDone, v.sets) }
           if (editing?.index === null) setItems([...run.items, it])
           else setItems(run.items.map((x, j) => (j === editing!.index ? it : x)))
           setEditing(null)
@@ -167,46 +170,6 @@ function RestChips({ value, onChange }: { value: number; onChange: (s: number) =
         </button>
       ))}
     </div>
-  )
-}
-
-function SetsSheet({ edit, onClose, onSave }: { edit: { item: RunItem; index: number | null } | null; onClose: () => void; onSave: (i: RunItem) => void }) {
-  const [sets, setSets] = useState(3)
-  const [reps, setReps] = useState('12')
-
-  useEffect(() => {
-    if (!edit) return
-    setSets(edit.item.sets)
-    setReps(edit.item.reps)
-  }, [edit])
-
-  return (
-    <Sheet open={!!edit} onClose={onClose} title={edit?.item.exercise.name}>
-      {edit && (
-        <div className="space-y-5">
-          <div>
-            <p className="mb-2 text-sm font-medium text-muted">Séries</p>
-            <div className="flex items-center justify-center gap-4">
-              <button aria-label="Menos séries" onClick={() => setSets((s) => Math.max(1, s - 1))} className="flex size-14 items-center justify-center rounded-2xl bg-soft text-2xl font-semibold text-primary active:scale-90">−</button>
-              <span className="w-16 text-center text-4xl font-bold">{sets}</span>
-              <button aria-label="Mais séries" onClick={() => setSets((s) => Math.min(10, s + 1))} className="flex size-14 items-center justify-center rounded-2xl bg-soft text-2xl font-semibold text-primary active:scale-90">+</button>
-            </div>
-          </div>
-          <div>
-            <p className="mb-2 text-sm font-medium text-muted">Repetições</p>
-            <div className="mb-2 flex flex-wrap gap-2">
-              {REPS_SUGGESTIONS.map((r) => (
-                <button key={r} onClick={() => setReps(r)} className={`rounded-full px-3.5 py-2 text-sm font-medium ${reps === r ? 'bg-primary text-white' : 'bg-soft'}`}>{r}</button>
-              ))}
-            </div>
-            <Field label="Ou digite" name="reps" maxLength={20} value={reps} onChange={(e) => setReps(e.target.value)} />
-          </div>
-          <Button onClick={() => onSave({ ...edit.item, sets, reps: reps.trim() || '12', setsDone: Math.min(edit.item.setsDone, sets) })}>
-            {edit.index === null ? `Incluir ${sets} × ${reps || '12'}` : 'Salvar para hoje'}
-          </Button>
-        </div>
-      )}
-    </Sheet>
   )
 }
 
@@ -230,7 +193,36 @@ function ActiveView({ run, setRun }: { run: RunState; setRun: SetRun }) {
     }
   }, [now, run.restEndsAt, setRun])
 
-  const finish = () => setRun((r) => ({ ...r, phase: 'finished', finishedAt: Date.now(), current: null, restEndsAt: null }))
+  const finish = () =>
+    setRun((r) => ({ ...r, phase: 'finished', finishedAt: Date.now(), current: null, restEndsAt: null, timerKey: null, timerEndsAt: null, timerLeftMs: null }))
+
+  /* ── Cardio por tempo ── */
+  const finishTimed = (key: string) =>
+    setRun((r) => {
+      const items = r.items.map((x) => (x.key === key ? { ...x, setsDone: 1, done: true } : x))
+      const allDone = items.every((x) => x.done)
+      return { ...r, items, current: null, timerKey: null, timerEndsAt: null, timerLeftMs: null, ...(allDone ? { phase: 'finished' as const, finishedAt: Date.now() } : {}) }
+    })
+  const startTimer = (it: RunItem) => {
+    unlockAudio()
+    setRun((r) => ({ ...r, timerKey: it.key, timerEndsAt: Date.now() + minutesOf(it.reps) * 60_000, timerLeftMs: null }))
+  }
+  const pauseTimer = () => setRun((r) => (r.timerEndsAt ? { ...r, timerLeftMs: Math.max(0, r.timerEndsAt - Date.now()), timerEndsAt: null } : r))
+  const resumeTimer = () => {
+    unlockAudio()
+    setRun((r) => (r.timerLeftMs != null ? { ...r, timerEndsAt: Date.now() + r.timerLeftMs, timerLeftMs: null } : r))
+  }
+  const timerAlerted = useRef<number | null>(null)
+  useEffect(() => {
+    if (run.timerKey && run.timerEndsAt && run.timerEndsAt <= now && timerAlerted.current !== run.timerEndsAt) {
+      timerAlerted.current = run.timerEndsAt
+      restDoneAlert()
+      const it = run.items.find((x) => x.key === run.timerKey)
+      if (it) toast({ text: `✓ ${it.exercise.name}: tempo concluído!` })
+      finishTimed(run.timerKey)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [now, run.timerEndsAt, run.timerKey])
 
   const completeSet = (index: number) => {
     unlockAudio()
@@ -292,8 +284,9 @@ function ActiveView({ run, setRun }: { run: RunState; setRun: SetRun }) {
               <div className="min-w-0 flex-1">
                 <p className={`truncate font-semibold ${it.done ? 'text-muted line-through' : ''}`}>{it.exercise.name}</p>
                 <p className="text-sm text-muted">
-                  {it.sets} × {it.reps}
-                  {it.setsDone > 0 && !it.done && <span className="ml-2 font-semibold text-primary">{it.setsDone}/{it.sets} séries</span>}
+                  {prescription(it)}
+                  {it.setsDone > 0 && !it.done && !isTimed(it) && <span className="ml-2 font-semibold text-primary">{it.setsDone}/{it.sets} séries</span>}
+                  {run.timerKey === it.key && !it.done && <span className="ml-2 font-semibold text-primary">⏱ {clock(run.timerEndsAt ? run.timerEndsAt - now + 999 : (run.timerLeftMs ?? 0))}{run.timerLeftMs ? ' (pausado)' : ''}</span>}
                 </p>
               </div>
               {!it.done && (
@@ -301,7 +294,7 @@ function ActiveView({ run, setRun }: { run: RunState; setRun: SetRun }) {
                   onClick={() => setRun((r) => ({ ...r, current: idx }))}
                   className="shrink-0 rounded-xl bg-primary px-3.5 py-2 text-sm font-semibold text-white active:scale-95"
                 >
-                  {it.setsDone > 0 ? 'Continuar' : 'Iniciar'}
+                  {it.setsDone > 0 || run.timerKey === it.key ? 'Continuar' : 'Iniciar'}
                 </button>
               )}
             </div>
@@ -317,7 +310,23 @@ function ActiveView({ run, setRun }: { run: RunState; setRun: SetRun }) {
 
       {/* Execução do exercício */}
       <AnimatePresence>
-        {cur && run.current !== null && (
+        {cur && run.current !== null && isTimed(cur) && (
+          <TimedRunner
+            key={cur.key}
+            item={cur}
+            now={now}
+            active={run.timerKey === cur.key}
+            endsAt={run.timerKey === cur.key ? (run.timerEndsAt ?? null) : null}
+            leftMs={run.timerKey === cur.key ? (run.timerLeftMs ?? null) : null}
+            otherRunning={!!run.timerKey && run.timerKey !== cur.key}
+            onStart={() => startTimer(cur)}
+            onPause={pauseTimer}
+            onResume={resumeTimer}
+            onFinish={() => finishTimed(cur.key)}
+            onClose={() => setRun((r) => ({ ...r, current: null }))}
+          />
+        )}
+        {cur && run.current !== null && !isTimed(cur) && (
           <ExerciseRunner
             key={cur.key}
             item={cur}
@@ -335,6 +344,68 @@ function ActiveView({ run, setRun }: { run: RunState; setRun: SetRun }) {
         )}
       </AnimatePresence>
     </div>
+  )
+}
+
+/** Cardio por tempo: contagem regressiva com pausar/continuar. */
+function TimedRunner(props: {
+  item: RunItem
+  now: number
+  active: boolean
+  endsAt: number | null
+  leftMs: number | null
+  otherRunning: boolean
+  onStart: () => void
+  onPause: () => void
+  onResume: () => void
+  onFinish: () => void
+  onClose: () => void
+}) {
+  const { item, now, endsAt, leftMs } = props
+  const total = minutesOf(item.reps) * 60_000
+  const running = endsAt !== null
+  const paused = !running && leftMs !== null
+  const remaining = running ? Math.max(0, endsAt - now) : paused ? leftMs : total
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-40 overflow-y-auto bg-bg"
+      initial={{ y: '100%' }}
+      animate={{ y: 0 }}
+      exit={{ y: '100%' }}
+      transition={{ type: 'spring', stiffness: 380, damping: 38 }}
+    >
+      <div className="safe-top mx-auto flex min-h-full max-w-lg flex-col px-5 pt-4 pb-8">
+        <header className="mb-4 flex items-center gap-3">
+          <button onClick={props.onClose} aria-label="Voltar para a lista" className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface text-xl text-primary shadow-sm">⌄</button>
+          <h2 className="min-w-0 flex-1 truncate text-lg font-bold">{item.exercise.name}</h2>
+        </header>
+
+        <div className="flex flex-1 flex-col items-center justify-center gap-6 text-center">
+          <ExerciseImage image={item.exercise.image} name={item.exercise.name} size={120} animate={running} />
+          <Ring value={remaining} max={total} size={230} stroke={14} color="var(--color-orchid)">
+            <span className="font-mono text-5xl font-bold tabular-nums" role="timer" aria-live="off">{clock(remaining + (running ? 999 : 0))}</span>
+            <span className="text-sm text-muted">{running ? 'restantes' : paused ? 'pausado' : `meta: ${minutesOf(item.reps)} min`}</span>
+          </Ring>
+          {item.notes && <p className="rounded-2xl bg-soft px-3 py-2 text-sm">📝 {item.notes}</p>}
+          {props.otherRunning && <p className="text-sm text-muted">Há outro cronômetro em andamento; ao iniciar este, ele é substituído.</p>}
+        </div>
+
+        <div className="mt-6 space-y-3">
+          {running ? (
+            <Button variant="ghost" onClick={props.onPause} className="!h-14 text-lg">⏸ Pausar</Button>
+          ) : paused ? (
+            <Button onClick={props.onResume} className="!h-14 text-lg">▶ Continuar</Button>
+          ) : (
+            <Button onClick={props.onStart} className="!h-14 text-lg">▶ Iniciar {minutesOf(item.reps)} min</Button>
+          )}
+          <button onClick={props.onFinish} className="w-full py-2 text-sm font-medium text-muted underline-offset-2 hover:underline">
+            {running || paused ? 'Concluir agora' : 'Marcar como feito'}
+          </button>
+          {running && <p className="text-center text-xs text-muted">Pode voltar para a lista: o cronômetro continua e avisa no fim.</p>}
+        </div>
+      </div>
+    </motion.div>
   )
 }
 
@@ -427,7 +498,7 @@ function FinishedView({ run, setRun }: { run: RunState; setRun: SetRun }) {
   const [error, setError] = useState<string | null>(null)
   const seconds = Math.round(((run.finishedAt ?? Date.now()) - (run.startedAt ?? Date.now())) / 1000)
   const done = run.items.filter((i) => i.done && i.setsDone > 0)
-  const totalSets = run.items.reduce((a, i) => a + i.setsDone, 0)
+  const totalSets = run.items.filter((i) => !isTimed(i)).reduce((a, i) => a + i.setsDone, 0)
 
   // Salva o treino no servidor (uma vez); fica registrado mesmo sem check-in
   const save = async () => {
@@ -489,7 +560,7 @@ function FinishedView({ run, setRun }: { run: RunState; setRun: SetRun }) {
         {run.items.map((i) => (
           <li key={i.key} className="flex items-center justify-between rounded-xl bg-surface px-4 py-2.5 text-sm">
             <span className={`truncate ${i.done && i.setsDone > 0 ? '' : 'text-muted line-through'}`}>{i.exercise.name}</span>
-            <span className="shrink-0 pl-2 text-muted">{i.setsDone}/{i.sets} × {i.reps}</span>
+            <span className="shrink-0 pl-2 text-muted">{isTimed(i) ? `${i.done ? '✓ ' : ''}${minutesOf(i.reps)} min` : `${i.setsDone}/${i.sets} × ${i.reps}`}</span>
           </li>
         ))}
       </ul>

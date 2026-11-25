@@ -1,10 +1,11 @@
 import { durationLabel } from '../lib/run'
+import { isTimed, prescription } from '../lib/workout'
 import type { WorkoutSessionData } from '../lib/types'
 
 /** Resumo do treino executado: tempo, exercícios e séries (no check-in e no histórico). */
 export function SessionSummary({ session, compact = false }: { session: WorkoutSessionData; compact?: boolean }) {
   const done = session.exercises.filter((e) => e.done)
-  const sets = session.exercises.reduce((a, e) => a + e.sets_done, 0)
+  const sets = session.exercises.filter((e) => !isTimed(e)).reduce((a, e) => a + e.sets_done, 0)
 
   return (
     <div className="rounded-2xl bg-soft/70 p-3">
@@ -21,9 +22,7 @@ export function SessionSummary({ session, compact = false }: { session: WorkoutS
                 {e.done ? '✓ ' : ''}
                 {e.name}
               </span>
-              <span className="shrink-0 text-muted">
-                {e.sets_done}/{e.sets} × {e.reps}
-              </span>
+              <span className="shrink-0 text-muted">{isTimed(e) ? prescription(e) : `${e.sets_done}/${e.sets} × ${e.reps}`}</span>
             </li>
           ))}
         </ul>

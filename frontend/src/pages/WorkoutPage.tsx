@@ -1,15 +1,16 @@
-import { AnimatePresence, motion, Reorder } from 'framer-motion'
+import { motion, Reorder } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ExerciseImage } from '../components/ExerciseImage'
 import { ExercisePicker } from '../components/ExercisePicker'
 import { Sheet } from '../components/Sheet'
+import { SetsSheet } from '../components/SetsSheet'
+import { isTimed, minutesOf, prescription } from '../lib/workout'
 import { useToast } from '../components/Toast'
-import { Alert, Button, Field, Spinner } from '../components/ui'
+import { Alert, Button, Spinner } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import type { Exercise, Workout, WorkoutItem } from '../lib/types'
 
-const REPS_SUGGESTIONS = ['8', '10', '12', '15', '8-12', 'até a falha', '30 s']
 
 type Item = WorkoutItem & { key: string }
 const withKeys = (items: WorkoutItem[]): Item[] => items.map((i, n) => ({ ...i, key: `${i.id ?? 'n'}-${n}-${Math.random()}` }))
@@ -116,7 +117,7 @@ export function WorkoutPage() {
                 <ExerciseImage image={it.exercise.image} name={it.exercise.name} size={48} animate={false} />
                 <button onClick={() => setEditIndex(idx)} className="min-w-0 flex-1 text-left">
                   <p className="truncate text-sm font-medium">{it.exercise.name}</p>
-                  <p className="text-xs font-semibold text-primary">{it.sets} × {it.reps}</p>
+                  <p className="text-xs font-semibold text-primary">{prescription(it)}</p>
                 </button>
                 <button aria-label="Remover" onClick={() => setItems((l) => l.filter((_, j) => j !== idx))} className="text-xl text-muted">×</button>
               </div>
@@ -133,7 +134,7 @@ export function WorkoutPage() {
                   <p className="text-xs text-muted">{idx + 1}º exercício</p>
                   <p className="font-semibold leading-snug">{it.exercise.name}</p>
                   <p className="mt-1 inline-block rounded-full bg-orchid/15 px-2.5 py-0.5 text-sm font-bold text-primary">
-                    {it.sets} × {it.reps}
+                    {prescription(it)}
                   </p>
                   {it.notes && <p className="mt-1 text-xs text-muted">📝 {it.notes}</p>}
                 </div>
@@ -179,15 +180,16 @@ export function WorkoutPage() {
 
       {/* Séries/repetições: novo exercício ou edição */}
       <SetsSheet
-        item={pending ? { exercise_id: pending.id, exercise: pending, sets: 3, reps: '12', notes: null } : editIndex !== null ? items[editIndex] : null}
+        item={pending ? { exercise: pending, sets: 3, reps: '12', notes: null } : editIndex !== null ? items[editIndex] : null}
         isNew={!!pending}
         onClose={() => {
           setPending(null)
           setEditIndex(null)
         }}
-        onSave={(it) => {
-          if (pending) setItems((l) => [...l, ...withKeys([it])])
-          else setItems((l) => l.map((x, j) => (j === editIndex ? { ...x, ...it } : x)))
+        withNotes
+        onSave={(v) => {
+          if (pending) setItems((l) => [...l, ...withKeys([{ exercise_id: pending.id, exercise: pending, ...v }])])
+          else setItems((l) => l.map((x, j) => (j === editIndex ? { ...x, ...v } : x)))
           setPending(null)
           setEditIndex(null)
         }}
@@ -206,61 +208,12 @@ export function WorkoutPage() {
               <ExerciseImage image={null} name={viewing.exercise.name} size={96} />
             )}
             <p className="text-center text-2xl font-bold text-primary">
-              {viewing.sets} séries × {viewing.reps}
+              {isTimed(viewing) ? `${minutesOf(viewing.reps)} minutos` : `${viewing.sets} séries × ${viewing.reps}`}
             </p>
             {viewing.notes && <p className="rounded-2xl bg-soft p-3 text-sm">📝 {viewing.notes}</p>}
           </div>
         )}
       </Sheet>
     </div>
-  )
-}
-
-function SetsSheet({ item, isNew, onClose, onSave }: { item: WorkoutItem | null; isNew: boolean; onClose: () => void; onSave: (i: WorkoutItem) => void }) {
-  const [sets, setSets] = useState(3)
-  const [reps, setReps] = useState('12')
-  const [notes, setNotes] = useState('')
-
-  useEffect(() => {
-    if (!item) return
-    setSets(item.sets)
-    setReps(item.reps)
-    setNotes(item.notes ?? '')
-  }, [item])
-
-  return (
-    <Sheet open={!!item} onClose={onClose} title={item?.exercise.name}>
-      {item && (
-        <div className="space-y-5">
-          <div>
-            <p className="mb-2 text-sm font-medium text-muted">Séries</p>
-            <div className="flex items-center justify-center gap-4">
-              <button aria-label="Menos séries" onClick={() => setSets((s) => Math.max(1, s - 1))} className="flex size-14 items-center justify-center rounded-2xl bg-soft text-2xl font-semibold text-primary active:scale-90">−</button>
-              <AnimatePresence mode="popLayout" initial={false}>
-                <motion.span key={sets} initial={{ y: -12, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 12, opacity: 0 }} className="w-16 text-center text-4xl font-bold">
-                  {sets}
-                </motion.span>
-              </AnimatePresence>
-              <button aria-label="Mais séries" onClick={() => setSets((s) => Math.min(10, s + 1))} className="flex size-14 items-center justify-center rounded-2xl bg-soft text-2xl font-semibold text-primary active:scale-90">+</button>
-            </div>
-          </div>
-          <div>
-            <p className="mb-2 text-sm font-medium text-muted">Repetições</p>
-            <div className="mb-2 flex flex-wrap gap-2">
-              {REPS_SUGGESTIONS.map((r) => (
-                <button key={r} onClick={() => setReps(r)} className={`rounded-full px-3.5 py-2 text-sm font-medium transition-colors ${reps === r ? 'bg-primary text-white' : 'bg-soft'}`}>
-                  {r}
-                </button>
-              ))}
-            </div>
-            <Field label="Ou digite" name="reps" maxLength={20} value={reps} onChange={(e) => setReps(e.target.value)} />
-          </div>
-          <Field label="Observação (opcional)" name="notes" maxLength={200} placeholder="ex.: drop-set na última série" value={notes} onChange={(e) => setNotes(e.target.value)} />
-          <Button onClick={() => onSave({ ...item, sets, reps: reps.trim() || '12', notes: notes.trim() || null })}>
-            {isNew ? `Adicionar ${sets} × ${reps || '12'}` : 'Salvar'}
-          </Button>
-        </div>
-      )}
-    </Sheet>
   )
 }
