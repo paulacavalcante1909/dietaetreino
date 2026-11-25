@@ -83,6 +83,15 @@ class AuthController extends Controller
         return response()->json(['user' => $user]);
     }
 
+    /** Preferências do app (ex.: somar calorias do treino à meta do dia). */
+    public function updatePreferences(Request $request): JsonResponse
+    {
+        $data = $request->validate(['add_burned_to_goal' => ['required', 'boolean']]);
+        $request->user()->update($data);
+
+        return response()->json(['user' => $request->user()->fresh()]);
+    }
+
     public function updatePassword(Request $request): JsonResponse
     {
         $data = $request->validate([

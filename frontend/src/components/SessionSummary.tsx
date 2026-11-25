@@ -11,8 +11,9 @@ export function SessionSummary({ session, compact = false }: { session: WorkoutS
     <div className="rounded-2xl bg-soft/70 p-3">
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm font-semibold">
         <span>⏱️ {durationLabel(session.duration_seconds)}</span>
-        <span>💪 {done.length}/{session.exercises.length} exercícios</span>
-        <span>🔁 {sets} séries</span>
+        <span>💪 {done.length}/{session.exercises.length} {session.exercises.length === 1 ? 'exercício' : 'exercícios'}</span>
+        {sets > 0 && <span>🔁 {sets} {sets === 1 ? 'série' : 'séries'}</span>}
+        {session.kcal_burned != null && <span title="Estimativa média (MET × peso × tempo)">🔥 ~{session.kcal_burned} kcal</span>}
       </div>
       {!compact && (
         <ul className="mt-2 space-y-1">

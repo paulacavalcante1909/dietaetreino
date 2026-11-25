@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Workout;
+use App\Models\Weight;
 use App\Models\WorkoutSession;
+use App\Services\CalorieEstimator;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -12,7 +14,7 @@ use Illuminate\Http\Request;
 class WorkoutSessionController extends Controller
 {
     /** Salva um treino executado (enviado ao finalizar). */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, CalorieEstimator $estimator): JsonResponse
     {
         $user = $request->user();
         $data = $request->validate([
@@ -55,6 +57,13 @@ class WorkoutSessionController extends Controller
                 'done' => (bool) $e['done'],
             ], $data['exercises']),
         ]);
+        // Estimativa de gasto: peso mais recente até o dia do treino (sem registro → 65 kg)
+        $weight = Weight::where('user_id', $user->id)->whereDate('date', '<=', $end->toDateString())->orderByDesc('date')->value('kg');
+        $kg = $weight ? (float) $weight : CalorieEstimator::DEFAULT_WEIGHT;
+        $session->kcal_burned = $estimator->estimate($session->exercises, $session->duration_seconds, $kg);
+        $session->weight_kg = $kg;
+        $session->weight_estimated = $weight === null;
+
         $session->user_id = $user->id;
         $session->save();
 

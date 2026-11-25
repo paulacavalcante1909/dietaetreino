@@ -30,6 +30,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::put('/me', [AuthController::class, 'updateProfile']);
     Route::put('/me/password', [AuthController::class, 'updatePassword']);
+    Route::put('/me/preferences', [AuthController::class, 'updatePreferences']);
     Route::delete('/me', [AuthController::class, 'destroy']);
 
     // Metas

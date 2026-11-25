@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\WorkoutSession;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -37,9 +38,16 @@ class DayController extends Controller
         $all = $entries->flatten();
         $water = $user->waterLogs()->whereDate('date', $date)->orderBy('id')->get();
 
+        // Gasto estimado nos treinos do dia; só entra na meta se a usuária escolheu em Ajustes
+        $burned = (int) WorkoutSession::where('user_id', $user->id)->whereDate('date', $date)->sum('kcal_burned');
+        $goal = $user->goalFor($date);
+
         return response()->json([
             'date' => $date,
-            'goal' => $user->goalFor($date),
+            'goal' => $goal,
+            'burned' => $burned,
+            'add_burned_to_goal' => (bool) $user->add_burned_to_goal,
+            'kcal_target' => $goal ? $goal->kcal + ($user->add_burned_to_goal ? $burned : 0) : null,
             'totals' => [
                 'kcal' => round($all->sum('kcal'), 1),
                 'carbs' => round($all->sum('carbs'), 1),

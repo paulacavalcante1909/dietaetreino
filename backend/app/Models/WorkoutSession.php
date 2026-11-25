@@ -17,6 +17,9 @@ class WorkoutSession extends Model
             'started_at' => 'datetime',
             'finished_at' => 'datetime',
             'duration_seconds' => 'integer',
+            'kcal_burned' => 'integer',
+            'weight_kg' => 'float',
+            'weight_estimated' => 'boolean',
             'exercises' => 'array',
         ];
     }

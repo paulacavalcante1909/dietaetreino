@@ -525,7 +525,7 @@ function FinishedView({ run, setRun }: { run: RunState; setRun: SetRun }) {
           })),
         },
       })
-      setRun((s) => ({ ...s, sessionId: r.session.id }))
+      setRun((s) => ({ ...s, sessionId: r.session.id, kcalBurned: r.session.kcal_burned, weightEstimated: r.session.weight_estimated }))
     } catch (e) {
       setError((e as ApiError).message)
     } finally {
@@ -554,8 +554,12 @@ function FinishedView({ run, setRun }: { run: RunState; setRun: SetRun }) {
       <div className="mt-6 grid grid-cols-3 gap-2 text-center">
         <SummaryStat icon="⏱️" value={durationLabel(seconds)} label="de treino" />
         <SummaryStat icon="💪" value={`${done.length}/${run.items.length}`} label="exercícios" />
-        <SummaryStat icon="🔁" value={String(totalSets)} label="séries" />
+        <SummaryStat icon="🔥" value={run.kcalBurned != null ? `~${run.kcalBurned}` : '…'} label="kcal gastas" />
       </div>
+      <p className="mt-2 text-center text-xs text-muted">
+        {totalSets > 0 && `${totalSets} ${totalSets === 1 ? 'série' : 'séries'} · `}Gasto estimado (média por MET × peso × tempo).
+        {run.weightEstimated && ' Registre seu peso em Progresso para uma estimativa melhor.'}
+      </p>
 
       <ul className="mt-5 space-y-1.5">
         {run.items.map((i) => (

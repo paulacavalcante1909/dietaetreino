@@ -44,6 +44,7 @@ export function HomePage() {
   }
 
   const goal = day?.goal
+  const target = day?.kcal_target ?? goal?.kcal ?? 0
   const t = day?.totals
 
   return (
@@ -111,13 +112,14 @@ export function HomePage() {
             <motion.div variants={container} initial="hidden" animate="show" className="space-y-4">
               <motion.div variants={item}>
                 <Card className="flex flex-col items-center gap-5">
-                  <Ring value={t.kcal} max={goal.kcal} color="var(--color-orchid)">
-                    <span className="text-3xl font-bold">{fmt(Math.abs(goal.kcal - t.kcal))}</span>
-                    <span className="text-sm text-muted">{t.kcal > goal.kcal ? 'kcal acima' : 'kcal restantes'}</span>
+                  <Ring value={t.kcal} max={target} color="var(--color-orchid)">
+                    <span className="text-3xl font-bold">{fmt(Math.abs(target - t.kcal))}</span>
+                    <span className="text-sm text-muted">{t.kcal > target ? 'kcal acima' : 'kcal restantes'}</span>
                   </Ring>
-                  <div className="flex w-full justify-around text-center text-sm">
+                  <div className="grid w-full grid-cols-3 text-center text-sm">
                     <Stat value={t.kcal} label="consumidas" />
-                    <Stat value={goal.kcal} label="meta" />
+                    <Stat value={target} label={day.add_burned_to_goal && day.burned > 0 ? 'meta + treino' : 'meta'} />
+                    <Stat value={day.burned} label="gastas no treino" prefix="🔥 ~" />
                   </div>
                   <div className="w-full space-y-3">
                     <Bar label="Carboidratos" value={t.carbs} max={goal.carbs_g} unit="g" color="var(--color-lavender)" />
@@ -203,10 +205,13 @@ function NavBtn({ label, onClick, children }: { label: string; onClick: () => vo
   )
 }
 
-function Stat({ value, label }: { value: number; label: string }) {
+function Stat({ value, label, prefix = '' }: { value: number; label: string; prefix?: string }) {
   return (
     <div>
-      <p className="font-semibold">{fmt(value)}</p>
+      <p className="font-semibold">
+        {value > 0 ? prefix : ''}
+        {fmt(value)}
+      </p>
       <p className="text-muted">{label}</p>
     </div>
   )

@@ -3,6 +3,7 @@ export interface User {
   name: string
   email: string
   created_at: string
+  add_burned_to_goal?: boolean
 }
 
 export interface Goal {
@@ -123,6 +124,9 @@ export interface DayData {
   date: string
   goal: Goal | null
   totals: Nutrients & { water: number }
+  burned: number // kcal estimadas gastas nos treinos do dia
+  add_burned_to_goal: boolean
+  kcal_target: number | null // meta + treino (se a preferência estiver ligada)
   meals: DayMeal[]
   water: WaterLog[]
 }
@@ -188,6 +192,8 @@ export interface WorkoutSessionData {
   started_at: string
   finished_at: string
   duration_seconds: number
+  kcal_burned: number | null
+  weight_estimated?: boolean
   exercises: SessionExercise[]
 }
 
