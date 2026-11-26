@@ -11,7 +11,7 @@ class MealControllerTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_suggestions_bring_the_last_time_and_the_usual_foods_of_the_meal(): void
+    public function test_suggestion_brings_the_last_time_the_meal_was_registered(): void
     {
         $user = User::factory()->create();
         $meal = $user->meals()->first();
@@ -23,16 +23,13 @@ class MealControllerTest extends TestCase
         $add('2026-11-23', $egg, 100);
         $add('2026-11-24', $egg, 150);
         $add('2026-11-24', $bread, 50);
-        $add('2026-11-25', $bread, 50); // já registrado hoje: sai das sugestões
+        $add('2026-11-25', $bread, 50); // parte da refeição já registrada hoje: ainda sugere
 
         $this->actingAs($user)->getJson("/api/meals/{$meal->id}/suggestions?date=2026-11-25")
             ->assertOk()
             ->assertJsonPath('last.date', '2026-11-24')
             ->assertJsonPath('last.items', ['Ovo cozido', 'Pão francês'])
-            ->assertJsonCount(1, 'frequent')
-            ->assertJsonPath('frequent.0.name', 'Ovo cozido')
-            ->assertJsonPath('frequent.0.quantity', 150)
-            ->assertJsonPath('frequent.0.times', 2);
+            ->assertJsonMissingPath('frequent');
 
         // Depois de repetir a refeição inteira, ela não aparece mais como sugestão
         $add('2026-11-25', $egg, 150);

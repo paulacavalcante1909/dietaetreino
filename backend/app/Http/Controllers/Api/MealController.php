@@ -71,10 +71,8 @@ class MealController extends Controller
     }
 
     /**
-     * Sugestões para registrar uma refeição rápido:
-     * - `last`: o que foi registrado nela da última vez (para repetir inteira);
-     * - `frequent`: o que mais aparece nela nos últimos 60 dias, com a porção da última vez
-     *   (sem o que já foi registrado na refeição neste dia).
+     * Sugestão para registrar uma refeição rápido: o que foi registrado nela da última vez
+     * (`last`, para repetir inteira com 1 toque).
      */
     public function suggestions(Request $request, Meal $meal): JsonResponse
     {
@@ -95,24 +93,6 @@ class MealController extends Controller
             }
         }
 
-        $recent = (clone $entries)
-            ->whereDate('date', '>=', CarbonImmutable::parse($date)->subDays(60)->toDateString())
-            ->where(fn ($q) => $q->whereNotNull('food_id')->orWhereNotNull('recipe_id'))
-            ->orderByDesc('id')
-            ->get(['food_id', 'recipe_id', 'name', 'quantity', 'portion_id', 'unit_label', 'kcal']);
-
-        $frequent = $recent
-            ->groupBy(fn ($e) => $e->recipe_id ? 'r'.$e->recipe_id : 'f'.$e->food_id)
-            ->reject(fn ($group) => $today->contains(fn ($t) => $group[0]->recipe_id ? $t->recipe_id === $group[0]->recipe_id : $t->food_id === $group[0]->food_id))
-            ->sortByDesc(fn ($group) => $group->count())
-            ->take(8)
-            ->map(fn ($group) => [
-                ...$group[0]->only('food_id', 'recipe_id', 'name', 'quantity', 'portion_id', 'unit_label'),
-                'kcal' => round($group[0]->kcal),
-                'times' => $group->count(),
-            ])
-            ->values();
-
-        return response()->json(['last' => $last, 'frequent' => $frequent]);
+        return response()->json(['last' => $last]);
     }
 }
