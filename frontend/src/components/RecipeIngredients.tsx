@@ -4,10 +4,10 @@ import { FoodSearch } from './FoodSearch'
 import { FoodSheet, type FoodTarget } from './FoodSheet'
 import { LazyBarcodeScanner as BarcodeScanner } from './LazyBarcodeScanner'
 import { QuantityPicker, type QtyValue } from './QuantityPicker'
-import { fmt } from './Ring'
+import { fmtKcal } from './Ring'
 import { Sheet } from './Sheet'
 import { useToast } from './Toast'
-import { Button } from './ui'
+import { BackButton, Button } from './ui'
 import { entryQtyLabel, fmtQty, nutrientsFor, num } from '../lib/nutrition'
 import type { FoodDetail, Nutrients, RecipeItem } from '../lib/types'
 
@@ -56,7 +56,7 @@ export function IngredientList({ items, onEdit }: { items: RecipeItem[]; onEdit:
                 </p>
                 <p className="truncate text-xs text-muted">{itemLabel(i)}</p>
               </div>
-              <span className="shrink-0 text-sm text-muted">{fmt(nutrientsFor(i.food, itemAmount(i)).kcal)} kcal</span>
+              <span className="shrink-0 text-sm text-muted">{fmtKcal(nutrientsFor(i.food, itemAmount(i)).kcal)} kcal</span>
             </button>
           </motion.li>
         ))}
@@ -130,9 +130,7 @@ export function IngredientPicker({ open, onClose, onAdd, confirmLabel = 'Adicion
           >
             <div className="safe-top mx-auto max-w-lg px-5 pt-4 pb-10">
               <header className="mb-4 flex items-center gap-3">
-                <button onClick={onClose} aria-label="Fechar" className="flex size-10 items-center justify-center rounded-full bg-surface text-xl text-primary shadow-sm">
-                  ×
-                </button>
+                <BackButton onClick={onClose} label="Fechar" icon="close" />
                 <h2 className="text-xl font-bold">Adicionar ingrediente</h2>
               </header>
               <FoodSearch onPickFood={setTarget} onScan={() => setScanning(true)} />

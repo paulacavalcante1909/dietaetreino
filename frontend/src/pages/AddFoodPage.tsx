@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
+import { BackButton } from '../components/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { LazyBarcodeScanner as BarcodeScanner } from '../components/LazyBarcodeScanner'
@@ -6,10 +7,10 @@ import { FoodSearch } from '../components/FoodSearch'
 import { FoodSheet, type FoodTarget } from '../components/FoodSheet'
 import { RecipeSheet, type RecipeAdjustment } from '../components/RecipeSheet'
 import { useToast } from '../components/Toast'
-import { api } from '../lib/api'
+import { api, ApiError } from '../lib/api'
 import { isoDate } from '../lib/date'
-import { fmt } from '../components/Ring'
-import type { Entry, FoodDetail, Meal, RecipeSummary } from '../lib/types'
+import { fmtKcal } from '../components/Ring'
+import type { Entry, FoodDetail, FoodLite, Meal, RecipeSummary } from '../lib/types'
 
 export function AddFoodPage() {
   const navigate = useNavigate()
@@ -41,6 +42,21 @@ export function AddFoodPage() {
     registerAdded(r.entry)
     setTarget(null)
     toast({ text: `${food.name.split(',')[0]} adicionado ✓` })
+  }
+
+  // Recentes: adiciona de novo com a mesma porção da última vez (1 toque)
+  const quickAdd = async (f: FoodLite) => {
+    if (!f.last) return
+    try {
+      const r = await api<{ entry: Entry }>('/entries', {
+        method: 'POST',
+        body: { date, meal_id: mealId, food_id: f.id, quantity: f.last.quantity, portion_id: f.last.portion_id },
+      })
+      registerAdded(r.entry)
+      toast({ text: `${(f.display_name || f.name).split(',')[0]} adicionado ✓` })
+    } catch (e) {
+      toast({ text: (e as ApiError).message })
+    }
   }
 
   const addRecipe = async (servings: number, items: RecipeAdjustment[] | null) => {
@@ -90,9 +106,7 @@ export function AddFoodPage() {
   return (
     <div className={`safe-top mx-auto flex min-h-full max-w-lg flex-col px-5 pt-4 ${added.length ? 'pb-32' : 'pb-8'}`}>
       <header className="mb-4 flex items-center gap-3">
-        <button onClick={() => (added.length ? goHome() : navigate(-1))} aria-label="Voltar" className="flex size-10 items-center justify-center rounded-full bg-surface text-2xl text-primary shadow-sm">
-          ‹
-        </button>
+        <BackButton onClick={() => (added.length ? goHome() : navigate(-1))} />
         <div>
           <h1 className="text-xl font-bold">Adicionar alimento</h1>
           <p className="text-sm text-muted">{meal?.name ?? '…'}</p>
@@ -107,6 +121,7 @@ export function AddFoodPage() {
           onPickRecipe={setRecipe}
           onScan={() => setScanning(true)}
           onQueryChange={onQueryChange}
+          onQuickAdd={quickAdd}
         />
       </div>
 
@@ -146,7 +161,7 @@ export function AddFoodPage() {
             <div className="mx-auto flex max-w-lg items-center gap-3 px-5 py-3">
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold">
-                  ✓ {added.length} {added.length === 1 ? 'item adicionado' : 'itens adicionados'} · {fmt(totalKcal)} kcal
+                  ✓ {added.length} {added.length === 1 ? 'item adicionado' : 'itens adicionados'} · {fmtKcal(totalKcal)} kcal
                 </p>
                 <p className="truncate text-xs text-muted">
                   {added.map((a) => a.name.split(',')[0]).join(', ')} ·{' '}

@@ -15,7 +15,7 @@ const shortDate = (s: string) => parseIso(s).toLocaleDateString('pt-BR', { day: 
  * Uma série: sem legenda (o título da seção nomeia). Grade discreta, linha 2px,
  * marcador no último ponto, crosshair + tooltip ao tocar/passar o mouse.
  */
-export function WeightChart({ data }: { data: Weight[] }) {
+export function WeightChart({ data, label = 'peso' }: { data: Weight[]; label?: string }) {
   const svg = useRef<SVGSVGElement>(null)
   const [hover, setHover] = useState<number | null>(null)
 
@@ -60,7 +60,7 @@ export function WeightChart({ data }: { data: Weight[] }) {
         viewBox={`0 0 ${W} ${H}`}
         className="w-full touch-pan-y select-none"
         role="img"
-        aria-label={`Gráfico do peso de ${shortDate(data[0].date)} a ${shortDate(data[data.length - 1].date)}`}
+        aria-label={`Gráfico de ${label} de ${shortDate(data[0].date)} a ${shortDate(data[data.length - 1].date)}`}
         onPointerMove={onMove}
         onPointerDown={onMove}
         onPointerLeave={() => setHover(null)}

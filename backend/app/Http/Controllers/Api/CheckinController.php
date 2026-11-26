@@ -41,27 +41,31 @@ class CheckinController extends Controller
     {
         $user = $request->user();
         $data = $request->validate([
-            'workout_id' => ['required', 'integer'],
+            // Treino da ficha (workout_id) OU exercício avulso (apenas session_id, sem ficha)
+            'workout_id' => ['required_without:session_id', 'nullable', 'integer'],
             'session_id' => ['nullable', 'integer'],
-            'photo' => ['required', 'image', 'mimes:jpeg,png,webp,heic,heif', 'max:12288'],
+            'photo' => ['nullable', 'image', 'mimes:jpeg,png,webp,heic,heif', 'max:12288'],
             'note' => ['nullable', 'string', 'max:280'],
             'date' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:today'],
         ], [
+            'workout_id.required_without' => 'Escolha um treino da ficha ou um exercício.',
             'photo.required' => 'Tire ou escolha a foto do dia.',
             'photo.image' => 'O arquivo precisa ser uma imagem.',
             'photo.max' => 'A foto é muito grande (máximo 12 MB).',
         ]);
 
-        $workout = Workout::where('user_id', $user->id)->findOrFail($data['workout_id']);
-        $sessionId = isset($data['session_id'])
-            ? WorkoutSession::where('user_id', $user->id)->whereKey($data['session_id'])->value('id')
-            : null;
-        $path = $this->storePhoto($data['photo'], $user->id);
+        $workout = ! empty($data['workout_id']) ? Workout::where('user_id', $user->id)->findOrFail($data['workout_id']) : null;
+        $session = ! empty($data['session_id']) ? WorkoutSession::where('user_id', $user->id)->find($data['session_id']) : null;
+        if (! $workout && ! $session) {
+            throw ValidationException::withMessages(['session_id' => 'Escolha um treino da ficha ou um exercício.']);
+        }
+        $path = isset($data['photo']) ? $this->storePhoto($data['photo'], $user->id) : null;
 
         $checkin = new Checkin([
-            'workout_id' => $workout->id,
-            'session_id' => $sessionId,
-            'workout_name' => $workout->name,
+            'workout_id' => $workout?->id,
+            'session_id' => $session?->id,
+            // Avulso: o nome vem do registro (ex.: "Corrida na esteira")
+            'workout_name' => $workout?->name ?? $session->workout_name,
             'date' => $data['date'] ?? now()->toDateString(),
             'photo_path' => $path,
             'note' => $data['note'] ?? null,
@@ -117,6 +121,16 @@ class CheckinController extends Controller
         return $path;
     }
 
+    private function weekDays(int $userId): int
+    {
+        $start = CarbonImmutable::today()->startOfWeek()->toDateString();
+        $end = CarbonImmutable::today()->endOfWeek()->toDateString();
+        $a = Checkin::where('user_id', $userId)->whereBetween('date', [$start, $end])->pluck('date')->map(fn ($d) => substr((string) $d, 0, 10));
+        $b = WorkoutSession::where('user_id', $userId)->whereBetween('date', [$start, $end])->pluck('date')->map(fn ($d) => substr((string) $d, 0, 10));
+
+        return $a->merge($b)->unique()->count();
+    }
+
     private function stats(int $userId, CarbonImmutable $monthStart): array
     {
         $dates = Checkin::where('user_id', $userId)
@@ -144,6 +158,9 @@ class CheckinController extends Controller
             'month_count' => $inMonth,
             'total_count' => $all->count(),
             'today' => isset($set[CarbonImmutable::today()->toDateString()]),
+            // Semana atual (seg–dom): dias com treino (check-in ou treino executado) × meta
+            'week_days' => $this->weekDays($userId),
+            'weekly_goal' => (int) (\App\Models\User::whereKey($userId)->value('weekly_workout_goal') ?? 3),
         ];
     }
 }

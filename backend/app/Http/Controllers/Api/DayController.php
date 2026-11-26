@@ -19,12 +19,14 @@ class DayController extends Controller
         $user->ensureMeals();
 
         $entries = $user->entries()->whereDate('date', $date)->orderBy('id')->get()->groupBy('meal_id');
+        $yesterday = $user->entries()->whereDate('date', date('Y-m-d', strtotime($date.' -1 day')))
+            ->selectRaw('meal_id, COUNT(*) as n')->groupBy('meal_id')->pluck('n', 'meal_id');
 
         // Refeições ativas + inativas que tenham itens neste dia
         $meals = $user->meals()->get()
             ->filter(fn ($m) => $m->active || $entries->has($m->id))
             ->values()
-            ->map(function ($m) use ($entries) {
+            ->map(function ($m) use ($entries, $yesterday) {
                 $items = $entries->get($m->id, collect())->values();
 
                 return [
@@ -32,6 +34,7 @@ class DayController extends Controller
                     'name' => $m->name,
                     'kcal' => round($items->sum('kcal'), 1),
                     'entries' => $items,
+                    'yesterday_count' => (int) ($yesterday[$m->id] ?? 0),
                 ];
             });
 

@@ -10,6 +10,8 @@ use App\Http\Controllers\Api\EntryController;
 use App\Http\Controllers\Api\FoodController;
 use App\Http\Controllers\Api\GoalController;
 use App\Http\Controllers\Api\MealController;
+use App\Http\Controllers\Api\PasswordResetController;
+use App\Http\Controllers\Api\StatsController;
 use App\Http\Controllers\Api\RecipeController;
 use App\Http\Controllers\Api\WaterController;
 use App\Http\Controllers\Api\WeightController;
@@ -18,6 +20,8 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('throttle:10,1')->group(function () {
     Route::post('/auth/register', [AuthController::class, 'register']);
     Route::post('/auth/login', [AuthController::class, 'login']);
+    Route::post('/auth/forgot', [PasswordResetController::class, 'forgot']);
+    Route::post('/auth/reset', [PasswordResetController::class, 'reset']);
 });
 
 // Foto do check-in: acesso só por link temporário assinado (a tag <img> não envia o token)
@@ -39,6 +43,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Painel do dia
     Route::get('/day/{date}', [DayController::class, 'show']);
+
+    // Estatísticas
+    Route::get('/calendar', [StatsController::class, 'calendar']);
+    Route::get('/stats/week', [StatsController::class, 'week']);
+    Route::get('/stats/workouts', [StatsController::class, 'workouts']);
+    Route::get('/stats/loads', [StatsController::class, 'loads']);
 
     // Refeições
     Route::get('/meals', [MealController::class, 'index']);

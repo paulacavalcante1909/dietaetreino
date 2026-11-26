@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 
 class FoodController extends Controller
 {
-    private const LIST_COLUMNS = ['id', 'user_id', 'source', 'name', 'brand', 'base_qty', 'base_unit', 'kcal', 'carbs', 'protein', 'fat', 'sodium'];
+    private const LIST_COLUMNS = ['id', 'user_id', 'source', 'name', 'display_name', 'brand', 'base_qty', 'base_unit', 'kcal', 'carbs', 'protein', 'fat', 'sodium'];
 
     /**
      * Código de barras: 1) alimento da usuária com esse código, 2) cache global, 3) Open Food Facts.
@@ -86,8 +86,14 @@ class FoodController extends Controller
             ->limit(30)
             ->pluck('food_id');
 
+        // Última porção usada de cada alimento (para "adicionar de novo" com 1 toque)
+        $last = $request->user()->entries()->whereIn('food_id', $ids)
+            ->orderByDesc('id')->get(['food_id', 'quantity', 'portion_id', 'unit_label', 'kcal'])
+            ->unique('food_id')->keyBy('food_id');
+
         $foods = Food::whereIn('id', $ids)->select(self::LIST_COLUMNS)->get()
-            ->sortBy(fn ($f) => $ids->search($f->id))->values();
+            ->sortBy(fn ($f) => $ids->search($f->id))->values()
+            ->map(fn ($f) => [...$f->toArray(), 'last' => $last->get($f->id)?->only('quantity', 'portion_id', 'unit_label', 'kcal')]);
 
         return response()->json(['foods' => $foods]);
     }

@@ -1,6 +1,7 @@
+import { Plus } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
-import { fmt } from './Ring'
+import { fmtKcal } from './Ring'
 import { Alert } from './ui'
 import { api, ApiError } from '../lib/api'
 import { baseLabel } from '../lib/nutrition'
@@ -17,10 +18,12 @@ interface Props {
   onQueryChange?: (q: string) => void
   /** Incrementar para recarregar as abas (ex.: após favoritar). */
   refreshKey?: number
+  /** Adicionar de novo com a última porção (aba Recentes). */
+  onQuickAdd?: (f: FoodLite) => void
 }
 
 /** Busca de alimentos: base local + produtos de marca (Open Food Facts) + abas rápidas. */
-export function FoodSearch({ withRecipes, onPickFood, onPickRecipe, onScan, onQueryChange, refreshKey = 0 }: Props) {
+export function FoodSearch({ withRecipes, onPickFood, onPickRecipe, onScan, onQueryChange, refreshKey = 0, onQuickAdd }: Props) {
   const tabs: { key: Tab; label: string }[] = [
     { key: 'buscar', label: 'Buscar' },
     { key: 'recentes', label: 'Recentes' },
@@ -28,7 +31,7 @@ export function FoodSearch({ withRecipes, onPickFood, onPickRecipe, onScan, onQu
     ...(withRecipes ? [{ key: 'receitas' as Tab, label: 'Refeições prontas' }] : []),
     { key: 'meus', label: 'Meus alimentos' },
   ]
-  const [tab, setTab] = useState<Tab>('buscar')
+  const [tab, setTab] = useState<Tab>('recentes')
   const [query, setQuery] = useState('')
   const [lists, setLists] = useState<Partial<Record<Tab, FoodLite[]>>>({})
   const [recipes, setRecipes] = useState<RecipeSummary[] | null>(null)
@@ -130,7 +133,7 @@ export function FoodSearch({ withRecipes, onPickFood, onPickRecipe, onScan, onQu
           ) : (
             <>
               {loading && !foods && <ListSkeleton />}
-              {foods && foods.length > 0 && <FoodList foods={foods} onPick={(f) => onPickFood({ id: f.id })} />}
+              {foods && foods.length > 0 && <FoodList foods={foods} onPick={(f) => onPickFood({ id: f.id })} onQuickAdd={tab === 'recentes' ? onQuickAdd : undefined} />}
               {foods && foods.length === 0 && <Empty tab={tab} query={query} />}
               {!foods && !loading && tab === 'buscar' && (
                 <p className="py-8 text-center text-sm text-muted">Digite o nome do alimento ou toque no leitor para escanear o código de barras.</p>
@@ -175,23 +178,36 @@ export function FoodSearch({ withRecipes, onPickFood, onPickRecipe, onScan, onQu
   )
 }
 
-function FoodList({ foods, onPick }: { foods: FoodLite[]; onPick: (f: FoodLite) => void }) {
+function FoodList({ foods, onPick, onQuickAdd }: { foods: FoodLite[]; onPick: (f: FoodLite) => void; onQuickAdd?: (f: FoodLite) => void }) {
   return (
     <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] bg-surface shadow-[0_2px_12px_-4px_rgba(31,23,36,0.08)]">
-      {foods.map((f) => (
-        <li key={f.id}>
-          <button onClick={() => onPick(f)} className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition-colors active:bg-soft">
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium">{f.name}</p>
-              <p className="truncate text-xs text-muted">
-                {f.brand ? `${f.brand} · ` : ''}
-                {baseLabel(f)} · {f.user_id ? 'meu' : f.source === 'taco' ? 'TACO' : 'Open Food Facts'}
-              </p>
-            </div>
-            <span className="shrink-0 text-sm font-semibold text-primary">{fmt(f.kcal)} kcal</span>
-          </button>
-        </li>
-      ))}
+      {foods.map((f) => {
+        const quick = onQuickAdd && f.last
+        return (
+          <li key={f.id} className="flex items-center">
+            <button onClick={() => onPick(f)} className="flex min-w-0 flex-1 items-center justify-between gap-3 px-4 py-3.5 text-left transition-colors active:bg-soft">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold">{f.display_name || f.name}</p>
+                <p className="truncate text-xs text-muted">
+                  {quick
+                    ? `Última vez: ${f.last!.unit_label.includes('(') ? `${f.last!.quantity} × ${f.last!.unit_label}` : `${f.last!.quantity} ${f.last!.unit_label}`}`
+                    : `${f.brand ? `${f.brand} · ` : ''}${baseLabel(f)} · ${f.user_id ? 'meu' : f.source === 'taco' ? 'TACO' : 'Open Food Facts'}`}
+                </p>
+              </div>
+              <span className="shrink-0 text-sm font-bold text-primary">{fmtKcal(quick ? f.last!.kcal : f.kcal)} kcal</span>
+            </button>
+            {quick && (
+              <button
+                onClick={() => onQuickAdd!(f)}
+                aria-label={`Adicionar ${f.display_name || f.name} de novo (mesma porção)`}
+                className="mr-3 flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-white shadow active:scale-90"
+              >
+                <Plus className="size-5" strokeWidth={2.75} />
+              </button>
+            )}
+          </li>
+        )
+      })}
     </ul>
   )
 }
@@ -210,7 +226,7 @@ function RecipeList({ recipes, loading, onPick }: { recipes: RecipeSummary[] | n
                 {r.items_count} {r.items_count === 1 ? 'ingrediente' : 'ingredientes'} · por porção
               </p>
             </div>
-            <span className="shrink-0 text-sm font-semibold text-primary">{fmt(r.per_serving.kcal)} kcal</span>
+            <span className="shrink-0 text-sm font-semibold text-primary">{fmtKcal(r.per_serving.kcal)} kcal</span>
           </button>
         </li>
       ))}
@@ -222,7 +238,7 @@ function Empty({ tab, query }: { tab: Tab; query: string }) {
   const text = {
     buscar: `Nada na base para “${query}”. Veja os produtos de marca abaixo ou cadastre.`,
     recentes: 'Os alimentos que você registrar aparecem aqui.',
-    favoritos: 'Toque na ☆ de um alimento para favoritar.',
+    favoritos: 'Toque na estrela de um alimento para favoritar.',
     receitas: '',
     meus: 'Você ainda não cadastrou alimentos.',
   }[tab]

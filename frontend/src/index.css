@@ -12,6 +12,7 @@
   --color-primary: #9b3fa8;
   --color-primary-hover: #86348f;
   --color-water: #6b8bd6;
+  --color-water-ink: #3f5aa0;
   --color-bg: #fbf7fc;
   --color-surface: #ffffff;
   --color-ink: #1f1724;
@@ -21,7 +22,7 @@
   --color-scrim: #1f1724; /* fundo sempre escuro: avisos, leitor de código, sombra de painéis */
   --color-danger: #b0403f; /* texto de erro legível no tema */
 
-  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Nunito', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --radius-card: 1.25rem;
 }
 
@@ -81,6 +82,7 @@ input[type='number'] {
   --color-primary: #96582f;
   --color-primary-hover: #7f4a27;
   --color-water: #6f9bc8;
+  --color-water-ink: #3d6390;
   --color-bg: #fdf6ee;
   --color-surface: #ffffff;
   --color-ink: #3a2418;
@@ -102,6 +104,7 @@ input[type='number'] {
   --color-primary: #d6343a;
   --color-primary-hover: #e5484d;
   --color-water: #6ea8fe;
+  --color-water-ink: #b9d4ff;
   --color-bg: #141518;
   --color-surface: #1f2125;
   --color-ink: #eef0f3;

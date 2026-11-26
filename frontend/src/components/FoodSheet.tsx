@@ -1,7 +1,8 @@
+import { Star } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { QuantityPicker, type QtyValue } from './QuantityPicker'
-import { fmt } from './Ring'
+import { fmtKcal } from './Ring'
 import { Sheet } from './Sheet'
 import { Alert, Button } from './ui'
 import { api, ApiError } from '../lib/api'
@@ -69,7 +70,7 @@ export function FoodSheet({ target, confirmLabel, onClose, onConfirm, onNotFound
   }
 
   return (
-    <Sheet open={!!target} onClose={onClose} title={food?.name ?? (error ? 'Ops' : 'Carregando…')}>
+    <Sheet open={!!target} onClose={onClose} title={food ? food.display_name || food.name : error ? 'Ops' : 'Carregando…'}>
       {error && !food && <Alert>{error.message}</Alert>}
       {!food && !error && (
         <div className="space-y-3">
@@ -82,11 +83,12 @@ export function FoodSheet({ target, confirmLabel, onClose, onConfirm, onNotFound
           <div className="-mt-1 flex items-start justify-between gap-3">
             <p className="text-sm text-muted">
               {food.brand ? `${food.brand} · ` : ''}
-              {fmt(food.kcal)} kcal por {baseLabel(food)}
+              {fmtKcal(food.kcal)} kcal por {baseLabel(food)}
               {food.source === 'off' && ' · Open Food Facts'}
+              {food.display_name && food.display_name !== food.name && <span className="block text-xs">TACO: {food.name}</span>}
             </p>
             <button onClick={toggleFavorite} aria-label={food.is_favorite ? 'Remover dos favoritos' : 'Favoritar'} className="text-2xl leading-none text-orchid transition-transform active:scale-125">
-              {food.is_favorite ? '★' : '☆'}
+              <Star className={`size-6 ${food.is_favorite ? 'fill-current' : ''}`} />
             </button>
           </div>
           {error && <Alert>{error.message}</Alert>}

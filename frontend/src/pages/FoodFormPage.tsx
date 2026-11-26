@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useToast } from '../components/Toast'
-import { Alert, Button, Field, Spinner } from '../components/ui'
+import { Alert, BackButton, Button, Field, Spinner } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import { num } from '../lib/nutrition'
 import type { FoodDetail } from '../lib/types'
@@ -100,9 +100,7 @@ export function FoodFormPage() {
   return (
     <div className="safe-top mx-auto max-w-lg px-5 pt-4 pb-10">
       <header className="mb-5 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} aria-label="Voltar" className="flex size-10 items-center justify-center rounded-full bg-surface text-2xl text-primary shadow-sm">
-          ‹
-        </button>
+        <BackButton onClick={() => navigate(-1)} />
         <h1 className="text-xl font-bold">{id ? 'Editar alimento' : 'Cadastrar alimento'}</h1>
       </header>
 

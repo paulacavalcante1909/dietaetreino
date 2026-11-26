@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { IngredientList, IngredientPicker, ItemSheet, sumItems } from '../components/RecipeIngredients'
-import { fmt } from '../components/Ring'
+import { fmt, fmtKcal } from '../components/Ring'
 import { useToast } from '../components/Toast'
-import { Alert, Button, Card, Field, Spinner } from '../components/ui'
+import { Alert, BackButton, Button, Card, Field, Spinner } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import { fmtQty, num } from '../lib/nutrition'
 import type { RecipeDetail, RecipeItem } from '../lib/types'
@@ -75,9 +75,7 @@ export function RecipeEditorPage() {
   return (
     <div className="safe-top mx-auto max-w-lg px-5 pt-4 pb-10">
       <header className="mb-5 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} aria-label="Voltar" className="flex size-10 items-center justify-center rounded-full bg-surface text-2xl text-primary shadow-sm">
-          ‹
-        </button>
+        <BackButton onClick={() => navigate(-1)} />
         <h1 className="text-xl font-bold">{id ? 'Editar refeição pronta' : 'Nova refeição pronta'}</h1>
       </header>
 
@@ -91,13 +89,13 @@ export function RecipeEditorPage() {
         <Card className="!p-4">
           <p className="mb-2 text-xs font-semibold tracking-wide text-muted uppercase">Por porção</p>
           <div className="grid grid-cols-5 text-center">
-            <Mini label="kcal" value={per.kcal} className="text-primary" />
+            <Mini label="kcal" value={Math.round(per.kcal)} className="text-primary" />
             <Mini label="carb" value={per.carbs} className="text-lavender" />
             <Mini label="prot" value={per.protein} className="text-pink" />
             <Mini label="gord" value={per.fat} className="text-violet" />
             <Mini label="sódio" value={per.sodium} className="text-coral" />
           </div>
-          {s !== 1 && <p className="mt-2 text-center text-xs text-muted">Receita inteira: {fmt(totals.kcal)} kcal</p>}
+          {s !== 1 && <p className="mt-2 text-center text-xs text-muted">Receita inteira: {fmtKcal(totals.kcal)} kcal</p>}
         </Card>
 
         <div>

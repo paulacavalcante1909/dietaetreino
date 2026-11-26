@@ -2,7 +2,7 @@ import { BrowserMultiFormatReader, type IScannerControls } from '@zxing/browser'
 import { BarcodeFormat, DecodeHintType } from '@zxing/library'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Button, Field } from './ui'
+import { BackButton, Button, Field } from './ui'
 
 interface Props {
   open: boolean
@@ -71,9 +71,7 @@ export function BarcodeScanner({ open, onClose, onDetected }: Props) {
         <motion.div className="fixed inset-0 z-50 flex flex-col bg-scrim" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
           <div className="safe-top flex items-center justify-between px-5 pt-4 pb-3 text-white">
             <h2 className="text-lg font-bold">Ler código de barras</h2>
-            <button onClick={onClose} aria-label="Fechar" className="flex size-10 items-center justify-center rounded-full bg-white/10 text-xl">
-              ×
-            </button>
+            <BackButton onClick={onClose} label="Fechar" icon="close" />
           </div>
 
           <div className="relative flex-1 overflow-hidden">

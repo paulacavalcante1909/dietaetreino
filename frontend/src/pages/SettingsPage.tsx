@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { ChevronRight } from 'lucide-react'
 import { Alert, Button, Card, Field, PasswordField } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import { useAuth } from '../lib/auth'
@@ -15,7 +16,7 @@ function Section({ title, children, open, onToggle }: { title: string; children:
       <button onClick={onToggle} className="flex w-full items-center justify-between px-5 py-4 text-left font-medium">
         {title}
         <motion.span animate={{ rotate: open ? 90 : 0 }} className="text-muted">
-          ›
+          <ChevronRight className="size-5" />
         </motion.span>
       </button>
       <AnimatePresence initial={false}>
@@ -83,29 +84,42 @@ export function SettingsPage() {
     <div className="safe-top space-y-3 px-5 pt-6 pb-6">
       <h1 className="mb-2 text-2xl font-bold">Ajustes</h1>
 
+      <SectionTitle>Aparência</SectionTitle>
       <ThemePicker />
+
+      <SectionTitle>Nutrição</SectionTitle>
 
       <Link to="/metas" className="block">
         <Card className="flex items-center justify-between !py-4 transition-transform active:scale-[0.98]">
-          <span className="font-medium">Metas diárias</span>
-          <span className="text-muted">›</span>
+          <span>
+            <span className="block font-medium">Metas diárias</span>
+            <span className="block text-xs text-muted">Calorias, macros, água e treino na meta</span>
+          </span>
+          <ChevronRight className="size-5 text-muted" />
         </Card>
       </Link>
 
       <Link to="/receitas" className="block">
         <Card className="flex items-center justify-between !py-4 transition-transform active:scale-[0.98]">
-          <span className="font-medium">Refeições prontas</span>
-          <span className="text-muted">›</span>
+          <span>
+            <span className="block font-medium">Refeições prontas</span>
+            <span className="block text-xs text-muted">Combinações e receitas para adicionar com 1 toque</span>
+          </span>
+          <ChevronRight className="size-5 text-muted" />
         </Card>
       </Link>
 
       <Link to="/refeicoes" className="block">
         <Card className="flex items-center justify-between !py-4 transition-transform active:scale-[0.98]">
-          <span className="font-medium">Refeições</span>
-          <span className="text-muted">›</span>
+          <span>
+            <span className="block font-medium">Organizar refeições do dia</span>
+            <span className="block text-xs text-muted">Renomear, reordenar, ocultar ou criar</span>
+          </span>
+          <ChevronRight className="size-5 text-muted" />
         </Card>
       </Link>
 
+      <SectionTitle>Conta</SectionTitle>
       <Section title="Meus dados" open={open === 'profile'} onToggle={() => toggle('profile')}>
         <form onSubmit={profileForm.submit} className="space-y-3">
           <Field label="Nome" name="name" required value={profile.name} onChange={(e) => setProfile({ ...profile, name: e.target.value })} error={profileForm.error?.field('name')} />
@@ -126,18 +140,21 @@ export function SettingsPage() {
         </form>
       </Section>
 
-      <AppVersionCard />
+      <Button variant="ghost" onClick={logout}>
+        Sair da conta
+      </Button>
 
+      <SectionTitle>Sobre</SectionTitle>
+      <AppVersionCard />
       <Link to="/termos" className="block">
-        <Card className="flex items-center justify-between !py-4">
-          <span className="font-medium">Termos e privacidade</span>
-          <span className="text-muted">›</span>
+        <Card className="flex items-center justify-between !py-4 transition-transform active:scale-[0.98]">
+          <span>
+            <span className="block font-medium">Termos e privacidade</span>
+            <span className="block text-xs text-muted">LGPD, seus dados e fontes</span>
+          </span>
+          <ChevronRight className="size-5 text-muted" />
         </Card>
       </Link>
-
-      <Button variant="ghost" onClick={logout} className="!mt-6">
-        Sair
-      </Button>
 
       <Section title="Excluir conta" open={open === 'delete'} onToggle={() => toggle('delete')}>
         <form onSubmit={delForm.submit} className="space-y-3">
@@ -228,4 +245,8 @@ function ThemePicker() {
       <p className="mt-2 text-xs text-muted">Muda cores, mascote e o ícone da aba. O ícone do app instalado continua o mesmo.</p>
     </Card>
   )
+}
+
+function SectionTitle({ children }: { children: ReactNode }) {
+  return <h2 className="px-1 pt-4 text-xs font-bold tracking-wider text-muted uppercase">{children}</h2>
 }

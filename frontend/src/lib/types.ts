@@ -42,9 +42,12 @@ export interface FoodLite extends Nutrients {
   user_id: number | null
   source: 'taco' | 'off' | 'manual'
   name: string
+  display_name?: string | null // nome amigável (TACO)
   brand: string | null
   base_qty: number
   base_unit: 'g' | 'ml'
+  /** Última porção usada (aba Recentes) */
+  last?: { quantity: number; portion_id: number | null; unit_label: string; kcal: number } | null
 }
 
 export interface FoodDetail extends FoodLite {
@@ -112,6 +115,7 @@ export interface DayMeal {
   name: string
   kcal: number
   entries: Entry[]
+  yesterday_count: number // itens nesta refeição ontem (botão "Repetir de ontem")
 }
 
 export interface WaterLog {
@@ -162,7 +166,7 @@ export interface Checkin {
   workout_name: string
   date: string
   note: string | null
-  photo_url: string
+  photo_url: string | null // check-in pode ser sem foto
   created_at: string
   session: WorkoutSessionData | null
 }
@@ -172,6 +176,8 @@ export interface CheckinStats {
   month_count: number
   total_count: number
   today: boolean
+  week_days: number // dias treinados nesta semana
+  weekly_goal: number // meta de dias por semana
 }
 
 export interface SessionExercise {
@@ -182,6 +188,7 @@ export interface SessionExercise {
   reps: string
   sets_done: number
   done: boolean
+  loads?: (number | null)[] // carga (kg) por série
 }
 
 export interface WorkoutSessionData {

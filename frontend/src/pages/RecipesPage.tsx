@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { fmt } from '../components/Ring'
-import { Card } from '../components/ui'
+import { fmt, fmtKcal } from '../components/Ring'
+import { BackButton, Card, EmptyState } from '../components/ui'
 import { api } from '../lib/api'
 import type { RecipeSummary } from '../lib/types'
 
@@ -18,18 +18,14 @@ export function RecipesPage() {
   return (
     <div className="safe-top mx-auto max-w-lg px-5 pt-4 pb-10">
       <header className="mb-5 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} aria-label="Voltar" className="flex size-10 items-center justify-center rounded-full bg-surface text-2xl text-primary shadow-sm">
-          ‹
-        </button>
+        <BackButton onClick={() => navigate(-1)} />
         <h1 className="text-xl font-bold">Refeições prontas</h1>
       </header>
 
       {!recipes && <div className="h-40 animate-pulse rounded-2xl bg-soft" />}
       {recipes?.length === 0 && (
-        <Card className="py-10 text-center">
-          <p className="text-4xl">🥣</p>
-          <p className="mt-3 font-medium">Monte suas combinações do dia a dia</p>
-          <p className="mt-1 text-sm text-muted">Ex.: “Café padrão” com pão, ovos e leite. Depois é só adicionar com um toque.</p>
+        <Card>
+          <EmptyState title="Monte suas combinações do dia a dia" text="Ex.: “Café padrão” com pão, ovos e leite. Depois é só adicionar com um toque." />
         </Card>
       )}
 
@@ -45,7 +41,7 @@ export function RecipesPage() {
                   </p>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className="font-semibold text-primary">{fmt(r.per_serving.kcal)} kcal</p>
+                  <p className="font-semibold text-primary">{fmtKcal(r.per_serving.kcal)} kcal</p>
                   <p className="text-xs text-muted">por porção</p>
                 </div>
               </Card>

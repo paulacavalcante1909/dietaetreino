@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion'
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Alert, Button, Field, PasswordField, Logo } from '../components/ui'
-import { ApiError } from '../lib/api'
+import { api, ApiError } from '../lib/api'
 import { useAuth } from '../lib/auth'
 
 function AuthShell({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
@@ -50,6 +50,11 @@ export function LoginPage() {
         {error && !error.field('email') && !error.field('password') && <Alert>{error.message}</Alert>}
         <Field label="E-mail" name="email" type="email" autoComplete="email" inputMode="email" required value={email} onChange={(e) => setEmail(e.target.value)} error={error?.field('email')} />
         <PasswordField label="Senha" name="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} error={error?.field('password')} />
+        <div className="-mt-1 text-right">
+          <Link to="/esqueci-senha" className="text-sm font-semibold text-primary">
+            Esqueci minha senha
+          </Link>
+        </div>
         <Button type="submit" loading={loading} className="mt-2">
           Entrar
         </Button>
@@ -125,6 +130,101 @@ export function RegisterPage() {
           Entrar
         </Link>
       </p>
+    </AuthShell>
+  )
+}
+
+/** Pedir o link de redefinição por e-mail. */
+export function ForgotPasswordPage() {
+  const [email, setEmail] = useState('')
+  const [sent, setSent] = useState<string | null>(null)
+  const [error, setError] = useState<ApiError | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    try {
+      const r = await api<{ message: string }>('/auth/forgot', { method: 'POST', body: { email } })
+      setSent(r.message)
+    } catch (err) {
+      setError(err as ApiError)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <AuthShell title="Esqueci minha senha" subtitle="Enviamos um link para você criar uma nova">
+      {sent ? (
+        <div className="space-y-5 text-center">
+          <p className="rounded-2xl bg-soft p-4 text-sm">{sent}</p>
+          <p className="text-sm text-muted">Confira também a caixa de spam. O link vale por 60 minutos.</p>
+          <Link to="/entrar" className="font-semibold text-primary">Voltar para o login</Link>
+        </div>
+      ) : (
+        <form onSubmit={submit} className="space-y-4">
+          {error && !error.field('email') && <Alert>{error.message}</Alert>}
+          <Field label="E-mail da conta" name="email" type="email" autoComplete="email" inputMode="email" required value={email} onChange={(e) => setEmail(e.target.value)} error={error?.field('email')} />
+          <Button type="submit" loading={loading}>Enviar link</Button>
+          <p className="pt-2 text-center text-sm">
+            <Link to="/entrar" className="font-semibold text-primary">Voltar para o login</Link>
+          </p>
+        </form>
+      )}
+    </AuthShell>
+  )
+}
+
+/** Criar nova senha a partir do link recebido por e-mail. */
+export function ResetPasswordPage() {
+  const [params] = useSearchParams()
+  const navigate = useNavigate()
+  const token = params.get('token') ?? ''
+  const email = params.get('email') ?? ''
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<ApiError | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [done, setDone] = useState<string | null>(null)
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    try {
+      const r = await api<{ message: string }>('/auth/reset', { method: 'POST', body: { token, email, password } })
+      setDone(r.message)
+      setTimeout(() => navigate('/entrar', { replace: true }), 2500)
+    } catch (err) {
+      setError(err as ApiError)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (!token || !email) {
+    return (
+      <AuthShell title="Link incompleto" subtitle="Abra o link exatamente como chegou no e-mail">
+        <p className="text-center"><Link to="/esqueci-senha" className="font-semibold text-primary">Pedir um novo link</Link></p>
+      </AuthShell>
+    )
+  }
+
+  return (
+    <AuthShell title="Nova senha" subtitle={email}>
+      {done ? (
+        <p className="rounded-2xl bg-soft p-4 text-center text-sm">{done} Levando você ao login…</p>
+      ) : (
+        <form onSubmit={submit} className="space-y-4">
+          {error && <Alert>{error.field('token') ?? error.field('password') ?? error.message}</Alert>}
+          <PasswordField label="Nova senha" name="password" autoComplete="new-password" placeholder="Mínimo de 8 caracteres" minLength={8} required value={password} onChange={(e) => setPassword(e.target.value)} />
+          <Button type="submit" loading={loading}>Salvar nova senha</Button>
+          {error?.field('token') && (
+            <p className="text-center text-sm"><Link to="/esqueci-senha" className="font-semibold text-primary">Pedir um novo link</Link></p>
+          )}
+        </form>
+      )}
     </AuthShell>
   )
 }

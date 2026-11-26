@@ -1,8 +1,8 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fmt } from '../components/Ring'
-import { Alert, Button, Field, Logo } from '../components/ui'
+import { fmtKcal } from '../components/Ring'
+import { Alert, BackButton, Button, Field, Logo } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import type { Goal, User } from '../lib/types'
@@ -67,9 +67,7 @@ export function GoalsPage({ onboarding = false }: { onboarding?: boolean }) {
         </div>
       ) : (
         <div className="mb-6">
-          <button onClick={() => navigate(-1)} className="mb-3 text-sm font-medium text-primary">
-            ← Voltar
-          </button>
+          <div className="mb-3"><BackButton onClick={() => navigate(-1)} /></div>
           <h1 className="text-2xl font-bold">Metas diárias</h1>
           <p className="mt-1 text-sm text-muted">Alterações valem a partir de hoje. Dias anteriores mantêm a meta da época.</p>
         </div>
@@ -103,7 +101,7 @@ export function GoalsPage({ onboarding = false }: { onboarding?: boolean }) {
               exit={{ opacity: 0, height: 0 }}
               className="rounded-2xl bg-lavender/10 px-4 py-3 text-sm text-violet"
             >
-              Seus macros somam <strong>{fmt(macroKcal)} kcal</strong>, diferente da meta de {fmt(kcal)} kcal. Tudo bem se for intencional.
+              Seus macros somam <strong>{fmtKcal(macroKcal)} kcal</strong>, diferente da meta de {fmtKcal(kcal)} kcal. Tudo bem se for intencional.
             </motion.p>
           )}
         </AnimatePresence>
@@ -143,7 +141,7 @@ function BurnedToggle() {
       <div>
         <p className="text-sm font-semibold">Somar calorias do treino à meta do dia</p>
         <p className="mt-0.5 text-xs text-muted">
-          Desligado: o gasto aparece só como informação (🔥 na tela inicial). Ligado: a meta de calorias do dia aumenta com o gasto estimado do treino.
+          Desligado: o gasto aparece só como informação (na tela inicial). Ligado: a meta de calorias do dia aumenta com o gasto estimado do treino.
         </p>
       </div>
       <button

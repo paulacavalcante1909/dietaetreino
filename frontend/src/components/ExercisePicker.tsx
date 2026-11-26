@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useState, type FormEvent } from 'react'
 import { ExerciseImage } from './ExerciseImage'
 import { Sheet } from './Sheet'
-import { Alert, Button, Field } from './ui'
+import { Alert, BackButton, Button, Field } from './ui'
 import { api, ApiError } from '../lib/api'
 import type { Exercise } from '../lib/types'
 
@@ -44,9 +44,7 @@ export function ExercisePicker({ open, onClose, onPick }: Props) {
         >
           <div className="safe-top mx-auto max-w-lg px-5 pt-4 pb-10">
             <header className="mb-4 flex items-center gap-3">
-              <button onClick={onClose} aria-label="Fechar" className="flex size-10 items-center justify-center rounded-full bg-surface text-xl text-primary shadow-sm">
-                ×
-              </button>
+              <BackButton onClick={onClose} label="Fechar" icon="close" />
               <h2 className="text-xl font-bold">Adicionar exercício</h2>
             </header>
 

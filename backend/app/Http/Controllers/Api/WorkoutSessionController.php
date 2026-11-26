@@ -30,6 +30,8 @@ class WorkoutSessionController extends Controller
             'exercises.*.reps' => ['required', 'string', 'max:20'],
             'exercises.*.sets_done' => ['required', 'integer', 'min:0', 'max:10'],
             'exercises.*.done' => ['required', 'boolean'],
+            'exercises.*.loads' => ['nullable', 'array', 'max:10'],
+            'exercises.*.loads.*' => ['nullable', 'numeric', 'min:0', 'max:1000'],
         ]);
 
         $workoutId = isset($data['workout_id'])
@@ -55,6 +57,7 @@ class WorkoutSessionController extends Controller
                 'reps' => $e['reps'],
                 'sets_done' => min((int) $e['sets_done'], (int) $e['sets']),
                 'done' => (bool) $e['done'],
+                'loads' => array_values(array_map(fn ($v) => $v === null ? null : round((float) $v, 1), $e['loads'] ?? [])),
             ], $data['exercises']),
         ]);
         // Estimativa de gasto: peso mais recente até o dia do treino (sem registro → 65 kg)

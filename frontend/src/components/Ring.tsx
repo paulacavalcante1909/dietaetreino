@@ -65,3 +65,6 @@ export function Bar({ label, value, max, unit, color }: { label: string; value: 
 }
 
 export const fmt = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 1 })
+
+/** Calorias sempre inteiras (decimais só em gramas). */
+export const fmtKcal = (n: number) => Math.round(n).toLocaleString('pt-BR')

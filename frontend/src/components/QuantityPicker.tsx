@@ -71,7 +71,7 @@ export function QuantityPicker({ food, portions, value, onChange, hideGrams }: P
       </div>
 
       <motion.div layout className="grid grid-cols-5 gap-1 rounded-2xl bg-soft p-3 text-center">
-        <Nut label="kcal" value={n.kcal} color="text-primary" strong />
+        <Nut label="kcal" value={Math.round(n.kcal)} color="text-primary" strong />
         <Nut label="carb" value={n.carbs} unit="g" color="text-lavender" />
         <Nut label="prot" value={n.protein} unit="g" color="text-pink" />
         <Nut label="gord" value={n.fat} unit="g" color="text-violet" />

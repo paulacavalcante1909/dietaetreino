@@ -2,7 +2,7 @@ import { Reorder } from 'framer-motion'
 import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useToast } from '../components/Toast'
-import { Button, Card, Field } from '../components/ui'
+import { BackButton, Button, Card, Field } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import type { Meal } from '../lib/types'
 
@@ -48,10 +48,8 @@ export function MealsPage() {
   return (
     <div className="safe-top mx-auto max-w-lg px-5 pt-4 pb-10">
       <header className="mb-2 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} aria-label="Voltar" className="flex size-10 items-center justify-center rounded-full bg-surface text-2xl text-primary shadow-sm">
-          ‹
-        </button>
-        <h1 className="text-xl font-bold">Refeições</h1>
+        <BackButton onClick={() => navigate(-1)} />
+        <h1 className="text-xl font-bold">Organizar refeições do dia</h1>
       </header>
       <p className="mb-4 text-sm text-muted">Arraste ⋮⋮ para reordenar. Toque no nome para renomear.</p>
 

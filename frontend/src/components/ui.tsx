@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { ChevronDown, ChevronLeft, X } from 'lucide-react'
 import { useTheme } from '../lib/theme'
 import { useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react'
 
@@ -111,6 +112,34 @@ export function Spinner() {
   return (
     <div className="flex h-full items-center justify-center">
       <span className="size-8 animate-spin rounded-full border-[3px] border-orchid border-t-transparent" />
+    </div>
+  )
+}
+
+/** Botão "voltar" padrão (redondo), usado em todas as telas internas. */
+export function BackButton({ onClick, label = 'Voltar', icon = 'back' }: { onClick: () => void; label?: string; icon?: 'back' | 'close' | 'down' }) {
+  const Icon = icon === 'close' ? X : icon === 'down' ? ChevronDown : ChevronLeft
+  return (
+    <button onClick={onClick} aria-label={label} className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface text-primary shadow-sm transition-transform active:scale-90">
+      <Icon className="size-5" strokeWidth={2.5} />
+    </button>
+  )
+}
+
+/** Mascote do tema atual (coelhinha, onça ou ratão). */
+export function Mascot({ size = 96, className = '' }: { size?: number; className?: string }) {
+  const { theme } = useTheme()
+  return <img src={`${theme.assets}/mascote.png`} width={size} height={size} alt="" className={`rounded-full shadow-md ${className}`} style={{ width: size, height: size }} />
+}
+
+/** Estado vazio com o mascote. */
+export function EmptyState({ title, text, children }: { title: string; text?: string; children?: ReactNode }) {
+  return (
+    <div className="flex flex-col items-center py-8 text-center">
+      <Mascot size={88} />
+      <p className="mt-4 font-semibold">{title}</p>
+      {text && <p className="mt-1 max-w-xs text-sm text-muted">{text}</p>}
+      {children && <div className="mt-4 w-full max-w-xs">{children}</div>}
     </div>
   )
 }

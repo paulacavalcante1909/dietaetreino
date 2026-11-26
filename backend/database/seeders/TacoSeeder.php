@@ -82,6 +82,7 @@ class TacoSeeder extends Seeder
                     ['source' => 'taco', 'external_id' => $r['taco_id']],
                     [
                         'name' => $r['name'],
+                        'display_name' => Food::friendly($r['name']),
                         'category' => $r['category'],
                         'base_qty' => 100,
                         'base_unit' => 'g',

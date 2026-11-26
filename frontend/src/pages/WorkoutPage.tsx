@@ -4,10 +4,12 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ExerciseImage } from '../components/ExerciseImage'
 import { ExercisePicker } from '../components/ExercisePicker'
 import { Sheet } from '../components/Sheet'
+import { WeightChart } from '../components/WeightChart'
+import { Trophy } from 'lucide-react'
 import { SetsSheet } from '../components/SetsSheet'
 import { isTimed, minutesOf, prescription } from '../lib/workout'
 import { useToast } from '../components/Toast'
-import { Alert, Button, Spinner } from '../components/ui'
+import { Alert, BackButton, Button, Spinner } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import type { Exercise, Workout, WorkoutItem } from '../lib/types'
 
@@ -87,9 +89,7 @@ export function WorkoutPage() {
   return (
     <div className="safe-top mx-auto max-w-lg px-5 pt-4 pb-28">
       <header className="mb-5 flex items-center gap-3">
-        <button onClick={() => (editing ? cancel() : navigate('/treinos'))} aria-label="Voltar" className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface text-2xl text-primary shadow-sm">
-          ‹
-        </button>
+        <BackButton onClick={() => (editing ? cancel() : navigate('/treinos'))} />
         {editing ? (
           <input aria-label="Nome do treino" value={name} onChange={(e) => setName(e.target.value)} className="min-w-0 flex-1 rounded-xl border border-line bg-surface px-3 py-2 text-xl font-bold outline-none focus:border-orchid" />
         ) : (
@@ -136,7 +136,7 @@ export function WorkoutPage() {
                   <p className="mt-1 inline-block rounded-full bg-orchid/15 px-2.5 py-0.5 text-sm font-bold text-primary">
                     {prescription(it)}
                   </p>
-                  {it.notes && <p className="mt-1 text-xs text-muted">📝 {it.notes}</p>}
+                  {it.notes && <p className="mt-1 text-xs text-muted">{it.notes}</p>}
                 </div>
               </button>
             </motion.li>
@@ -163,7 +163,7 @@ export function WorkoutPage() {
             <Button onClick={save} loading={saving} disabled={!name.trim()}>Salvar treino</Button>
           ) : (
             <Link to={`/checkin?treino=${workout.id}`} className="flex h-12 w-full items-center justify-center rounded-2xl bg-primary font-semibold text-white shadow-[0_6px_20px_-8px_rgba(155,63,168,0.7)] active:scale-[0.98]">
-              📸 Fazer check-in deste treino
+              Fazer check-in deste treino
             </Link>
           )}
         </div>
@@ -210,10 +210,42 @@ export function WorkoutPage() {
             <p className="text-center text-2xl font-bold text-primary">
               {isTimed(viewing) ? `${minutesOf(viewing.reps)} minutos` : `${viewing.sets} séries × ${viewing.reps}`}
             </p>
-            {viewing.notes && <p className="rounded-2xl bg-soft p-3 text-sm">📝 {viewing.notes}</p>}
+            {viewing.notes && <p className="rounded-2xl bg-soft p-3 text-sm">{viewing.notes}</p>}
+            {!isTimed(viewing) && <LoadHistory name={viewing.exercise.name} />}
           </div>
         )}
       </Sheet>
+    </div>
+  )
+}
+
+/** Evolução da carga máxima por treino (a partir dos treinos executados). */
+function LoadHistory({ name }: { name: string }) {
+  const [history, setHistory] = useState<{ date: string; kg: number }[] | null>(null)
+  useEffect(() => {
+    api<{ history: { date: string; kg: number }[] }>(`/stats/loads?name=${encodeURIComponent(name)}`)
+      .then((r) => setHistory(r.history))
+      .catch(() => setHistory([]))
+  }, [name])
+
+  if (!history) return <div className="h-40 animate-pulse rounded-2xl bg-soft" />
+  if (history.length === 0)
+    return <p className="rounded-2xl bg-soft p-3 text-center text-sm text-muted">Anote a carga das séries durante o treino para ver sua evolução aqui.</p>
+
+  const best = Math.max(...history.map((h) => h.kg))
+  return (
+    <div className="rounded-2xl bg-soft/60 p-3">
+      <div className="mb-2 flex items-center justify-between text-sm">
+        <span className="font-bold">Evolução de carga</span>
+        <span className="flex items-center gap-1 font-semibold text-primary">
+          <Trophy className="size-4" /> {best.toLocaleString('pt-BR')} kg
+        </span>
+      </div>
+      {history.length > 1 ? (
+        <WeightChart data={history.map((h, i) => ({ id: i, date: h.date, kg: h.kg }))} label="carga" />
+      ) : (
+        <p className="text-center text-sm text-muted">1 treino registrado ({history[0].kg.toLocaleString('pt-BR')} kg). O gráfico aparece a partir do 2º.</p>
+      )}
     </div>
   )
 }

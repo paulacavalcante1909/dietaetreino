@@ -1,8 +1,18 @@
+import { Dumbbell, Flame, Repeat, Timer } from 'lucide-react'
 import { durationLabel } from '../lib/run'
 import { isTimed, prescription } from '../lib/workout'
-import type { WorkoutSessionData } from '../lib/types'
+import type { SessionExercise, WorkoutSessionData } from '../lib/types'
 
-/** Resumo do treino executado: tempo, exercícios e séries (no check-in e no histórico). */
+/** "3/3 × 10 · 40–45 kg" (com carga quando registrada) */
+export function exerciseLine(e: SessionExercise) {
+  if (isTimed(e)) return prescription(e)
+  const loads = (e.loads ?? []).filter((v): v is number => v != null && v > 0)
+  const n = (v: number) => v.toLocaleString('pt-BR')
+  const kg = loads.length ? ` · ${Math.min(...loads) === Math.max(...loads) ? n(Math.max(...loads)) : `${n(Math.min(...loads))}–${n(Math.max(...loads))}`} kg` : ''
+  return `${e.sets_done}/${e.sets} × ${e.reps}${kg}`
+}
+
+/** Resumo do treino executado: tempo, exercícios, séries e gasto (no check-in e no histórico). */
 export function SessionSummary({ session, compact = false }: { session: WorkoutSessionData; compact?: boolean }) {
   const done = session.exercises.filter((e) => e.done)
   const sets = session.exercises.filter((e) => !isTimed(e)).reduce((a, e) => a + e.sets_done, 0)
@@ -10,10 +20,12 @@ export function SessionSummary({ session, compact = false }: { session: WorkoutS
   return (
     <div className="rounded-2xl bg-soft/70 p-3">
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm font-semibold">
-        <span>⏱️ {durationLabel(session.duration_seconds)}</span>
-        <span>💪 {done.length}/{session.exercises.length} {session.exercises.length === 1 ? 'exercício' : 'exercícios'}</span>
-        {sets > 0 && <span>🔁 {sets} {sets === 1 ? 'série' : 'séries'}</span>}
-        {session.kcal_burned != null && <span title="Estimativa média (MET × peso × tempo)">🔥 ~{session.kcal_burned} kcal</span>}
+        <span className="flex items-center gap-1"><Timer className="size-4 text-primary" /> {durationLabel(session.duration_seconds)}</span>
+        <span className="flex items-center gap-1"><Dumbbell className="size-4 text-primary" /> {done.length}/{session.exercises.length} {session.exercises.length === 1 ? 'exercício' : 'exercícios'}</span>
+        {sets > 0 && <span className="flex items-center gap-1"><Repeat className="size-4 text-primary" /> {sets} {sets === 1 ? 'série' : 'séries'}</span>}
+        {session.kcal_burned != null && (
+          <span className="flex items-center gap-1" title="Estimativa média (MET × peso × tempo)"><Flame className="size-4 text-coral" /> ~{session.kcal_burned} kcal</span>
+        )}
       </div>
       {!compact && (
         <ul className="mt-2 space-y-1">
@@ -23,7 +35,7 @@ export function SessionSummary({ session, compact = false }: { session: WorkoutS
                 {e.done ? '✓ ' : ''}
                 {e.name}
               </span>
-              <span className="shrink-0 text-muted">{isTimed(e) ? prescription(e) : `${e.sets_done}/${e.sets} × ${e.reps}`}</span>
+              <span className="shrink-0 text-muted">{exerciseLine(e)}</span>
             </li>
           ))}
         </ul>

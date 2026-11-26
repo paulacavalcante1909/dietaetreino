@@ -6,7 +6,7 @@ import { Spinner } from './components/ui'
 import { AuthProvider, useAuth } from './lib/auth'
 import { ThemeProvider } from './lib/theme'
 import { AddFoodPage } from './pages/AddFoodPage'
-import { LoginPage, RegisterPage } from './pages/AuthPages'
+import { ForgotPasswordPage, LoginPage, RegisterPage, ResetPasswordPage } from './pages/AuthPages'
 import { FoodFormPage } from './pages/FoodFormPage'
 import { GoalsPage } from './pages/GoalsPage'
 import { HomePage } from './pages/HomePage'
@@ -15,7 +15,7 @@ import { RecipeEditorPage } from './pages/RecipeEditorPage'
 import { RecipesPage } from './pages/RecipesPage'
 import { TermsPage } from './pages/MiscPages'
 import { ProgressPage } from './pages/ProgressPage'
-import { ErrorBoundary, InstallBanner, OfflineBanner } from './components/AppChrome'
+import { ErrorBoundary, InstallBanner, OfflineBanner, OutboxSync } from './components/AppChrome'
 import { SettingsPage } from './pages/SettingsPage'
 import { CheckinPage } from './pages/CheckinPage'
 import { CheckinsPage } from './pages/CheckinsPage'
@@ -56,11 +56,14 @@ export default function App() {
         <BrowserRouter>
           <ScrollToTop />
           <OfflineBanner />
+          <OutboxSync />
           <InstallBanner />
           <Routes>
             <Route path="/entrar" element={<Public><LoginPage /></Public>} />
             <Route path="/cadastro" element={<Public><RegisterPage /></Public>} />
             <Route path="/termos" element={<TermsPage />} />
+            <Route path="/esqueci-senha" element={<Public><ForgotPasswordPage /></Public>} />
+            <Route path="/redefinir-senha" element={<ResetPasswordPage />} />
             <Route path="/metas/inicio" element={<Private needsGoal={false}><GoalsPage onboarding /></Private>} />
             <Route path="/metas" element={<Private><GoalsPage /></Private>} />
 

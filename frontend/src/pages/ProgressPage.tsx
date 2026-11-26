@@ -1,12 +1,14 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Sheet } from '../components/Sheet'
 import { useToast } from '../components/Toast'
 import { WeightChart } from '../components/WeightChart'
-import { Alert, Button, Card, Field } from '../components/ui'
+import { Bar, Ring, fmt, fmtKcal } from '../components/Ring'
+import { CalendarCheck, ChevronLeft, ChevronRight, Droplet, Flame, Timer, Target } from 'lucide-react'
+import { Alert, Button, Card, EmptyState, Field } from '../components/ui'
 import { api, ApiError } from '../lib/api'
-import { isoDate, parseIso } from '../lib/date'
+import { addDays, isoDate, parseIso } from '../lib/date'
 import { num } from '../lib/nutrition'
 import type { Weight, WeightSummary } from '../lib/types'
 
@@ -22,8 +24,8 @@ const signed = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${kg(Math.abs(
 const shortDate = (s: string) => parseIso(s).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }).replace('.', '')
 const longDate = (s: string) => parseIso(s).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' }).replace('.', '')
 
-/** Progresso: peso atual, variação, gráfico por período e histórico. */
-export function ProgressPage() {
+/** Aba Peso: peso atual, variação, gráfico por período e histórico. */
+function WeightTab() {
   const [params, setParams] = useSearchParams()
   const [range, setRange] = useState<string>('90')
   const [weights, setWeights] = useState<Weight[] | null>(null)
@@ -41,21 +43,18 @@ export function ProgressPage() {
 
   const close = () => {
     setEditing(null)
-    if (params.get('registrar')) setParams({}, { replace: true })
+    if (params.get('registrar')) setParams({ aba: 'peso' }, { replace: true })
   }
 
   const empty = summary && summary.current === null
 
   return (
-    <div className="safe-top space-y-4 px-5 pt-6 pb-6">
-      <h1 className="text-2xl font-bold">Progresso</h1>
-
+    <div className="space-y-4">
       {empty ? (
-        <Card className="py-10 text-center">
-          <p className="text-4xl">⚖️</p>
-          <p className="mt-3 font-medium">Acompanhe seu peso</p>
-          <p className="mt-1 text-sm text-muted">Registre hoje e veja sua evolução no gráfico.</p>
-          <Button className="mt-5" onClick={() => setEditing('new')}>Registrar peso</Button>
+        <Card>
+          <EmptyState title="Acompanhe seu peso" text="Registre hoje e veja sua evolução no gráfico.">
+            <Button onClick={() => setEditing('new')}>Registrar peso</Button>
+          </EmptyState>
         </Card>
       ) : (
         summary && (
@@ -212,5 +211,251 @@ function WeightSheet({ weight, onClose, onSaved }: { weight: Weight | 'new' | nu
         )}
       </form>
     </Sheet>
+  )
+}
+
+/* ───────────────────────── Página ───────────────────────── */
+
+const TABS = [
+  ['semana', 'Semana'],
+  ['treinos', 'Treinos'],
+  ['peso', 'Peso'],
+] as const
+
+/** Progresso: resumo da semana (alimentação), treinos e peso. */
+export function ProgressPage() {
+  const [params, setParams] = useSearchParams()
+  const tab = (TABS.find((t) => t[0] === params.get('aba'))?.[0] ?? 'semana') as (typeof TABS)[number][0]
+
+  return (
+    <div className="safe-top space-y-4 px-5 pt-6 pb-6">
+      <h1 className="text-2xl font-extrabold">Progresso</h1>
+      <div className="flex gap-1 rounded-2xl bg-soft p-1" role="tablist" aria-label="Seções do progresso">
+        {TABS.map(([k, label]) => (
+          <button key={k} role="tab" aria-selected={tab === k} onClick={() => setParams({ aba: k }, { replace: true })} className="relative flex-1 rounded-xl py-2.5 text-sm font-bold">
+            {tab === k && <motion.span layoutId="progress-tab" className="absolute inset-0 rounded-xl bg-surface shadow-sm" transition={{ type: 'spring', stiffness: 500, damping: 38 }} />}
+            <span className={`relative ${tab === k ? 'text-primary' : 'text-muted'}`}>{label}</span>
+          </button>
+        ))}
+      </div>
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
+          {tab === 'semana' ? <WeekTab /> : tab === 'treinos' ? <WorkoutsTab /> : <WeightTab />}
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  )
+}
+
+/* ───────────────────────── Semana (alimentação) ───────────────────────── */
+
+interface WeekDay {
+  date: string
+  logged: boolean
+  kcal: number
+  carbs: number
+  protein: number
+  fat: number
+  sodium: number
+  water: number
+  burned: number
+  goal: { kcal: number; carbs_g: number; protein_g: number; fat_g: number; sodium_mg: number; water_ml: number } | null
+}
+
+const WD = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
+
+function WeekTab() {
+  const [start, setStart] = useState(() => {
+    const t = isoDate()
+    return addDays(t, -parseIso(t).getDay())
+  })
+  const [days, setDays] = useState<WeekDay[] | null>(null)
+
+  useEffect(() => {
+    setDays(null)
+    api<{ days: WeekDay[] }>(`/stats/week?start=${start}`).then((r) => setDays(r.days)).catch(() => setDays([]))
+  }, [start])
+
+  const thisWeek = start === addDays(isoDate(), -parseIso(isoDate()).getDay())
+  const end = addDays(start, 6)
+  const title = thisWeek ? 'Esta semana' : `${shortDate(start)} – ${shortDate(end)}`
+
+  const logged = days?.filter((d) => d.logged) ?? []
+  const avg = (k: keyof Pick<WeekDay, 'kcal' | 'carbs' | 'protein' | 'fat' | 'sodium' | 'water'>) =>
+    logged.length ? logged.reduce((a, d) => a + d[k], 0) / logged.length : 0
+  const goal = days?.find((d) => d.goal)?.goal ?? null
+  const inGoal = logged.filter((d) => d.goal && Math.abs(d.kcal - d.goal.kcal) <= d.goal.kcal * 0.1).length
+  const burned = days?.reduce((a, d) => a + d.burned, 0) ?? 0
+  const max = Math.max(goal?.kcal ?? 0, ...(days ?? []).map((d) => d.kcal), 1)
+  const waterDays = days?.filter((d) => d.water > 0) ?? []
+  const waterAvg = waterDays.length ? waterDays.reduce((a, d) => a + d.water, 0) / waterDays.length : 0
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <button aria-label="Semana anterior" onClick={() => setStart(addDays(start, -7))} className="flex size-9 items-center justify-center rounded-full bg-surface text-primary shadow-sm active:scale-90">
+          <ChevronLeft className="size-5" />
+        </button>
+        <p className="font-bold">{title}</p>
+        <button aria-label="Próxima semana" disabled={thisWeek} onClick={() => setStart(addDays(start, 7))} className="flex size-9 items-center justify-center rounded-full bg-surface text-primary shadow-sm active:scale-90 disabled:opacity-30">
+          <ChevronRight className="size-5" />
+        </button>
+      </div>
+
+      {!days && <div className="h-64 animate-pulse rounded-[var(--radius-card)] bg-soft" />}
+      {days && logged.length === 0 && (
+        <Card>
+          <EmptyState title="Nada registrado nesta semana" text="Registre suas refeições para ver médias e quantos dias você ficou dentro da meta." />
+        </Card>
+      )}
+
+      {days && logged.length > 0 && (
+        <>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <MiniStat icon={<Target className="size-4 text-primary" />} value={`${inGoal}/${logged.length}`} label="dias na meta" />
+            <MiniStat icon={<Flame className="size-4 text-orchid" />} value={fmtKcal(avg('kcal'))} label="kcal/dia (média)" />
+            <MiniStat icon={<Flame className="size-4 text-coral" />} value={`~${fmtKcal(burned)}`} label="gastas no treino" />
+          </div>
+
+          {/* Calorias por dia × meta */}
+          <Card>
+            <p className="mb-3 text-sm font-bold">Calorias por dia</p>
+            <div className="relative flex h-40 items-end gap-2" role="img" aria-label={`Calorias por dia; meta ${goal ? fmtKcal(goal.kcal) : '-'} kcal`}>
+              {goal && (
+                <div className="pointer-events-none absolute inset-x-0 border-t-2 border-dashed border-muted/40" style={{ bottom: `${(goal.kcal / max) * 100}%` }}>
+                  <span className="absolute -top-5 right-0 text-[10px] font-semibold text-muted">meta {fmtKcal(goal.kcal)}</span>
+                </div>
+              )}
+              {days.map((d, i) => {
+                const over = d.goal && d.kcal > d.goal.kcal * 1.1
+                return (
+                  <div key={d.date} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
+                    <motion.div
+                      className="w-full rounded-t-lg"
+                      style={{ background: over ? 'var(--color-coral)' : 'var(--color-orchid)', opacity: d.logged ? 1 : 0.15 }}
+                      initial={{ height: 0 }}
+                      animate={{ height: `${Math.max((d.kcal / max) * 100, d.logged ? 3 : 2)}%` }}
+                      transition={{ duration: 0.6, delay: i * 0.04 }}
+                      title={`${fmtKcal(d.kcal)} kcal`}
+                    />
+                  </div>
+                )
+              })}
+            </div>
+            <div className="mt-1 flex gap-2">
+              {days.map((d, i) => (
+                <span key={d.date} className={`flex-1 text-center text-xs font-semibold ${d.date === isoDate() ? 'text-primary' : 'text-muted'}`}>{WD[i]}</span>
+              ))}
+            </div>
+          </Card>
+
+          {/* Médias dos macros nos dias registrados */}
+          {goal && (
+            <Card className="space-y-3">
+              <p className="text-sm font-bold">Média por dia registrado</p>
+              <Bar label="Carboidratos" value={Math.round(avg('carbs'))} max={goal.carbs_g} unit="g" color="var(--color-lavender)" />
+              <Bar label="Proteínas" value={Math.round(avg('protein'))} max={goal.protein_g} unit="g" color="var(--color-pink)" />
+              <Bar label="Gorduras" value={Math.round(avg('fat'))} max={goal.fat_g} unit="g" color="var(--color-violet)" />
+              <Bar label="Sódio" value={Math.round(avg('sodium'))} max={goal.sodium_mg} unit="mg" color="var(--color-coral)" />
+              <div className="flex items-center gap-2 pt-1 text-sm text-muted">
+                <Droplet className="size-4 text-water" /> Água: {fmt(Math.round(waterAvg))} ml/dia em média (meta {fmt(goal.water_ml)} ml)
+              </div>
+            </Card>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+/* ───────────────────────── Treinos ───────────────────────── */
+
+interface WeekWorkouts {
+  week_start: string
+  days: number
+  minutes: number
+  kcal: number
+}
+
+function WorkoutsTab() {
+  const [data, setData] = useState<{ weeks: WeekWorkouts[]; weekly_goal: number } | null>(null)
+
+  useEffect(() => {
+    api<{ weeks: WeekWorkouts[]; weekly_goal: number }>('/stats/workouts?weeks=8').then(setData).catch(() => setData({ weeks: [], weekly_goal: 3 }))
+  }, [])
+
+  if (!data) return <div className="h-64 animate-pulse rounded-[var(--radius-card)] bg-soft" />
+  const current = data.weeks[data.weeks.length - 1]
+  const total = data.weeks.reduce((a, w) => ({ days: a.days + w.days, minutes: a.minutes + w.minutes, kcal: a.kcal + w.kcal }), { days: 0, minutes: 0, kcal: 0 })
+  const max = Math.max(data.weekly_goal, ...data.weeks.map((w) => w.days), 1)
+  const hit = data.weeks.filter((w) => w.days >= data.weekly_goal).length
+
+  if (total.days === 0)
+    return (
+      <Card>
+        <EmptyState title="Seus treinos aparecem aqui" text="Use “Treinar” na aba Treinos para registrar e acompanhar sua frequência.">
+          <Link to="/treinos?treinar=1" className="flex h-11 items-center justify-center rounded-2xl bg-primary font-bold text-white">Treinar</Link>
+        </EmptyState>
+      </Card>
+    )
+
+  return (
+    <div className="space-y-4">
+      <Card className="flex items-center gap-4">
+        <Ring value={Math.min(current?.days ?? 0, data.weekly_goal)} max={data.weekly_goal} size={96} stroke={10} color="var(--color-orchid)">
+          <span className="text-xl font-extrabold">{current?.days ?? 0}/{data.weekly_goal}</span>
+          <span className="text-[10px] text-muted">semana</span>
+        </Ring>
+        <div className="min-w-0">
+          <p className="font-bold">{(current?.days ?? 0) >= data.weekly_goal ? 'Meta da semana batida! 🎉' : `Faltam ${data.weekly_goal - (current?.days ?? 0)} treino(s) nesta semana`}</p>
+          {hit > 0 && <p className="text-sm text-muted">Meta batida em {hit} das últimas {data.weeks.length} semanas.</p>}
+        </div>
+      </Card>
+
+      <div className="grid grid-cols-3 gap-2 text-center">
+        <MiniStat icon={<CalendarCheck className="size-4 text-primary" />} value={String(total.days)} label="dias em 8 semanas" />
+        <MiniStat icon={<Timer className="size-4 text-primary" />} value={total.minutes < 60 ? `${Math.round(total.minutes)} min` : `${(total.minutes / 60).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} h`} label="de treino" />
+        <MiniStat icon={<Flame className="size-4 text-coral" />} value={`~${fmtKcal(total.kcal)}`} label="kcal gastas" />
+      </div>
+
+      <Card>
+        <p className="mb-3 text-sm font-bold">Dias treinados por semana</p>
+        <div className="relative flex h-36 items-end gap-2" role="img" aria-label={`Dias treinados por semana nas últimas ${data.weeks.length} semanas; meta ${data.weekly_goal}`}>
+          <div className="pointer-events-none absolute inset-x-0 border-t-2 border-dashed border-muted/40" style={{ bottom: `${(data.weekly_goal / max) * 100}%` }}>
+            <span className="absolute -top-5 right-0 text-[10px] font-semibold text-muted">meta {data.weekly_goal}</span>
+          </div>
+          {data.weeks.map((w, i) => (
+            <div key={w.week_start} className="flex h-full flex-1 flex-col items-center justify-end">
+              <span className="mb-1 text-xs font-bold">{w.days || ''}</span>
+              <motion.div
+                className="w-full rounded-t-lg"
+                style={{ background: w.days >= data.weekly_goal ? 'var(--color-orchid)' : 'var(--color-lavender)', opacity: w.days ? 1 : 0.15 }}
+                initial={{ height: 0 }}
+                animate={{ height: `${Math.max((w.days / max) * 100, 3)}%` }}
+                transition={{ duration: 0.6, delay: i * 0.04 }}
+              />
+            </div>
+          ))}
+        </div>
+        <div className="mt-1 flex gap-2">
+          {data.weeks.map((w, i) => (
+            <span key={w.week_start} className={`flex-1 text-center text-[10px] font-semibold ${i === data.weeks.length - 1 ? 'text-primary' : 'text-muted'}`}>
+              {i === data.weeks.length - 1 ? 'esta' : shortDate(w.week_start)}
+            </span>
+          ))}
+        </div>
+      </Card>
+
+      <Link to="/checkins" className="block text-center text-sm font-bold text-primary">Ver histórico de check-ins</Link>
+    </div>
+  )
+}
+
+function MiniStat({ icon, value, label }: { icon: ReactNode; value: string; label: string }) {
+  return (
+    <Card className="!p-3">
+      <p className="flex items-center justify-center gap-1 text-lg font-extrabold">{icon}{value}</p>
+      <p className="text-[11px] leading-tight text-muted">{label}</p>
+    </Card>
   )
 }

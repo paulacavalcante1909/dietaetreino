@@ -1,5 +1,8 @@
+import { Camera, Check, CloudUpload, Dumbbell, Flame, Pause, Play, Timer } from 'lucide-react'
+import { enqueue, isOffline, newRef } from '../lib/outbox'
+import { exerciseLine } from '../components/SessionSummary'
 import { AnimatePresence, motion, Reorder } from 'framer-motion'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ExerciseImage } from '../components/ExerciseImage'
 import { ExercisePicker } from '../components/ExercisePicker'
@@ -7,7 +10,7 @@ import { Ring } from '../components/Ring'
 import { SetsSheet } from '../components/SetsSheet'
 import { isTimed, minutesOf, prescription } from '../lib/workout'
 import { useToast } from '../components/Toast'
-import { Alert, Button, Spinner } from '../components/ui'
+import { Alert, BackButton, Button, Mascot, Spinner } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import {
   clearRun, clock, durationLabel, loadRun, newRun, REST_OPTIONS, restDoneAlert, unlockAudio, useNow, useRun, useWakeLock,
@@ -86,6 +89,12 @@ function PrepView({ run, setRun }: { run: RunState; setRun: SetRun }) {
   const begin = () => {
     unlockAudio()
     setRun((r) => ({ ...r, phase: 'active', startedAt: Date.now() }))
+    // Última carga usada em cada exercício (pré-preenche a série)
+    const names = run.items.filter((i) => !isTimed(i)).map((i) => `names[]=${encodeURIComponent(i.exercise.name)}`).join('&')
+    if (names)
+      api<{ last: Record<string, { loads: number[] }> }>(`/stats/loads?${names}`)
+        .then((res) => setRun((r) => ({ ...r, items: r.items.map((i) => (res.last[i.exercise.name] ? { ...i, lastLoads: res.last[i.exercise.name].loads } : i)) })))
+        .catch(() => {})
   }
 
   const cancel = () => {
@@ -96,7 +105,7 @@ function PrepView({ run, setRun }: { run: RunState; setRun: SetRun }) {
   return (
     <div className="safe-top mx-auto max-w-lg px-5 pt-4 pb-32">
       <header className="mb-2 flex items-center gap-3">
-        <button onClick={cancel} aria-label="Cancelar" className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface text-2xl text-primary shadow-sm">‹</button>
+        <BackButton onClick={cancel} label="Cancelar" />
         <div className="min-w-0">
           <p className="text-xs font-medium text-muted uppercase">Iniciar treino</p>
           <h1 className="truncate text-xl font-bold">{run.workoutName}</h1>
@@ -133,7 +142,7 @@ function PrepView({ run, setRun }: { run: RunState; setRun: SetRun }) {
 
       <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/90 backdrop-blur-lg">
         <div className="mx-auto max-w-lg px-5 py-3">
-          <Button onClick={begin} disabled={run.items.length === 0}>▶ Começar treino</Button>
+          <Button onClick={begin} disabled={run.items.length === 0}><Play className="size-5 fill-current" /> Começar treino</Button>
         </div>
       </div>
 
@@ -224,13 +233,17 @@ function ActiveView({ run, setRun }: { run: RunState; setRun: SetRun }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [now, run.timerEndsAt, run.timerKey])
 
-  const completeSet = (index: number) => {
+  const completeSet = (index: number, kg: number | null) => {
     unlockAudio()
     navigator.vibrate?.(40)
     const it = run.items[index]
     const setsDone = it.setsDone + 1
     const done = setsDone >= it.sets
-    const items = run.items.map((x, j) => (j === index ? { ...x, setsDone, done } : x))
+    const loads = [...(it.loads ?? [])]
+    loads[it.setsDone] = kg
+    const best = Math.max(0, ...(it.lastLoads ?? []))
+    if (kg && best && kg > best && !(it.loads ?? []).some((v) => v != null && v > best)) toast({ text: `🏆 Recorde em ${it.exercise.name}: ${kg.toLocaleString('pt-BR')} kg!` })
+    const items = run.items.map((x, j) => (j === index ? { ...x, setsDone, done, loads } : x))
     const allDone = items.every((x) => x.done)
 
     if (done) toast({ text: `✓ ${it.exercise.name}: feito!` })
@@ -334,7 +347,7 @@ function ActiveView({ run, setRun }: { run: RunState; setRun: SetRun }) {
             resting={resting}
             restEndsAt={run.restEndsAt}
             restSeconds={run.restSeconds}
-            onCompleteSet={() => completeSet(run.current!)}
+            onCompleteSet={(kg) => completeSet(run.current!, kg)}
             onFinishExercise={() => finishExercise(run.current!)}
             onAdjustRest={(delta) => setRun((r) => ({ ...r, restEndsAt: r.restEndsAt ? Math.max(Date.now(), r.restEndsAt + delta * 1000) : r.restEndsAt }))}
             onSkipRest={() => setRun((r) => ({ ...r, restEndsAt: null }))}
@@ -378,7 +391,7 @@ function TimedRunner(props: {
     >
       <div className="safe-top mx-auto flex min-h-full max-w-lg flex-col px-5 pt-4 pb-8">
         <header className="mb-4 flex items-center gap-3">
-          <button onClick={props.onClose} aria-label="Voltar para a lista" className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface text-xl text-primary shadow-sm">⌄</button>
+          <BackButton onClick={props.onClose} label="Voltar para a lista" icon="down" />
           <h2 className="min-w-0 flex-1 truncate text-lg font-bold">{item.exercise.name}</h2>
         </header>
 
@@ -388,17 +401,17 @@ function TimedRunner(props: {
             <span className="font-mono text-5xl font-bold tabular-nums" role="timer" aria-live="off">{clock(remaining + (running ? 999 : 0))}</span>
             <span className="text-sm text-muted">{running ? 'restantes' : paused ? 'pausado' : `meta: ${minutesOf(item.reps)} min`}</span>
           </Ring>
-          {item.notes && <p className="rounded-2xl bg-soft px-3 py-2 text-sm">📝 {item.notes}</p>}
+          {item.notes && <p className="rounded-2xl bg-soft px-3 py-2 text-sm">{item.notes}</p>}
           {props.otherRunning && <p className="text-sm text-muted">Há outro cronômetro em andamento; ao iniciar este, ele é substituído.</p>}
         </div>
 
         <div className="mt-6 space-y-3">
           {running ? (
-            <Button variant="ghost" onClick={props.onPause} className="!h-14 text-lg">⏸ Pausar</Button>
+            <Button variant="ghost" onClick={props.onPause} className="!h-14 text-lg"><Pause className="size-5 fill-current" /> Pausar</Button>
           ) : paused ? (
-            <Button onClick={props.onResume} className="!h-14 text-lg">▶ Continuar</Button>
+            <Button onClick={props.onResume} className="!h-14 text-lg"><Play className="size-5 fill-current" /> Continuar</Button>
           ) : (
-            <Button onClick={props.onStart} className="!h-14 text-lg">▶ Iniciar {minutesOf(item.reps)} min</Button>
+            <Button onClick={props.onStart} className="!h-14 text-lg"><Play className="size-5 fill-current" /> Iniciar {minutesOf(item.reps)} min</Button>
           )}
           <button onClick={props.onFinish} className="w-full py-2 text-sm font-medium text-muted underline-offset-2 hover:underline">
             {running || paused ? 'Concluir agora' : 'Marcar como feito'}
@@ -416,7 +429,7 @@ function ExerciseRunner(props: {
   resting: boolean
   restEndsAt: number | null
   restSeconds: number
-  onCompleteSet: () => void
+  onCompleteSet: (kg: number | null) => void
   onFinishExercise: () => void
   onAdjustRest: (deltaSeconds: number) => void
   onSkipRest: () => void
@@ -426,6 +439,15 @@ function ExerciseRunner(props: {
   const { item, now, resting, restEndsAt, restSeconds } = props
   const remaining = resting && restEndsAt ? restEndsAt - now : 0
   const nextSet = Math.min(item.setsDone + 1, item.sets)
+  // Carga sugerida: a da série anterior hoje, senão a mesma série da última vez
+  const suggested = item.loads?.[item.setsDone - 1] ?? item.lastLoads?.[item.setsDone] ?? item.lastLoads?.[item.lastLoads.length - 1] ?? null
+  const [kg, setKg] = useState(suggested != null ? String(suggested).replace('.', ',') : '')
+  useEffect(() => {
+    setKg(suggested != null ? String(suggested).replace('.', ',') : '')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item.setsDone])
+  const kgNum = kg.trim() ? Math.max(0, Number(kg.replace(',', '.'))) || null : null
+  const bump = (d: number) => setKg(String(Math.max(0, Math.round(((kgNum ?? 0) + d) * 10) / 10)).replace('.', ','))
 
   return (
     <motion.div
@@ -437,7 +459,7 @@ function ExerciseRunner(props: {
     >
       <div className="safe-top mx-auto flex min-h-full max-w-lg flex-col px-5 pt-4 pb-8">
         <header className="mb-4 flex items-center gap-3">
-          <button onClick={props.onClose} aria-label="Voltar para a lista" className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface text-xl text-primary shadow-sm">⌄</button>
+          <BackButton onClick={props.onClose} label="Voltar para a lista" icon="down" />
           <h2 className="min-w-0 flex-1 truncate text-lg font-bold">{item.exercise.name}</h2>
         </header>
 
@@ -473,11 +495,35 @@ function ExerciseRunner(props: {
                 <p className="text-sm font-semibold tracking-wide text-muted uppercase">Série {nextSet} de {item.sets}</p>
                 <p className="mt-1 text-5xl font-bold text-primary">{item.reps}</p>
                 <p className="text-sm text-muted">{/^\d/.test(item.reps) && !/s$/.test(item.reps) ? 'repetições' : ''}</p>
-                {item.notes && <p className="mt-2 rounded-2xl bg-soft px-3 py-2 text-sm">📝 {item.notes}</p>}
+                {item.notes && <p className="mt-2 rounded-2xl bg-soft px-3 py-2 text-sm">{item.notes}</p>}
               </div>
+
+              {/* Carga desta série */}
+              <div className="w-full rounded-2xl bg-soft/70 p-3">
+                <div className="flex items-center justify-center gap-3">
+                  <button onClick={() => bump(-2.5)} aria-label="Menos 2,5 kg" className="flex size-12 items-center justify-center rounded-xl bg-surface font-bold text-primary active:scale-90">−2,5</button>
+                  <div className="flex items-baseline gap-1">
+                    <input
+                      aria-label="Carga em kg"
+                      inputMode="decimal"
+                      placeholder="—"
+                      value={kg}
+                      onChange={(e) => setKg(e.target.value.replace(/[^\d.,]/g, '').slice(0, 6))}
+                      onFocus={(e) => e.target.select()}
+                      className="w-20 bg-transparent text-center text-3xl font-extrabold outline-none placeholder:text-line"
+                    />
+                    <span className="font-semibold text-muted">kg</span>
+                  </div>
+                  <button onClick={() => bump(2.5)} aria-label="Mais 2,5 kg" className="flex size-12 items-center justify-center rounded-xl bg-surface font-bold text-primary active:scale-90">+2,5</button>
+                </div>
+                <p className="mt-1 text-center text-xs text-muted">
+                  {item.lastLoads?.length ? `Última vez: ${item.lastLoads.map((v) => v.toLocaleString('pt-BR')).join(' · ')} kg` : 'Opcional: anote a carga para ver sua evolução'}
+                </p>
+              </div>
+
               <div className="mt-auto w-full space-y-3">
-                <Button onClick={props.onCompleteSet} className="!h-16 text-lg">
-                  ✓ Concluir série {nextSet}
+                <Button onClick={() => props.onCompleteSet(kgNum)} className="!h-16 text-lg">
+                  <Check className="size-6" strokeWidth={3} /> Concluir série {nextSet}
                 </Button>
                 <button onClick={props.onFinishExercise} className="w-full py-2 text-sm font-medium text-muted underline-offset-2 hover:underline">
                   Encerrar este exercício
@@ -502,14 +548,15 @@ function FinishedView({ run, setRun }: { run: RunState; setRun: SetRun }) {
   const totalSets = run.items.filter((i) => !isTimed(i)).reduce((a, i) => a + i.setsDone, 0)
 
   // Salva o treino no servidor (uma vez); fica registrado mesmo sem check-in
+  const offline = !run.sessionId && !!run.sessionRef
+
+  const inFlight = useRef(false)
   const save = async () => {
-    if (run.sessionId) return
+    if (run.sessionId || run.sessionRef || inFlight.current) return
+    inFlight.current = true
     setSaving(true)
     setError(null)
-    try {
-      const r = await api<{ session: WorkoutSessionData }>('/workout-sessions', {
-        method: 'POST',
-        body: {
+    const body = {
           workout_id: run.workoutId,
           workout_name: run.workoutName,
           started_at: new Date(run.startedAt!).toISOString(),
@@ -522,13 +569,21 @@ function FinishedView({ run, setRun }: { run: RunState; setRun: SetRun }) {
             reps: i.reps,
             sets_done: i.setsDone,
             done: i.done && i.setsDone > 0,
+            loads: (i.loads ?? []).slice(0, i.sets),
           })),
-        },
-      })
+    }
+    try {
+      const r = await api<{ session: WorkoutSessionData }>('/workout-sessions', { method: 'POST', body })
       setRun((s) => ({ ...s, sessionId: r.session.id, kcalBurned: r.session.kcal_burned, weightEstimated: r.session.weight_estimated }))
     } catch (e) {
-      setError((e as ApiError).message)
+      if (isOffline(e)) {
+        // Sem internet: guarda o treino na fila e envia quando a conexão voltar
+        const ref = newRef()
+        await enqueue({ kind: 'session', ref, body })
+        setRun((s) => ({ ...s, sessionRef: ref }))
+      } else setError((e as ApiError).message)
     } finally {
+      inFlight.current = false
       setSaving(false)
     }
   }
@@ -546,15 +601,15 @@ function FinishedView({ run, setRun }: { run: RunState; setRun: SetRun }) {
   return (
     <div className="safe-top mx-auto flex min-h-full max-w-lg flex-col px-5 pt-10 pb-8">
       <motion.div initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 14 }} className="text-center">
-        <p className="text-6xl">🎉</p>
-        <h1 className="mt-3 text-2xl font-bold">Treino concluído!</h1>
+        <Mascot size={120} className="mx-auto" />
+        <h1 className="mt-4 text-2xl font-extrabold">Treino concluído!</h1>
         <p className="text-muted">{run.workoutName}</p>
       </motion.div>
 
       <div className="mt-6 grid grid-cols-3 gap-2 text-center">
-        <SummaryStat icon="⏱️" value={durationLabel(seconds)} label="de treino" />
-        <SummaryStat icon="💪" value={`${done.length}/${run.items.length}`} label="exercícios" />
-        <SummaryStat icon="🔥" value={run.kcalBurned != null ? `~${run.kcalBurned}` : '…'} label="kcal gastas" />
+        <SummaryStat icon={<Timer className="size-5 text-primary" />} value={durationLabel(seconds)} label="de treino" />
+        <SummaryStat icon={<Dumbbell className="size-5 text-primary" />} value={`${done.length}/${run.items.length}`} label="exercícios" />
+        <SummaryStat icon={<Flame className="size-5 text-coral" />} value={run.kcalBurned != null ? `~${run.kcalBurned}` : offline ? '⏳' : '…'} label="kcal gastas" />
       </div>
       <p className="mt-2 text-center text-xs text-muted">
         {totalSets > 0 && `${totalSets} ${totalSets === 1 ? 'série' : 'séries'} · `}Gasto estimado (média por MET × peso × tempo).
@@ -565,11 +620,18 @@ function FinishedView({ run, setRun }: { run: RunState; setRun: SetRun }) {
         {run.items.map((i) => (
           <li key={i.key} className="flex items-center justify-between rounded-xl bg-surface px-4 py-2.5 text-sm">
             <span className={`truncate ${i.done && i.setsDone > 0 ? '' : 'text-muted line-through'}`}>{i.exercise.name}</span>
-            <span className="shrink-0 pl-2 text-muted">{isTimed(i) ? `${i.done ? '✓ ' : ''}${minutesOf(i.reps)} min` : `${i.setsDone}/${i.sets} × ${i.reps}`}</span>
+            <span className="shrink-0 pl-2 text-muted">
+              {exerciseLine({ name: i.exercise.name, muscle_group: null, image: null, sets: i.sets, reps: i.reps, sets_done: i.setsDone, done: i.done, loads: i.loads })}
+            </span>
           </li>
         ))}
       </ul>
 
+      {offline && (
+        <p className="mt-4 flex items-center gap-2 rounded-2xl bg-soft p-3 text-sm">
+          <CloudUpload className="size-4 shrink-0 text-primary" /> Sem internet: treino guardado no celular. Ele é enviado sozinho quando a conexão voltar.
+        </p>
+      )}
       {error && (
         <div className="mt-4 space-y-2">
           <Alert>Não foi possível salvar o treino: {error}</Alert>
@@ -578,10 +640,14 @@ function FinishedView({ run, setRun }: { run: RunState; setRun: SetRun }) {
       )}
 
       <div className="mt-auto space-y-3 pt-8">
-        <Button onClick={() => leave(`/checkin?treino=${run.workoutId}&sessao=${run.sessionId}`)} disabled={!run.sessionId} loading={saving}>
-          📸 Fazer check-in com foto
+        <Button
+          onClick={() => leave(run.sessionId ? `/checkin?treino=${run.workoutId}&sessao=${run.sessionId}` : `/checkin?treino=${run.workoutId}&ref=${run.sessionRef}`)}
+          disabled={!run.sessionId && !run.sessionRef}
+          loading={saving}
+        >
+          <Camera className="size-5" /> Fazer check-in
         </Button>
-        <Button variant="ghost" onClick={() => leave('/treinos')} disabled={!run.sessionId && !error}>
+        <Button variant="ghost" onClick={() => leave('/treinos')} disabled={!run.sessionId && !run.sessionRef && !error}>
           Agora não
         </Button>
       </div>
@@ -589,10 +655,10 @@ function FinishedView({ run, setRun }: { run: RunState; setRun: SetRun }) {
   )
 }
 
-function SummaryStat({ icon, value, label }: { icon: string; value: string; label: string }) {
+function SummaryStat({ icon, value, label }: { icon: ReactNode; value: string; label: string }) {
   return (
     <div className="rounded-2xl bg-surface p-3 shadow-[0_2px_12px_-4px_rgba(31,23,36,0.08)]">
-      <p className="text-lg">{icon}</p>
+      <p className="flex justify-center">{icon}</p>
       <p className="font-bold">{value}</p>
       <p className="text-xs text-muted">{label}</p>
     </div>

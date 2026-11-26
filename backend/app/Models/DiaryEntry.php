@@ -68,7 +68,7 @@ class DiaryEntry extends Model
         $this->fill([
             'food_id' => $food->id,
             'portion_id' => $portion?->id,
-            'name' => $food->name,
+            'name' => $food->label(),
             'brand' => $food->brand,
             'quantity' => $quantity,
             'unit_label' => $unit,

@@ -1,6 +1,9 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { Component, useEffect, useState, type ReactNode } from 'react'
 import { useTheme } from '../lib/theme'
+import { flush } from '../lib/outbox'
+import { useToast } from './Toast'
+import { CloudOff } from 'lucide-react'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -101,7 +104,7 @@ export function OfflineBanner() {
           className="fixed inset-x-0 top-0 z-[60] bg-scrim py-2 text-center text-sm text-white"
           role="status"
         >
-          Você está sem internet. Os registros voltam a salvar quando a conexão voltar.
+          Sem internet. Treinos e check-ins ficam guardados e são enviados quando a conexão voltar.
         </motion.div>
       )}
     </AnimatePresence>
@@ -120,7 +123,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: b
     if (!this.state.error) return this.props.children
     return (
       <div className="flex min-h-full flex-col items-center justify-center gap-4 p-8 text-center">
-        <p className="text-5xl">😵‍💫</p>
+        <CloudOff className="size-12 text-primary" aria-hidden />
         <p className="text-lg font-semibold">Ops, algo deu errado.</p>
         <button onClick={() => location.reload()} className="rounded-2xl bg-primary px-6 py-3 font-semibold text-white">
           Recarregar
@@ -128,4 +131,26 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: b
       </div>
     )
   }
+}
+
+/** Envia a fila offline ao abrir, ao voltar a internet, ao voltar ao app e a cada minuto. */
+export function OutboxSync() {
+  const toast = useToast()
+  useEffect(() => {
+    const run = () =>
+      flush().then((n) => {
+        if (n > 0) toast({ text: n === 1 ? 'Envio pendente concluído ✓' : `${n} envios pendentes concluídos ✓` })
+      })
+    run()
+    const onVisible = () => document.visibilityState === 'visible' && run()
+    window.addEventListener('online', run)
+    document.addEventListener('visibilitychange', onVisible)
+    const id = setInterval(run, 60_000)
+    return () => {
+      window.removeEventListener('online', run)
+      document.removeEventListener('visibilitychange', onVisible)
+      clearInterval(id)
+    }
+  }, [toast])
+  return null
 }

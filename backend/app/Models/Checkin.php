@@ -27,12 +27,16 @@ class Checkin extends Model
 
     protected static function booted(): void
     {
-        static::deleted(fn (Checkin $c) => Storage::disk('local')->delete($c->photo_path));
+        static::deleted(fn (Checkin $c) => $c->photo_path && Storage::disk('local')->delete($c->photo_path));
     }
 
     /** Link temporário assinado: a foto é privada e não fica acessível por URL fixa. */
-    public function getPhotoUrlAttribute(): string
+    public function getPhotoUrlAttribute(): ?string
     {
+        if (! $this->photo_path) {
+            return null; // check-in sem foto
+        }
+
         return URL::temporarySignedRoute('checkins.photo', now()->addHours(6), ['checkin' => $this->id], absolute: false);
     }
 }

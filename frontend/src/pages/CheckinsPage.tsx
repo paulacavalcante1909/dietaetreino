@@ -1,9 +1,11 @@
+import { Calendar, CheckCircle2, ChevronLeft, ChevronRight, Flame, Timer, Trophy } from 'lucide-react'
+import { useTheme } from '../lib/theme'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Sheet } from '../components/Sheet'
 import { useToast } from '../components/Toast'
-import { Button, Card } from '../components/ui'
+import { BackButton, Button, Card, EmptyState } from '../components/ui'
 import { api } from '../lib/api'
 import { isoDate, parseIso } from '../lib/date'
 import type { Checkin, CheckinStats } from '../lib/types'
@@ -20,6 +22,7 @@ const shiftMonth = (m: string, n: number) => {
 
 /** Histórico de check-ins: calendário do mês com as fotos + estatísticas. */
 export function CheckinsPage() {
+  const { theme } = useTheme()
   const navigate = useNavigate()
   const toast = useToast()
   const [month, setMonth] = useState(isoDate().slice(0, 7))
@@ -66,22 +69,20 @@ export function CheckinsPage() {
   return (
     <div className="safe-top mx-auto max-w-lg px-5 pt-4 pb-10">
       <header className="mb-5 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} aria-label="Voltar" className="flex size-10 items-center justify-center rounded-full bg-surface text-2xl text-primary shadow-sm">
-          ‹
-        </button>
+        <BackButton onClick={() => navigate(-1)} />
         <h1 className="text-xl font-bold">Meus check-ins</h1>
       </header>
 
       {stats && (
         <div className="mb-4 grid grid-cols-3 gap-2 text-center">
-          {[
-            ['🔥', stats.streak, stats.streak === 1 ? 'dia seguido' : 'dias seguidos'],
-            ['📅', stats.month_count, stats.month_count === 1 ? 'check-in no mês' : 'check-ins no mês'],
-            ['🏆', stats.total_count, 'no total'],
-          ].map(([icon, v, l]) => (
+          {([
+            [Flame, stats.streak, stats.streak === 1 ? 'dia seguido' : 'dias seguidos'],
+            [Calendar, stats.month_count, stats.month_count === 1 ? 'check-in no mês' : 'check-ins no mês'],
+            [Trophy, stats.total_count, 'no total'],
+          ] as const).map(([Icon, v, l]) => (
             <Card key={String(l)} className="!p-3">
-              <p className="text-xl font-bold text-primary">
-                {icon} {v}
+              <p className="flex items-center justify-center gap-1 text-xl font-extrabold text-primary">
+                <Icon className="size-5" /> {v}
               </p>
               <p className="text-xs text-muted">{l}</p>
             </Card>
@@ -91,9 +92,9 @@ export function CheckinsPage() {
 
       <Card className="!p-4">
         <div className="mb-3 flex items-center justify-between">
-          <button aria-label="Mês anterior" onClick={() => go(-1)} className="flex size-9 items-center justify-center rounded-full bg-soft text-xl text-primary">‹</button>
+          <button aria-label="Mês anterior" onClick={() => go(-1)} className="flex size-9 items-center justify-center rounded-full bg-soft text-primary"><ChevronLeft className="size-5" /></button>
           <p className="font-semibold first-letter:uppercase">{title}</p>
-          <button aria-label="Próximo mês" onClick={() => go(1)} disabled={month >= today.slice(0, 7)} className="flex size-9 items-center justify-center rounded-full bg-soft text-xl text-primary disabled:opacity-30">›</button>
+          <button aria-label="Próximo mês" onClick={() => go(1)} disabled={month >= today.slice(0, 7)} className="flex size-9 items-center justify-center rounded-full bg-soft text-primary disabled:opacity-30"><ChevronRight className="size-5" /></button>
         </div>
         <div className="mb-1 grid grid-cols-7 text-center text-xs font-medium text-muted">
           {WEEKDAYS.map((d, i) => <span key={i}>{d}</span>)}
@@ -116,10 +117,11 @@ export function CheckinsPage() {
                   key={i}
                   disabled={!c}
                   onClick={() => c && setOpen(c)}
-                  className={`relative aspect-square overflow-hidden rounded-xl text-sm ${date === today ? 'ring-2 ring-orchid' : ''} ${c ? '' : 'bg-soft/50 text-muted'}`}
+                  className={`relative aspect-square overflow-hidden rounded-xl text-sm ${date === today ? 'ring-2 ring-orchid' : ''} ${c ? (c.photo_url ? '' : 'bg-gradient-to-br from-orchid to-violet') : 'bg-soft/50 text-muted'}`}
                 >
-                  {c && <img src={c.photo_url} alt="" loading="lazy" className="absolute inset-0 size-full object-cover" />}
+                  {c?.photo_url && <img src={c.photo_url} alt="" loading="lazy" className="absolute inset-0 size-full object-cover" />}
                   <span className={`relative ${c ? 'font-bold text-white [text-shadow:0_1px_3px_rgba(0,0,0,.6)]' : ''}`}>{day}</span>
+                  {c && !c.photo_url && <CheckCircle2 className="absolute right-0.5 bottom-0.5 size-3 text-white" aria-hidden />}
                 </button>
               )
             })}
@@ -127,15 +129,21 @@ export function CheckinsPage() {
         </AnimatePresence>
       </Card>
 
-      {checkins && checkins.length === 0 && <p className="py-6 text-center text-sm text-muted">Nenhum check-in neste mês.</p>}
+      {checkins && checkins.length === 0 && <EmptyState title="Nenhum check-in neste mês" text="Treinou? Registre pelo botão Treinar ou pelo “+” da barra." />}
 
       <div className="mt-4 grid grid-cols-3 gap-2">
         {checkins?.map((c) => (
           <button key={c.id} onClick={() => setOpen(c)} className="relative aspect-[4/5] overflow-hidden rounded-2xl">
-            <img src={c.photo_url} alt={`Check-in ${c.workout_name}`} loading="lazy" className="size-full object-cover" />
-            <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/70 to-transparent px-2 pt-6 pb-1.5 text-left text-[11px] font-semibold text-white">
+            {c.photo_url ? (
+              <img src={c.photo_url} alt={`Check-in ${c.workout_name}`} loading="lazy" className="size-full object-cover" />
+            ) : (
+              <span className="flex size-full items-start justify-center bg-gradient-to-br from-orchid to-violet pt-4">
+                <img src={`${theme.assets}/mascote.png`} alt="" className="size-14 rounded-full ring-2 ring-white/70" />
+              </span>
+            )}
+            <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-scrim/70 to-transparent px-2 pt-6 pb-1.5 text-left text-[11px] font-semibold text-white">
               {parseIso(c.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} · {c.workout_name}
-              {c.session && <span className="block font-normal text-white/85">⏱️ {durationLabel(c.session.duration_seconds)}</span>}
+              {c.session && <span className="flex items-center gap-1 font-normal text-white/85"><Timer className="size-3" /> {durationLabel(c.session.duration_seconds)}</span>}
             </span>
           </button>
         ))}
@@ -149,7 +157,7 @@ export function CheckinsPage() {
               {' · '}
               {new Date(open.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
             </p>
-            <img src={open.photo_url} alt={`Foto do check-in ${open.workout_name}`} className="w-full rounded-2xl object-cover" />
+            {open.photo_url && <img src={open.photo_url} alt={`Foto do check-in ${open.workout_name}`} className="w-full rounded-2xl object-cover" />}
             {open.session && <SessionSummary session={open.session} />}
             {open.note && <p className="rounded-2xl bg-soft p-3 text-sm">{open.note}</p>}
             <Button variant="danger" onClick={() => remove(open)}>Excluir check-in</Button>

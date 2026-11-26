@@ -21,6 +21,7 @@ return [
         'min' => 'A senha deve ter no mínimo :min caracteres.',
     ],
     'required' => 'O campo :attribute é obrigatório.',
+    'required_without' => 'O campo :attribute é obrigatório quando :values não for informado.',
     'string' => 'O campo :attribute deve ser um texto.',
     'unique' => 'Este :attribute já está em uso.',
 

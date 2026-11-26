@@ -13,6 +13,8 @@ export interface RunItem {
   reps: string
   notes: string | null
   setsDone: number
+  loads?: (number | null)[] // carga (kg) registrada em cada série
+  lastLoads?: number[] // cargas da última vez que fez este exercício
   done: boolean
 }
 
@@ -27,6 +29,7 @@ export interface RunState {
   restEndsAt: number | null // fim do descanso atual
   restSeconds: number // descanso padrão entre séries
   sessionId: number | null // salvo no servidor
+  sessionRef?: string | null // salvo na fila offline (enviado quando a internet voltar)
   kcalBurned?: number | null // estimativa calculada pelo servidor
   weightEstimated?: boolean
   timerKey?: string | null // cardio: exercício com cronômetro ativo/pausado

@@ -15,7 +15,7 @@ class Food extends Model
     protected $table = 'foods';
 
     protected $fillable = [
-        'user_id', 'source', 'external_id', 'ean', 'name', 'brand', 'category',
+        'user_id', 'source', 'external_id', 'ean', 'name', 'display_name', 'brand', 'category',
         'base_qty', 'base_unit', 'kcal', 'carbs', 'protein', 'fat', 'sodium', 'fiber',
     ];
 
@@ -32,13 +32,50 @@ class Food extends Model
     protected static function booted(): void
     {
         static::saving(function (Food $food) {
-            $food->search_name = self::normalize(trim($food->name.' '.$food->brand));
+            $food->search_name = self::normalize(trim($food->name.' '.$food->display_name.' '.$food->brand));
         });
     }
 
     public static function normalize(string $s): string
     {
         return Str::of($s)->ascii()->lower()->replaceMatches('/[^a-z0-9 ]+/', ' ')->squish()->toString();
+    }
+
+    /** Nome para exibir: amigável quando existir. */
+    public function label(): string
+    {
+        return $this->display_name ?: $this->name;
+    }
+
+    /**
+     * Nome amigável a partir do padrão técnico da TACO
+     * ("Ovo, de galinha, inteiro, cozido/10minutos" → "Ovo inteiro cozido").
+     */
+    public static function friendly(string $name): string
+    {
+        $n = preg_replace('#\s*/\s*\d+\s*minutos?#iu', '', $name);
+        $parts = array_values(array_filter(array_map('trim', explode(',', $n)), fn ($p) => $p !== ''));
+        $first = $parts[0] ?? $n;
+        $rest = array_slice($parts, 1);
+
+        // Termos que só atrapalham a leitura
+        $rest = array_values(array_filter($rest, fn ($p) => ! in_array(mb_strtolower($p), ['de galinha', 'de vaca', 'bovina'], true)));
+        if ($first === 'Carne' && str_contains(mb_strtolower($n), 'bovina')) {
+            $first = 'Carne bovina,';
+        }
+        if ($first === 'Arroz') {
+            $rest = array_map(fn ($p) => mb_strtolower($p) === 'tipo 1' ? 'branco' : $p, $rest);
+        }
+        if ($first === 'Pão' && ($rest[0] ?? '') === 'trigo') {
+            array_shift($rest);
+            if (($rest[0] ?? '') === 'forma') {
+                $rest[0] = 'de forma';
+            }
+        }
+
+        $out = trim($first.' '.implode(' ', $rest));
+
+        return rtrim(preg_replace('/\s+/', ' ', str_replace(', ', ' ', $out)), ', ');
     }
 
     public function portions(): HasMany
