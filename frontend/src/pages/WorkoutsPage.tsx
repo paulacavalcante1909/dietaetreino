@@ -1,12 +1,12 @@
 import { motion, Reorder } from 'framer-motion'
-import { Calendar, Camera, CheckCircle2, ChevronRight, CloudUpload, Dumbbell, Flame, Play, Plus, Trophy, Zap } from 'lucide-react'
+import { Calendar, Camera, CheckCircle2, ChevronRight, CloudUpload, Dumbbell, Flame, Pencil, Play, Plus, Trophy, Zap } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ExerciseImage } from '../components/ExerciseImage'
 import { Ring } from '../components/Ring'
 import { Sheet } from '../components/Sheet'
-import { useToast } from '../components/Toast'
-import { Button, Card, EmptyState, Mascot } from '../components/ui'
+import { WeeklyGoalSheet } from '../components/WeeklyGoalSheet'
+import { Button, Card, EmptyState } from '../components/ui'
 import { api } from '../lib/api'
 import { isoDate } from '../lib/date'
 import { useOutboxCount } from '../lib/outbox'
@@ -16,7 +16,6 @@ import type { Checkin, CheckinStats, Workout } from '../lib/types'
 /** Aba Treinos: "Treinar" (ficha ou avulso), meta da semana, sequência e ficha. */
 export function WorkoutsPage() {
   const navigate = useNavigate()
-  const toast = useToast()
   const [params, setParams] = useSearchParams()
   const [workouts, setWorkouts] = useState<Workout[] | null>(null)
   const [stats, setStats] = useState<CheckinStats | null>(null)
@@ -50,13 +49,6 @@ export function WorkoutsPage() {
     setCreating(true)
     const r = await api<{ workout: Workout }>('/workouts', { method: 'POST', body: {} })
     navigate(`/treinos/${r.workout.id}?editar=1`)
-  }
-
-  const saveGoal = async (n: number) => {
-    setStats((s) => (s ? { ...s, weekly_goal: n } : s))
-    setGoalOpen(false)
-    await api('/me/preferences', { method: 'PUT', body: { weekly_workout_goal: n } }).catch(() => {})
-    toast({ text: `Meta: ${n}× por semana ✓` })
   }
 
   const saveOrder = () => workouts && api('/workouts/order', { method: 'PUT', body: { ids: workouts.map((w) => w.id) } }).catch(() => {})
@@ -98,7 +90,7 @@ export function WorkoutsPage() {
                   <span className="text-xl leading-none font-extrabold text-white">
                     {stats.week_days}/{stats.weekly_goal}
                   </span>
-                  <span className="text-[10px] text-white/80">semana</span>
+                  <span className="text-[10px] text-white/80">treinos</span>
                 </Ring>
               </button>
             )}
@@ -111,6 +103,11 @@ export function WorkoutsPage() {
                   <span className="flex items-center gap-1"><Calendar className="size-3.5" />{stats.month_count} no mês</span>
                   <span className="flex items-center gap-1"><Trophy className="size-3.5" />{stats.total_count}</span>
                 </div>
+              )}
+              {stats && (
+                <button onClick={() => setGoalOpen(true)} className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-bold text-white active:bg-white/30">
+                  Meta: {stats.weekly_goal} {stats.weekly_goal === 1 ? 'treino' : 'treinos'} por semana <Pencil className="size-3" />
+                </button>
               )}
             </div>
             {todayCheckin?.photo_url && <img src={todayCheckin.photo_url} alt="Foto do check-in de hoje" className="size-14 shrink-0 rounded-2xl border-2 border-white/70 object-cover" />}
@@ -221,24 +218,7 @@ export function WorkoutsPage() {
       </Sheet>
 
       {/* Meta da semana */}
-      <Sheet open={goalOpen} onClose={() => setGoalOpen(false)} title="Meta da semana">
-        <div className="space-y-4 text-center">
-          <Mascot size={72} className="mx-auto" />
-          <p className="text-sm text-muted">Quantos dias por semana você quer treinar?</p>
-          <div className="grid grid-cols-7 gap-1.5">
-            {[1, 2, 3, 4, 5, 6, 7].map((n) => (
-              <button
-                key={n}
-                onClick={() => saveGoal(n)}
-                className={`h-12 rounded-xl text-lg font-extrabold transition-colors ${stats?.weekly_goal === n ? 'bg-primary text-white' : 'bg-soft text-ink'}`}
-              >
-                {n}
-              </button>
-            ))}
-          </div>
-          <p className="text-xs text-muted">Conta dias com treino executado ou check-in (domingo a sábado).</p>
-        </div>
-      </Sheet>
+      <WeeklyGoalSheet open={goalOpen} onClose={() => setGoalOpen(false)} value={stats?.weekly_goal ?? 3} onSaved={(n) => setStats((s) => (s ? { ...s, weekly_goal: n } : s))} />
     </div>
   )
 }

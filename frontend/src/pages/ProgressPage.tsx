@@ -3,9 +3,10 @@ import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from
 import { Link, useSearchParams } from 'react-router-dom'
 import { Sheet } from '../components/Sheet'
 import { useToast } from '../components/Toast'
+import { WeeklyGoalSheet } from '../components/WeeklyGoalSheet'
 import { WeightChart } from '../components/WeightChart'
 import { Bar, Ring, fmt, fmtKcal } from '../components/Ring'
-import { Activity, CalendarCheck, ChevronLeft, ChevronRight, Droplet, Flame, Timer, Target } from 'lucide-react'
+import { Activity, CalendarCheck, ChevronLeft, ChevronRight, Droplet, Flame, Info, Pencil, Target, Timer, TrendingDown, TrendingUp } from 'lucide-react'
 import { Alert, Button, Card, EmptyState, Field } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import { addDays, isoDate, parseIso } from '../lib/date'
@@ -323,34 +324,22 @@ function WeekTab() {
 
       {days && logged.length > 0 && (
         <>
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <MiniStat icon={<Target className="size-4 text-primary" />} value={`${inGoal}/${logged.length}`} label="dias na meta" />
-            <MiniStat icon={<Flame className="size-4 text-orchid" />} value={fmtKcal(avg('kcal'))} label="kcal/dia (média)" />
-            <MiniStat icon={<Flame className="size-4 text-coral" />} value={`~${fmtKcal(burned)}`} label="gastas no treino" />
+          {goal && <GoalDaysCard inGoal={inGoal} logged={logged.length} goalKcal={goal.kcal} />}
+
+          <div className="grid grid-cols-2 gap-2 text-center">
+            <MiniStat icon={<Flame className="size-4 text-orchid" />} value={`${fmtKcal(avg('kcal'))} kcal`} label="comidas por dia, em média" />
+            <MiniStat icon={<Flame className="size-4 text-coral" />} value={`~${fmtKcal(burned)} kcal`} label="gastas nos treinos da semana" />
           </div>
 
-          {/* Déficit da semana: soma de (gasto estimado − consumido) nos dias registrados */}
+          {/* Balanço da semana: soma de (gasto estimado − consumido) nos dias já encerrados */}
           {withGet.length > 0 ? (
-            <Card className="flex items-center gap-3">
-              <span className={`flex size-11 shrink-0 items-center justify-center rounded-full ${deficitTotal < 0 ? 'bg-coral/15 text-coral' : 'bg-fiber/15 text-fiber'}`}>
-                <Activity className="size-5" />
-              </span>
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-muted">{deficitTotal < 0 ? 'Superávit' : 'Déficit'} na semana ({withGet.length} {withGet.length === 1 ? 'dia completo' : 'dias completos'})</p>
-                <p className="text-xl font-extrabold">
-                  {fmtKcal(Math.abs(deficitTotal))} kcal <span className="text-sm font-semibold text-muted">· {fmtKcal(Math.abs(deficitTotal) / withGet.length)}/dia</span>
-                </p>
-                <p className="text-xs text-muted">
-                  ≈ {(Math.abs(deficitTotal) / 7700).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} kg de gordura {deficitTotal < 0 ? 'a mais' : 'a menos'} (estimativa)
-                </p>
-              </div>
-            </Card>
+            <WeekBalanceCard balance={deficitTotal} days={withGet.length} />
           ) : todayPending ? (
-            <p className="rounded-2xl bg-soft p-3 text-sm text-muted">O déficit da semana soma os dias já encerrados. O de hoje está na tela inicial.</p>
+            <p className="rounded-2xl bg-soft p-3 text-sm text-muted">O balanço da semana usa só os dias que já terminaram. O de hoje você acompanha na tela inicial.</p>
           ) : (
             energy && !energy.available && (
               <Link to="/ajustes?abrir=dados" className="flex items-center gap-2 rounded-2xl bg-soft p-3 text-sm font-semibold text-primary">
-                <Activity className="size-4" /> Complete seus dados para ver o déficit calórico <ChevronRight className="ml-auto size-4" />
+                <Activity className="size-4" /> Complete seus dados para ver se comeu mais ou menos do que gastou <ChevronRight className="ml-auto size-4 shrink-0" />
               </Link>
             )
           )}
@@ -418,6 +407,7 @@ interface WeekWorkouts {
 
 function WorkoutsTab() {
   const [data, setData] = useState<{ weeks: WeekWorkouts[]; weekly_goal: number } | null>(null)
+  const [goalOpen, setGoalOpen] = useState(false)
 
   useEffect(() => {
     api<{ weeks: WeekWorkouts[]; weekly_goal: number }>('/stats/workouts?weeks=8').then(setData).catch(() => setData({ weeks: [], weekly_goal: 3 }))
@@ -434,7 +424,11 @@ function WorkoutsTab() {
       <Card>
         <EmptyState title="Seus treinos aparecem aqui" text="Use “Treinar” na aba Treinos para registrar e acompanhar sua frequência.">
           <Link to="/treinos?treinar=1" className="flex h-11 items-center justify-center rounded-2xl bg-primary font-bold text-white">Treinar</Link>
+          <button onClick={() => setGoalOpen(true)} className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-soft px-3 py-1 text-xs font-bold text-primary">
+            Meta: {data.weekly_goal} {data.weekly_goal === 1 ? 'treino' : 'treinos'} por semana <Pencil className="size-3" />
+          </button>
         </EmptyState>
+        <WeeklyGoalSheet open={goalOpen} onClose={() => setGoalOpen(false)} value={data.weekly_goal} onSaved={(n) => setData((d) => (d ? { ...d, weekly_goal: n } : d))} />
       </Card>
     )
 
@@ -443,13 +437,17 @@ function WorkoutsTab() {
       <Card className="flex items-center gap-4">
         <Ring value={Math.min(current?.days ?? 0, data.weekly_goal)} max={data.weekly_goal} size={96} stroke={10} color="var(--color-orchid)">
           <span className="text-xl font-extrabold">{current?.days ?? 0}/{data.weekly_goal}</span>
-          <span className="text-[10px] text-muted">semana</span>
+          <span className="text-[10px] text-muted">treinos</span>
         </Ring>
         <div className="min-w-0">
           <p className="font-bold">{(current?.days ?? 0) >= data.weekly_goal ? 'Meta da semana batida! 🎉' : `Faltam ${data.weekly_goal - (current?.days ?? 0)} treino(s) nesta semana`}</p>
           {hit > 0 && <p className="text-sm text-muted">Meta batida em {hit} das últimas {data.weeks.length} semanas.</p>}
+          <button onClick={() => setGoalOpen(true)} className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-soft px-3 py-1 text-xs font-bold text-primary">
+            Meta: {data.weekly_goal} {data.weekly_goal === 1 ? 'treino' : 'treinos'} por semana <Pencil className="size-3" />
+          </button>
         </div>
       </Card>
+      <WeeklyGoalSheet open={goalOpen} onClose={() => setGoalOpen(false)} value={data.weekly_goal} onSaved={(n) => setData((d) => (d ? { ...d, weekly_goal: n } : d))} />
 
       <div className="grid grid-cols-3 gap-2 text-center">
         <MiniStat icon={<CalendarCheck className="size-4 text-primary" />} value={String(total.days)} label="dias em 8 semanas" />
@@ -495,6 +493,91 @@ function MiniStat({ icon, value, label }: { icon: ReactNode; value: string; labe
     <Card className="!p-3">
       <p className="flex items-center justify-center gap-1 text-lg font-extrabold">{icon}{value}</p>
       <p className="text-[11px] leading-tight text-muted">{label}</p>
+    </Card>
+  )
+}
+
+/** Botão ⓘ que abre uma explicação em linguagem simples. */
+function InfoButton({ title, children, label }: { title: string; children: ReactNode; label: string }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <button onClick={() => setOpen(true)} aria-label={label} className="-m-2 flex size-10 shrink-0 items-center justify-center rounded-full text-muted active:bg-soft">
+        <Info className="size-5" />
+      </button>
+      <Sheet open={open} onClose={() => setOpen(false)} title={title}>
+        <div className="space-y-3 text-sm text-muted [&_strong]:text-ink">{children}</div>
+        <Button className="mt-5" onClick={() => setOpen(false)}>Entendi</Button>
+      </Sheet>
+    </>
+  )
+}
+
+/** Quantos dias a pessoa comeu perto da meta de calorias (±10%). */
+function GoalDaysCard({ inGoal, logged, goalKcal }: { inGoal: number; logged: number; goalKcal: number }) {
+  return (
+    <Card className="flex items-center gap-3">
+      <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-soft text-primary">
+        <Target className="size-5" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-xl font-extrabold">
+          {inGoal} de {logged} {logged === 1 ? 'dia' : 'dias'}
+        </p>
+        <p className="text-sm text-muted">com calorias dentro da meta</p>
+      </div>
+      <InfoButton title="Dias com calorias na meta" label="O que são dias com calorias na meta?">
+        <p>
+          Um dia conta quando o que você comeu ficou <strong>perto da sua meta de calorias</strong>: até 10% a mais ou a menos.
+        </p>
+        <p>
+          Com a sua meta de <strong>{fmtKcal(goalKcal)} kcal</strong>, vale qualquer dia entre{' '}
+          <strong>{fmtKcal(goalKcal * 0.9)}</strong> e <strong>{fmtKcal(goalKcal * 1.1)} kcal</strong>.
+        </p>
+        <p>Só entram os dias em que você registrou alguma refeição.</p>
+      </InfoButton>
+    </Card>
+  )
+}
+
+/** Comeu mais ou menos do que gastou na semana, sem jargão. Positivo = comeu menos (déficit). */
+function WeekBalanceCard({ balance, days }: { balance: number; days: number }) {
+  const ateLess = balance >= 0
+  const kg = (Math.abs(balance) / 7700).toLocaleString('pt-BR', { maximumFractionDigits: 2 })
+  return (
+    <Card className="space-y-3">
+      <div className="flex items-start gap-3">
+        <span className={`flex size-11 shrink-0 items-center justify-center rounded-full ${ateLess ? 'bg-fiber/15 text-fiber' : 'bg-coral/15 text-coral'}`}>
+          {ateLess ? <TrendingDown className="size-5" /> : <TrendingUp className="size-5" />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-semibold text-muted">Balanço da semana</p>
+          <p className="text-lg leading-snug font-extrabold">
+            Você comeu {fmtKcal(Math.abs(balance))} kcal {ateLess ? 'a menos' : 'a mais'} do que gastou
+          </p>
+        </div>
+        <InfoButton title="Balanço da semana" label="Como funciona o balanço da semana?">
+          <p>
+            Comparamos <strong>o que você comeu</strong> com <strong>o quanto seu corpo gastou</strong>. O gasto é estimado pelo seu peso, altura,
+            idade e por quantas vezes você treina por semana.
+          </p>
+          <p>
+            <strong>Comeu menos do que gastou</strong> (déficit calórico): o corpo usa reservas e a tendência é <strong>perder peso</strong>.
+          </p>
+          <p>
+            <strong>Comeu mais do que gastou</strong> (superávit calórico): a tendência é <strong>ganhar peso</strong>, ou massa muscular se você
+            treina força.
+          </p>
+          <p>
+            Só entram os dias que já terminaram e têm refeições registradas. Cerca de 7.700 kcal equivalem a 1 kg de gordura.
+          </p>
+          <p className="text-xs">É uma estimativa e não substitui a orientação de um nutricionista.</p>
+        </InfoButton>
+      </div>
+      <p className="rounded-xl bg-soft px-3 py-2 text-sm text-muted">
+        {ateLess ? 'Isso ajuda a perder' : 'Isso tende a somar'} cerca de <strong className="text-ink">{kg} kg</strong> de gordura · média de{' '}
+        {fmtKcal(Math.abs(balance) / days)} kcal por dia em {days} {days === 1 ? 'dia completo' : 'dias completos'}
+      </p>
     </Card>
   )
 }

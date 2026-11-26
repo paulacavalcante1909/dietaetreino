@@ -4,6 +4,7 @@ export interface User {
   email: string
   created_at: string
   add_burned_to_goal?: boolean
+  weekly_workout_goal?: number
   sex?: 'f' | 'm' | null
   birth_date?: string | null
   height_cm?: number | null

@@ -7,6 +7,7 @@ import { api, ApiError } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import type { User } from '../lib/types'
 import { useToast } from '../components/Toast'
+import { WeeklyGoalSheet } from '../components/WeeklyGoalSheet'
 import { APP_VERSION, checkForUpdate, hardRefresh } from '../lib/pwa'
 import { THEMES, useTheme } from '../lib/theme'
 
@@ -62,6 +63,7 @@ export function SettingsPage() {
   const [params] = useSearchParams()
   const [open, setOpen] = useState<string | null>(params.get('abrir') === 'dados' ? 'profile' : null)
   const toggle = (k: string) => setOpen(open === k ? null : k)
+  const [goalOpen, setGoalOpen] = useState(false)
 
   const [profile, setProfile] = useState({
     name: user?.name ?? '',
@@ -128,6 +130,20 @@ export function SettingsPage() {
           <ChevronRight className="size-5 text-muted" />
         </Card>
       </Link>
+
+      <SectionTitle>Treinos</SectionTitle>
+      <button onClick={() => setGoalOpen(true)} className="block w-full text-left">
+        <Card className="flex items-center justify-between !py-4 transition-transform active:scale-[0.98]">
+          <span>
+            <span className="block font-medium">Meta de treinos por semana</span>
+            <span className="block text-xs text-muted">
+              {user?.weekly_workout_goal ?? 3} {(user?.weekly_workout_goal ?? 3) === 1 ? 'dia' : 'dias'} por semana · aparece em Treinos e Progresso
+            </span>
+          </span>
+          <ChevronRight className="size-5 text-muted" />
+        </Card>
+      </button>
+      <WeeklyGoalSheet open={goalOpen} onClose={() => setGoalOpen(false)} value={user?.weekly_workout_goal ?? 3} />
 
       <SectionTitle>Conta</SectionTitle>
       <Section title="Meus dados" open={open === 'profile'} onToggle={() => toggle('profile')}>
