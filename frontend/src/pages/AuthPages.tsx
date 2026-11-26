@@ -4,6 +4,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Alert, Button, Field, PasswordField, Logo } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import { useAuth } from '../lib/auth'
+import { useTheme } from '../lib/theme'
 
 function AuthShell({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
   return (
@@ -71,6 +72,7 @@ export function LoginPage() {
 
 export function RegisterPage() {
   const { register } = useAuth()
+  const { setTheme } = useTheme()
   const navigate = useNavigate()
   const [form, setForm] = useState({ name: '', email: '', password: '', terms: false })
   const [error, setError] = useState<ApiError | null>(null)
@@ -82,6 +84,8 @@ export function RegisterPage() {
     setError(null)
     try {
       await register(form)
+      // Conta nova começa no tema padrão (Neutro), mesmo se o aparelho tinha outro tema escolhido
+      setTheme('neutro')
       navigate('/metas/inicio', { replace: true })
     } catch (err) {
       setError(err as ApiError)
