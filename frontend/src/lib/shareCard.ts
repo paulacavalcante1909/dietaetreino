@@ -201,6 +201,13 @@ export async function shareImage(blob: Blob, filename: string, title: string): P
   return 'saved'
 }
 
+/**
+ * iPhone/iPad: o iOS não deixa uma página salvar direto na galeria (o "baixar" abre a tela do Safari).
+ * Lá, salvar é pela folha de compartilhar → "Salvar Imagem".
+ */
+export const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+
+/** Baixa a imagem direto (Android e computador). */
 export function saveImage(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')

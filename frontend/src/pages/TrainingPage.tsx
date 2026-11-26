@@ -11,7 +11,7 @@ import { Alert, BackButton, Button, Spinner } from '../components/ui'
 import { api, ApiError, apiUpload } from '../lib/api'
 import { parseIso } from '../lib/date'
 import { compressImage } from '../lib/image'
-import { renderShareCard, saveImage, sessionStats, shareImage } from '../lib/shareCard'
+import { isIOS, renderShareCard, saveImage, sessionStats, shareImage } from '../lib/shareCard'
 import type { WorkoutSessionData } from '../lib/types'
 import { fmtKm } from '../lib/workout'
 
@@ -54,6 +54,7 @@ export function TrainingPage() {
   // A imagem de compartilhar é a própria prévia: o que você vê é o que vai
   const photoUrl = session?.checkin?.photo_url ?? null
   const { theme } = useTheme()
+  const ios = isIOS()
   useEffect(() => {
     if (!session) return
     let url = ''
@@ -110,6 +111,7 @@ export function TrainingPage() {
     const result = await shareImage(card.blob, `treino-${session.date}.jpg`, session.workout_name)
     setSharing(false)
     if (result === 'saved') toast({ text: 'Imagem salva ✓' })
+    else if (result === 'shared' && ios) toast({ text: 'Pronto ✓' })
   }
 
   const remove = async () => {
@@ -158,14 +160,24 @@ export function TrainingPage() {
         )}
       </div>
 
-      <div className="mt-2 grid grid-cols-2 gap-2">
-        <Button onClick={share} loading={sharing} disabled={!card}>
-          <Share2 className="size-5" /> Compartilhar
-        </Button>
-        <Button variant="ghost" onClick={() => card && (saveImage(card.blob, `treino-${session.date}.jpg`), toast({ text: 'Imagem salva ✓' }))} disabled={!card}>
-          <Download className="size-5" /> Salvar
-        </Button>
-      </div>
+      {ios ? (
+        /* iPhone: salvar na galeria só pela folha de compartilhar ("Salvar Imagem") */
+        <div className="mt-2">
+          <Button onClick={share} loading={sharing} disabled={!card}>
+            <Share2 className="size-5" /> Salvar ou compartilhar
+          </Button>
+          <p className="mt-1.5 text-center text-xs text-muted">Para guardar na galeria, toque em <strong>Salvar Imagem</strong> na lista que abrir.</p>
+        </div>
+      ) : (
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <Button onClick={share} loading={sharing} disabled={!card}>
+            <Share2 className="size-5" /> Compartilhar
+          </Button>
+          <Button variant="ghost" onClick={() => card && (saveImage(card.blob, `treino-${session.date}.jpg`), toast({ text: 'Imagem salva ✓' }))} disabled={!card}>
+            <Download className="size-5" /> Salvar
+          </Button>
+        </div>
+      )}
 
       {/* Números */}
       <div className={`mt-5 grid gap-2 text-center ${st.km > 0 ? 'grid-cols-4' : 'grid-cols-3'}`}>
