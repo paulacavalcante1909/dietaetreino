@@ -9,6 +9,7 @@ import { Alert, BackButton, Button, Field, Logo } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import type { Objective } from '../lib/goalSuggestion'
+import { KCAL_MODES, type KcalMode } from '../lib/goalDays'
 import type { Energy, Goal, User } from '../lib/types'
 
 const fields: { key: keyof Goal; label: string; suffix: string; placeholder: string; decimal?: boolean }[] = [
@@ -42,13 +43,16 @@ export function GoalsPage({ onboarding = false }: { onboarding?: boolean }) {
   const [energy, setEnergy] = useState<Energy | null>(null)
   const [objective, setObjective] = useState<Objective | null>(null)
   const [suggested, setSuggested] = useState(false)
+  const [kcalMode, setKcalMode] = useState<KcalMode>(goal?.kcal_mode ?? 'range')
 
   useEffect(() => {
     if (onboarding && step === 'goals' && !energy) api<{ energy: Energy }>('/me/energy').then((r) => setEnergy(r.energy)).catch(() => {})
   }, [onboarding, step, energy])
 
   const applySuggestion = (g: Partial<Goal>) => {
-    setForm((f) => ({ ...f, ...Object.fromEntries(Object.entries(g).map(([k, v]) => [k, String(v)])) }))
+    const { kcal_mode, ...numbers } = g
+    setForm((f) => ({ ...f, ...Object.fromEntries(Object.entries(numbers).map(([k, v]) => [k, String(v)])) }))
+    if (kcal_mode) setKcalMode(kcal_mode)
     setSuggested(true)
   }
 
@@ -62,7 +66,7 @@ export function GoalsPage({ onboarding = false }: { onboarding?: boolean }) {
     setLoading(true)
     setError(null)
     try {
-      const body = Object.fromEntries(fields.map((f) => [f.key, num(form[f.key])]))
+      const body = { ...Object.fromEntries(fields.map((f) => [f.key, num(form[f.key])])), kcal_mode: kcalMode }
       const r = await api<{ goal: Goal }>('/goals', { method: 'POST', body })
       setGoal(r.goal)
       if (onboarding) navigate('/', { replace: true })
@@ -157,6 +161,33 @@ export function GoalsPage({ onboarding = false }: { onboarding?: boolean }) {
               error={error?.field(f.key)}
             />
           ))}
+        </div>
+
+        {/* Como o dia conta na meta de calorias (Progresso → dias na meta) */}
+        <div>
+          <p className="mb-1.5 text-sm font-medium text-muted">Como conto o dia na meta de calorias</p>
+          <div className="grid grid-cols-3 gap-1 rounded-2xl bg-soft p-1" role="radiogroup" aria-label="Como conto o dia na meta de calorias">
+            {KCAL_MODES.map((m) => (
+              <button
+                key={m.key}
+                type="button"
+                role="radio"
+                aria-checked={kcalMode === m.key}
+                onClick={() => setKcalMode(m.key)}
+                className={`rounded-xl px-1 py-2 text-center transition-colors ${kcalMode === m.key ? 'bg-primary text-white shadow-sm' : 'text-ink'}`}
+              >
+                <span className="block text-sm leading-tight font-bold">{m.label}</span>
+                <span className={`block text-xs ${kcalMode === m.key ? 'text-white/85' : 'text-muted'}`}>{m.hint}</span>
+              </button>
+            ))}
+          </div>
+          <p className="mt-1.5 text-xs text-muted">
+            {kcalMode === 'max'
+              ? `O dia conta quando você come até ${form.kcal || '…'} kcal.`
+              : kcalMode === 'min'
+                ? `O dia conta quando você come pelo menos ${form.kcal || '…'} kcal.`
+                : 'O dia conta quando você come até 10% a mais ou a menos que a meta.'}
+          </p>
         </div>
 
         <AnimatePresence>

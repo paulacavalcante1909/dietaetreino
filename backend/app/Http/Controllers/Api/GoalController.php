@@ -22,6 +22,8 @@ class GoalController extends Controller
     {
         $data = $request->validate([
             'kcal' => ['required', 'integer', 'min:500', 'max:10000'],
+            // max = até a meta · range = perto da meta · min = pelo menos a meta
+            'kcal_mode' => ['sometimes', 'in:max,range,min'],
             'carbs_g' => ['required', 'numeric', 'min:0', 'max:2000'],
             'protein_g' => ['required', 'numeric', 'min:0', 'max:1000'],
             'fat_g' => ['required', 'numeric', 'min:0', 'max:1000'],

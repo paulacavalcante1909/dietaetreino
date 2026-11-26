@@ -11,7 +11,8 @@ import { Alert, Button, Card, EmptyState, Field } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import { addDays, isoDate, parseIso } from '../lib/date'
 import { num } from '../lib/nutrition'
-import type { Energy, Weight, WeightSummary } from '../lib/types'
+import type { Energy, Goal, Weight, WeightSummary } from '../lib/types'
+import { HIGH_LIMIT, inGoal as inGoalDay, LOW_LIMIT, modeOf, outlier, RANGE } from '../lib/goalDays'
 
 const RANGES = [
   ['30', '30 dias'],
@@ -298,7 +299,10 @@ function WeekTab() {
   const avg = (k: keyof Pick<WeekDay, 'kcal' | 'carbs' | 'protein' | 'fat' | 'sodium' | 'fiber' | 'water'>) =>
     logged.length ? logged.reduce((a, d) => a + d[k], 0) / logged.length : 0
   const goal = days?.find((d) => d.goal)?.goal ?? null
-  const inGoal = logged.filter((d) => d.goal && Math.abs(d.kcal - d.goal.kcal) <= d.goal.kcal * 0.1).length
+  // Só dias encerrados: hoje ainda está em andamento (ex.: de manhã sempre estaria "até a meta")
+  const closed = logged.filter((d) => d.goal && d.date < isoDate())
+  const goalDays = closed.filter((d) => inGoalDay(d.kcal, d.goal!)).length
+  const outliers = closed.filter((d) => outlier(d.kcal, d.goal!)).length
   const burned = days?.reduce((a, d) => a + d.burned, 0) ?? 0
   const max = Math.max(goal?.kcal ?? 0, ...(days ?? []).map((d) => d.kcal), 1)
   const waterDays = days?.filter((d) => d.water > 0) ?? []
@@ -329,7 +333,7 @@ function WeekTab() {
 
       {days && logged.length > 0 && (
         <>
-          {goal && <GoalDaysCard inGoal={inGoal} logged={logged.length} goalKcal={goal.kcal} />}
+          {goal && closed.length > 0 && <GoalDaysCard inGoal={goalDays} logged={closed.length} outliers={outliers} goal={days!.filter((d) => d.goal).at(-1)!.goal!} />}
 
           <div className="grid grid-cols-2 gap-2 text-center">
             <MiniStat icon={<Flame className="size-4 text-orchid" />} value={`${fmtKcal(avg('kcal'))} kcal`} label="comidas por dia, em média" />
@@ -518,29 +522,53 @@ function InfoButton({ title, children, label }: { title: string; children: React
   )
 }
 
-/** Quantos dias a pessoa comeu perto da meta de calorias (±10%). */
-function GoalDaysCard({ inGoal, logged, goalKcal }: { inGoal: number; logged: number; goalKcal: number }) {
+/** Quantos dias (já encerrados) ficaram na meta de calorias, do jeito que a meta conta o dia. */
+function GoalDaysCard({ inGoal, logged, outliers, goal }: { inGoal: number; logged: number; outliers: number; goal: Goal }) {
+  const mode = modeOf(goal)
+  const k = goal.kcal
   return (
-    <Card className="flex items-center gap-3">
-      <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-soft text-primary">
-        <Target className="size-5" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-xl font-extrabold">
-          {inGoal} de {logged} {logged === 1 ? 'dia' : 'dias'}
-        </p>
-        <p className="text-sm text-muted">com calorias dentro da meta</p>
+    <Card className="space-y-3">
+      <div className="flex items-center gap-3">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-soft text-primary">
+          <Target className="size-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-xl font-extrabold">
+            {inGoal} de {logged} {logged === 1 ? 'dia' : 'dias'}
+          </p>
+          <p className="text-sm text-muted">
+            {mode === 'max' ? 'até a meta de calorias' : mode === 'min' ? 'com pelo menos a meta de calorias' : 'com calorias perto da meta'}
+          </p>
+        </div>
+        <InfoButton title="Dias na meta de calorias" label="O que são dias na meta de calorias?">
+          {mode === 'max' && (
+            <>
+              <p>Sua meta é para <strong>emagrecer</strong>: o dia conta quando você comeu <strong>até {fmtKcal(k)} kcal</strong>.</p>
+              <p>Comer bem menos que isso não é melhor: abaixo de <strong>{fmtKcal(k * LOW_LIMIT)} kcal</strong> avisamos, porque atrapalha a energia, os treinos e a massa muscular.</p>
+            </>
+          )}
+          {mode === 'min' && (
+            <>
+              <p>Sua meta é para <strong>ganhar massa</strong>: o dia conta quando você comeu <strong>pelo menos {fmtKcal(k)} kcal</strong>.</p>
+              <p>Passar muito também não ajuda: acima de <strong>{fmtKcal(k * HIGH_LIMIT)} kcal</strong> avisamos, porque o excesso tende a virar gordura.</p>
+            </>
+          )}
+          {mode === 'range' && (
+            <p>
+              Sua meta é para <strong>manter o peso</strong>: o dia conta quando você comeu perto dela, entre <strong>{fmtKcal(k * (1 - RANGE))}</strong> e{' '}
+              <strong>{fmtKcal(k * (1 + RANGE))} kcal</strong>.
+            </p>
+          )}
+          <p>Só entram os dias já encerrados em que você registrou alguma refeição. Dá para mudar o jeito de contar em Metas diárias.</p>
+        </InfoButton>
       </div>
-      <InfoButton title="Dias com calorias na meta" label="O que são dias com calorias na meta?">
-        <p>
-          Um dia conta quando o que você comeu ficou <strong>perto da sua meta de calorias</strong>: até 10% a mais ou a menos.
+      {outliers > 0 && (
+        <p className="rounded-2xl bg-coral/10 px-3 py-2 text-sm">
+          {mode === 'max'
+            ? `${outliers} ${outliers === 1 ? 'dia ficou' : 'dias ficaram'} bem abaixo da meta (menos de ${fmtKcal(k * LOW_LIMIT)} kcal). Comer pouco demais atrapalha o resultado.`
+            : `${outliers} ${outliers === 1 ? 'dia passou' : 'dias passaram'} bem da meta (mais de ${fmtKcal(k * HIGH_LIMIT)} kcal).`}
         </p>
-        <p>
-          Com a sua meta de <strong>{fmtKcal(goalKcal)} kcal</strong>, vale qualquer dia entre{' '}
-          <strong>{fmtKcal(goalKcal * 0.9)}</strong> e <strong>{fmtKcal(goalKcal * 1.1)} kcal</strong>.
-        </p>
-        <p>Só entram os dias em que você registrou alguma refeição.</p>
-      </InfoButton>
+      )}
     </Card>
   )
 }

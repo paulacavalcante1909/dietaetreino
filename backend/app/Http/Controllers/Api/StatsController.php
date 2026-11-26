@@ -67,7 +67,7 @@ class StatsController extends Controller
                 'fiber' => round((float) ($r->fiber ?? 0), 1),
                 'water' => $water[$d] ?? 0,
                 'burned' => $burned[$d] ?? 0,
-                'goal' => $goal?->only('kcal', 'carbs_g', 'protein_g', 'fat_g', 'sodium_mg', 'fiber_g', 'water_ml'),
+                'goal' => $goal?->only('kcal', 'kcal_mode', 'carbs_g', 'protein_g', 'fat_g', 'sodium_mg', 'fiber_g', 'water_ml'),
             ];
         }
 

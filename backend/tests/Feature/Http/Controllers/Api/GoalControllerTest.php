@@ -32,4 +32,13 @@ class GoalControllerTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonValidationErrors('fiber_g');
     }
+
+    public function test_goal_keeps_how_the_day_counts_for_calories(): void
+    {
+        $user = User::factory()->create();
+        $base = ['kcal' => 2500, 'carbs_g' => 300, 'protein_g' => 150, 'fat_g' => 70, 'sodium_mg' => 2000, 'water_ml' => 3000];
+
+        $this->actingAs($user)->postJson('/api/goals', [...$base, 'kcal_mode' => 'min'])->assertOk()->assertJsonPath('goal.kcal_mode', 'min');
+        $this->actingAs($user)->postJson('/api/goals', [...$base, 'kcal_mode' => 'menos'])->assertUnprocessable();
+    }
 }

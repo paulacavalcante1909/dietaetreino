@@ -15,6 +15,8 @@ export interface Goal {
   id?: number
   valid_from?: string
   kcal: number
+  /** Como o dia conta: até a meta, perto da meta ou pelo menos a meta */
+  kcal_mode?: 'max' | 'range' | 'min'
   carbs_g: number
   protein_g: number
   fat_g: number

@@ -13,7 +13,10 @@ const PROTEIN_PER_KG: Record<Objective, number> = { lose: 2.0, keep: 1.6, gain: 
 
 const round = (n: number, step: number) => Math.round(n / step) * step
 
-type SuggestedGoal = Pick<Goal, 'kcal' | 'carbs_g' | 'protein_g' | 'fat_g' | 'sodium_mg' | 'fiber_g' | 'water_ml'>
+type SuggestedGoal = Pick<Goal, 'kcal' | 'carbs_g' | 'protein_g' | 'fat_g' | 'sodium_mg' | 'fiber_g' | 'water_ml'> & { kcal_mode: NonNullable<Goal['kcal_mode']> }
+
+/** Emagrecer conta "até a meta"; ganhar, "pelo menos a meta"; manter, "perto da meta" */
+const KCAL_MODE: Record<Objective, SuggestedGoal['kcal_mode']> = { lose: 'max', keep: 'range', gain: 'min' }
 
 /**
  * Metas sugeridas a partir do gasto estimado:
@@ -30,6 +33,7 @@ export function suggestGoals(energy: Extract<Energy, { available: true }>, objec
 
   return {
     kcal,
+    kcal_mode: KCAL_MODE[objective],
     carbs_g: carbs,
     protein_g: protein,
     fat_g: fat,
