@@ -1,6 +1,6 @@
 import { durationLabel } from './run'
-import type { WorkoutSessionData } from './types'
-import { fmtKm, isTimed } from './workout'
+import type { SessionExercise, WorkoutSessionData } from './types'
+import { fmtKm, isTimed, prescription } from './workout'
 
 const W = 1080
 const H = 1350
@@ -118,7 +118,72 @@ export async function renderShareCard(session: WorkoutSessionData, photoUrl: str
     c.restore()
   }
 
+  drawExercises(c, session, font)
+
   return new Promise((resolve) => canvas.toBlob((b) => resolve(b!), 'image/jpeg', 0.9))
+}
+
+/** "3×12 · 40 kg", "30 min · 5 km" */
+function exerciseDetail(e: SessionExercise) {
+  if (isTimed(e)) return prescription(e)
+  const loads = (e.loads ?? []).filter((v): v is number => v != null && v > 0)
+  const kg = loads.length ? ` · ${Math.max(...loads).toLocaleString('pt-BR')} kg` : ''
+  return `${e.sets_done}×${e.reps.replace(/\s+/g, '')}${kg}`
+}
+
+/** Encurta o texto até caber na largura (com "…") */
+function fit(c: CanvasRenderingContext2D, text: string, width: number) {
+  if (c.measureText(text).width <= width) return text
+  let t = text
+  while (t.length > 1 && c.measureText(`${t}…`).width > width) t = t.slice(0, -1)
+  return `${t.trimEnd()}…`
+}
+
+/**
+ * Exercícios feitos à direita, abaixo do mascote: até 6, num painel escuro translúcido
+ * (lê bem sobre qualquer foto). O resto vira "+N exercícios".
+ */
+function drawExercises(c: CanvasRenderingContext2D, session: WorkoutSessionData, font: (w: number, s: number) => string) {
+  const done = session.exercises.filter((e) => e.done)
+  if (done.length === 0) return
+  const MAX = 6
+  const shown = done.slice(0, done.length > MAX ? MAX - 1 : MAX)
+  const more = done.length - shown.length
+
+  const panelW = 440
+  const padX = 28
+  const lineH = 76
+  const top = 72 + 128 + 28 // abaixo do mascote
+  const panelH = 24 + shown.length * lineH + (more ? 44 : 0) + 12
+  const x = W - 72 - panelW
+
+  c.save()
+  c.fillStyle = 'rgba(0,0,0,0.38)'
+  c.beginPath()
+  c.roundRect(x, top, panelW, panelH, 28)
+  c.fill()
+  c.restore()
+
+  c.fillStyle = '#fff'
+  c.textAlign = 'right'
+  const right = x + panelW - padX
+  const width = panelW - padX * 2
+  shown.forEach((e, i) => {
+    const y = top + 24 + i * lineH
+    c.font = font(700, 30)
+    c.fillText(fit(c, e.name, width), right, y + 30)
+    c.font = font(600, 24)
+    c.globalAlpha = 0.8
+    c.fillText(fit(c, exerciseDetail(e), width), right, y + 60)
+    c.globalAlpha = 1
+  })
+  if (more) {
+    c.font = font(700, 24)
+    c.globalAlpha = 0.85
+    c.fillText(`+${more} ${more === 1 ? 'exercício' : 'exercícios'}`, right, top + 24 + shown.length * lineH + 28)
+    c.globalAlpha = 1
+  }
+  c.textAlign = 'left'
 }
 
 /** Compartilha (celular) ou baixa a imagem (computador). Retorna o que foi feito. */
