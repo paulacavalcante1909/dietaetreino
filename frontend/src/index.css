@@ -70,7 +70,7 @@ input[type='number'] {
 }
 
 /* ───────────────────────── Temas ─────────────────────────
-   Coelhinha (padrão, definido no @theme acima) · Onça · Escuro.
+   Neutro (padrão do app) · Coelhinha (valores do @theme acima) · Onça · Ratão · Tigrão.
    O app usa só variáveis (--color-*), então trocar o tema = trocar estes valores.
    --color-scrim = fundo sempre escuro (avisos, leitor de código, sombra de painéis)
    --color-danger = texto de erro/alerta legível em cada tema */
@@ -114,6 +114,51 @@ input[type='number'] {
   --color-muted: #b4b9c1;
   --color-line: #363a41;
   --color-soft: #2a2d33;
+  --color-scrim: #000000;
+  --color-danger: #ff8f8f;
+}
+
+[data-theme='tigrao'] {
+  /* Tigrão: cinza + azul */
+  --color-orchid: #3b82c4; /* calorias: azul */
+  --color-lavender: #7fb0dd; /* carboidratos: azul claro */
+  --color-pink: #e8894a; /* proteínas: laranja do tigre */
+  --color-violet: #5b6b80; /* gorduras: cinza-azulado */
+  --color-coral: #d9534f; /* sódio / alerta */
+  --color-fiber: #4f9a6b; /* fibras */
+  --color-primary: #2563a8;
+  --color-primary-hover: #1e4f87;
+  --color-water: #38a3c9;
+  --color-water-ink: #1f6680;
+  --color-bg: #f3f5f8;
+  --color-surface: #ffffff;
+  --color-ink: #1b2430;
+  --color-muted: #556171;
+  --color-line: #dfe4ea;
+  --color-soft: #e9eef4;
+  --color-scrim: #1b2430;
+  --color-danger: #b3261e;
+}
+
+[data-theme='neutro'] {
+  /* Neutro (padrão): escuro + laranja */
+  color-scheme: dark;
+  --color-orchid: #ff8a3d; /* calorias: laranja */
+  --color-lavender: #f2c14e; /* carboidratos: amarelo */
+  --color-pink: #ff7a7a; /* proteínas: salmão */
+  --color-violet: #a5acb8; /* gorduras: cinza */
+  --color-coral: #ff6b57; /* sódio / alerta */
+  --color-fiber: #6fc28f; /* fibras */
+  --color-primary: #d4510e;
+  --color-primary-hover: #e8641c;
+  --color-water: #5aa9f0;
+  --color-water-ink: #b9dcff;
+  --color-bg: #141518;
+  --color-surface: #1e2024;
+  --color-ink: #f1f2f4;
+  --color-muted: #b4b9c1;
+  --color-line: #34373d;
+  --color-soft: #272a2f;
   --color-scrim: #000000;
   --color-danger: #ff8f8f;
 }

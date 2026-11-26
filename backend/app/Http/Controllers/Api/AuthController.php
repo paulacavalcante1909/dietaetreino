@@ -6,12 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Weight;
 use App\Services\EnergyEstimator;
+use App\Services\ImageStore;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AuthController extends Controller
 {
@@ -157,6 +159,42 @@ class AuthController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    /** Foto de perfil: recorte quadrado de 512 px, sem metadados. */
+    public function updateAvatar(Request $request, ImageStore $images): JsonResponse
+    {
+        $request->validate(
+            ['avatar' => ['required', 'image', 'mimes:jpeg,png,webp,heic,heif', 'max:12288']],
+            ['avatar.image' => 'O arquivo precisa ser uma imagem.', 'avatar.max' => 'A foto é muito grande (máximo 12 MB).'],
+        );
+        $user = $request->user();
+        $path = $images->store($request->file('avatar'), "avatars/{$user->id}", 512, square: true, field: 'avatar');
+        if ($user->avatar_path) {
+            Storage::disk('local')->delete($user->avatar_path);
+        }
+        $user->update(['avatar_path' => $path]);
+
+        return response()->json(['user' => $user]);
+    }
+
+    public function deleteAvatar(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        if ($user->avatar_path) {
+            Storage::disk('local')->delete($user->avatar_path);
+            $user->update(['avatar_path' => null]);
+        }
+
+        return response()->json(['user' => $user]);
+    }
+
+    /** Entrega a foto de perfil via link assinado. */
+    public function avatar(User $user): StreamedResponse
+    {
+        abort_unless($user->avatar_path, 404);
+
+        return Storage::disk('local')->response($user->avatar_path, null, ['Cache-Control' => 'private, max-age=21600']);
+    }
+
     public function destroy(Request $request): JsonResponse
     {
         $request->validate([
@@ -165,7 +203,8 @@ class AuthController extends Controller
 
         $user = $request->user();
         $user->tokens()->delete();
-        Storage::disk('local')->deleteDirectory("checkins/{$user->id}"); // fotos dos check-ins
+        Storage::disk('local')->deleteDirectory("checkins/{$user->id}"); // fotos dos treinos
+        Storage::disk('local')->deleteDirectory("avatars/{$user->id}"); // foto de perfil
         $user->delete(); // dados relacionados caem por cascade
 
         return response()->json(['ok' => true]);

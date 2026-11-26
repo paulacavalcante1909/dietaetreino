@@ -28,6 +28,10 @@ Route::middleware('throttle:10,1')->group(function () {
 Route::get('/checkins/{checkin}/photo', [CheckinController::class, 'photo'])
     ->middleware('signed:relative')->name('checkins.photo');
 
+// Foto de perfil: também por link assinado
+Route::get('/users/{user}/avatar', [AuthController::class, 'avatar'])
+    ->middleware('signed:relative')->name('users.avatar');
+
 Route::middleware('auth:sanctum')->group(function () {
     // Conta
     Route::get('/me', [AuthController::class, 'me']);
@@ -37,6 +41,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/me/preferences', [AuthController::class, 'updatePreferences']);
     Route::put('/me/body', [AuthController::class, 'updateBody']);
     Route::get('/me/energy', [AuthController::class, 'energy']);
+    Route::post('/me/avatar', [AuthController::class, 'updateAvatar'])->middleware('throttle:20,1');
+    Route::delete('/me/avatar', [AuthController::class, 'deleteAvatar']);
     Route::delete('/me', [AuthController::class, 'destroy']);
 
     // Metas
@@ -91,6 +97,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/exercises', [ExerciseController::class, 'index']);
     Route::post('/exercises', [ExerciseController::class, 'store']);
     Route::delete('/exercises/{exercise}', [ExerciseController::class, 'destroy']);
+    Route::post('/exercises/{exercise}/favorite', [ExerciseController::class, 'favorite']);
+    Route::delete('/exercises/{exercise}/favorite', [ExerciseController::class, 'unfavorite']);
     Route::get('/workouts', [WorkoutController::class, 'index']);
     Route::post('/workouts', [WorkoutController::class, 'store']);
     Route::put('/workouts/order', [WorkoutController::class, 'reorder']);
@@ -99,7 +107,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/workouts/{workout}', [WorkoutController::class, 'destroy']);
     Route::post('/workouts/{workout}/duplicate', [WorkoutController::class, 'duplicate']);
     Route::post('/workout-sessions', [WorkoutSessionController::class, 'store']);
+    Route::get('/workout-sessions/recent', [WorkoutSessionController::class, 'recent']);
+    Route::post('/workout-sessions/{session}/repeat', [WorkoutSessionController::class, 'repeat']);
     Route::get('/workout-sessions/{session}', [WorkoutSessionController::class, 'show']);
+    Route::put('/workout-sessions/{session}', [WorkoutSessionController::class, 'update']);
     Route::delete('/workout-sessions/{session}', [WorkoutSessionController::class, 'destroy']);
     Route::get('/checkins', [CheckinController::class, 'index']);
     Route::post('/checkins', [CheckinController::class, 'store'])->middleware('throttle:20,1');

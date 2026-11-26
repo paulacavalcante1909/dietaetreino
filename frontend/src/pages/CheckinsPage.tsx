@@ -1,3 +1,4 @@
+import { ask } from '../components/Dialog'
 import { Calendar, Camera, CheckCircle2, ChevronLeft, ChevronRight, Flame, Timer, Trash2, Trophy } from 'lucide-react'
 import { useTheme } from '../lib/theme'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -74,9 +75,12 @@ export function CheckinsPage() {
     setMonth((m) => shiftMonth(m, n))
   }
 
+  // Treino com registro: abre o resumo (foto, compartilhar, editar); check-in antigo: folha simples
+  const openItem = (c: HistoryItem) => (c.session ? navigate(`/treino/${c.session.id}`) : setOpen(c))
+
   // Remover o treino: apaga o registro, a foto e as calorias gastas
   const remove = async (c: HistoryItem) => {
-    if (!confirm(`Remover “${c.workout_name}”? Ele sai do histórico${c.session ? ' e as calorias gastas são removidas' : ''}.`)) return
+    if (!(await ask({ title: `Remover “${c.workout_name}”?`, text: `Ele sai do histórico${c.session ? ' e as calorias gastas são removidas' : ''}.`, confirmLabel: 'Remover treino', danger: true }))) return
     if (c.session) await api(`/workout-sessions/${c.session.id}`, { method: 'DELETE' })
     else await api(`/checkins/${c.id}`, { method: 'DELETE' })
     setOpen(null)
@@ -86,7 +90,7 @@ export function CheckinsPage() {
 
   // Só a foto/anotação: o treino continua contando
   const removePhoto = async (c: HistoryItem) => {
-    if (!confirm('Remover só a foto? O treino continua no histórico.')) return
+    if (!(await ask({ title: 'Remover só a foto?', text: 'O treino continua no histórico.', confirmLabel: 'Remover foto', danger: true }))) return
     await api(`/checkins/${c.id}`, { method: 'DELETE' })
     setOpen(null)
     toast({ text: 'Foto removida' })
@@ -143,8 +147,8 @@ export function CheckinsPage() {
                 <button
                   key={i}
                   disabled={!c}
-                  onClick={() => c && setOpen(c)}
-                  className={`relative aspect-square overflow-hidden rounded-xl text-sm ${date === today ? 'ring-2 ring-orchid' : ''} ${c ? (c.photo_url ? '' : 'bg-gradient-to-br from-orchid to-violet') : 'bg-soft/50 text-muted'}`}
+                  onClick={() => c && openItem(c)}
+                  className={`relative aspect-square overflow-hidden rounded-xl text-sm ${date === today ? 'ring-2 ring-orchid' : ''} ${c ? (c.photo_url ? '' : 'bg-gradient-to-br from-orchid to-primary') : 'bg-soft/50 text-muted'}`}
                 >
                   {c?.photo_url && <img src={c.photo_url} alt="" loading="lazy" className="absolute inset-0 size-full object-cover" />}
                   <span className={`relative ${c ? 'font-bold text-white [text-shadow:0_1px_3px_rgba(0,0,0,.6)]' : ''}`}>{day}</span>
@@ -160,11 +164,11 @@ export function CheckinsPage() {
 
       <div className="mt-4 grid grid-cols-3 gap-2">
         {checkins?.map((c) => (
-          <button key={c.id} onClick={() => setOpen(c)} className="relative aspect-[4/5] overflow-hidden rounded-2xl">
+          <button key={c.id} onClick={() => openItem(c)} className="relative aspect-[4/5] overflow-hidden rounded-2xl">
             {c.photo_url ? (
               <img src={c.photo_url} alt={`Foto do treino ${c.workout_name}`} loading="lazy" className="size-full object-cover" />
             ) : (
-              <span className="flex size-full items-start justify-center bg-gradient-to-br from-orchid to-violet pt-4">
+              <span className="flex size-full items-start justify-center bg-gradient-to-br from-orchid to-primary pt-4">
                 <img src={`${theme.assets}/mascote.png`} alt="" className="size-14 rounded-full ring-2 ring-white/70" />
               </span>
             )}

@@ -2,7 +2,7 @@ import { Camera, Flame, X } from 'lucide-react'
 import { enqueue, flush, isOffline, newRef } from '../lib/outbox'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { notifyChanged } from '../components/Layout'
 import { useToast } from '../components/Toast'
 import { Alert, BackButton, Button, Mascot, Spinner } from '../components/ui'
@@ -20,6 +20,7 @@ interface LooseItem {
   exercise: Exercise
   sets: number
   reps: string
+  distance_km?: number | null
 }
 
 /** Volta para a tela de onde veio (início, treinos…); sem histórico, vai para o início. */
@@ -46,7 +47,8 @@ export function CheckinPage() {
   const [session, setSession] = useState<WorkoutSessionData | null>(null)
   const [mode, setMode] = useState<'ficha' | 'avulso'>(params.get('avulso') ? 'avulso' : 'ficha')
   const [loose, setLoose] = useState<LooseItem[]>([])
-  const [picking, setPicking] = useState(false)
+  // Avulso: a lista de exercícios abre direto
+  const [picking, setPicking] = useState(!!params.get('avulso'))
   const [pending, setPending] = useState<Exercise | null>(null)
   const [minutes, setMinutes] = useState('')
   const [yesterday, setYesterday] = useState(false)
@@ -139,6 +141,7 @@ export function CheckinPage() {
         exercises: items.map((i) => ({
           name: i.exercise.name, muscle_group: i.exercise.muscle_group, image: i.exercise.image,
           sets: i.sets, reps: i.reps, sets_done: i.sets, done: true,
+          distance_km: 'distance_km' in i ? (i.distance_km ?? null) : null,
         })),
       }
       try {
@@ -188,6 +191,8 @@ export function CheckinPage() {
     }
   }
 
+  // Treino já salvo: a foto e o resumo ficam na tela do treino
+  if (sessionId) return <Navigate to={`/treino/${sessionId}`} replace />
   if (!photoOnly && !workouts) return <Spinner />
 
   if (celebrate) {
@@ -383,9 +388,10 @@ export function CheckinPage() {
       <SetsSheet
         item={pending ? { exercise: pending, sets: 3, reps: '12', notes: null } : null}
         isNew
+        withDistance
         onClose={() => setPending(null)}
         onSave={(v) => {
-          setLoose((l) => [...l, { key: `${pending!.id}-${Date.now()}`, exercise: pending!, sets: v.sets, reps: v.reps }])
+          setLoose((l) => [...l, { key: `${pending!.id}-${Date.now()}`, exercise: pending!, sets: v.sets, reps: v.reps, distance_km: v.distance_km }])
           setPending(null)
         }}
       />

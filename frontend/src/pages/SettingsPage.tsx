@@ -1,7 +1,9 @@
+import { ask } from '../components/Dialog'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
+import { AvatarEditor } from '../components/Avatar'
 import { Alert, Button, Card, Field, PasswordField } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import { useAuth } from '../lib/auth'
@@ -95,6 +97,10 @@ export function SettingsPage() {
   return (
     <div className="safe-top space-y-3 px-5 pt-6 pb-6">
       <h1 className="mb-2 text-2xl font-bold">Ajustes</h1>
+
+      <Card className="!p-4">
+        <AvatarEditor />
+      </Card>
 
       <SectionTitle>Aparência</SectionTitle>
       <ThemePicker />
@@ -240,7 +246,7 @@ function AppVersionCard() {
   }
 
   const reset = async () => {
-    if (!confirm('Apagar o cache do app e recarregar? Seu login e seus dados continuam salvos.')) return
+    if (!(await ask({ title: 'Limpar o cache e recarregar?', text: 'Seu login e seus dados continuam salvos.', confirmLabel: 'Limpar e recarregar' }))) return
     setBusy('reset')
     await hardRefresh()
   }
@@ -286,7 +292,7 @@ function ThemePicker() {
                 <span className="h-1.5 w-5 rounded-full" style={{ background: t.preview.accent }} />
                 <span className="h-1.5 w-3 rounded-full" style={{ background: t.preview.accent2 }} />
               </div>
-              <p className="mt-1.5 text-center text-xs font-semibold" style={{ color: t.id === 'dark' ? '#eef0f3' : '#3a2418' }}>
+              <p className="mt-1.5 text-center text-xs font-semibold" style={{ color: t.id === 'dark' || t.id === 'neutro' ? '#eef0f3' : '#1f2430' }}>
                 {t.name}
               </p>
               {active && <span className="absolute top-1.5 right-1.5 flex size-5 items-center justify-center rounded-full bg-primary text-[10px] text-white">✓</span>}

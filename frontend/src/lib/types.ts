@@ -8,6 +8,7 @@ export interface User {
   sex?: 'f' | 'm' | null
   birth_date?: string | null
   height_cm?: number | null
+  avatar_url?: string | null // foto de perfil (link temporário)
 }
 
 export interface Goal {
@@ -157,6 +158,7 @@ export interface Exercise {
   name: string
   muscle_group: string
   image: string | null
+  favorite?: boolean // marcado com estrela pela usuária
 }
 
 export interface WorkoutItem {
@@ -205,6 +207,7 @@ export interface SessionExercise {
   sets_done: number
   done: boolean
   loads?: (number | null)[] // carga (kg) por série
+  distance_km?: number | null // cardio: distância percorrida
 }
 
 export interface WorkoutSessionData {
@@ -218,6 +221,7 @@ export interface WorkoutSessionData {
   kcal_burned: number | null
   weight_estimated?: boolean
   exercises: SessionExercise[]
+  checkin?: { id: number; note: string | null; photo_url: string | null } | null // foto/anotação
 }
 
 export interface Weight {

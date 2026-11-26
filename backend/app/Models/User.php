@@ -10,14 +10,34 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\URL;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password', 'terms_accepted_at', 'add_burned_to_goal', 'weekly_workout_goal', 'sex', 'birth_date', 'height_cm'])]
-#[Hidden(['password', 'remember_token', 'email_verified_at', 'updated_at'])]
+#[Fillable(['name', 'email', 'password', 'terms_accepted_at', 'add_burned_to_goal', 'weekly_workout_goal', 'sex', 'birth_date', 'height_cm', 'avatar_path'])]
+#[Hidden(['password', 'remember_token', 'email_verified_at', 'updated_at', 'avatar_path'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
+
+    /** @var list<string> */
+    protected $appends = ['avatar_url'];
+
+    /** Link temporário assinado da foto de perfil (privada). */
+    public function getAvatarUrlAttribute(): ?string
+    {
+        if (! $this->avatar_path) {
+            return null;
+        }
+
+        // A versão no link troca a cada foto nova (o navegador não mostra a antiga do cache)
+        return URL::temporarySignedRoute('users.avatar', now()->addHours(6), ['user' => $this->id, 'v' => substr(md5($this->avatar_path), 0, 8)], absolute: false);
+    }
+
+    public function exerciseFavorites(): BelongsToMany
+    {
+        return $this->belongsToMany(Exercise::class, 'exercise_favorites')->withPivot('created_at');
+    }
 
     protected function casts(): array
     {

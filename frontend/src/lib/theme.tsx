@@ -5,7 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
  * e a cor da barra do celular. O ícone do app INSTALADO não muda (o sistema guarda
  * o ícone no momento da instalação).
  */
-export type ThemeId = 'coelhinha' | 'onca' | 'dark'
+export type ThemeId = 'neutro' | 'coelhinha' | 'onca' | 'dark' | 'tigrao'
 
 export interface ThemeInfo {
   id: ThemeId
@@ -18,6 +18,15 @@ export interface ThemeInfo {
 }
 
 export const THEMES: ThemeInfo[] = [
+  {
+    id: 'neutro',
+    name: 'Neutro',
+    description: 'Escuro e laranja',
+    assets: '/themes/neutro',
+    themeColor: '#141518',
+    heart: '🧡',
+    preview: { bg: '#141518', surface: '#1e2024', accent: '#ff8a3d', accent2: '#a5acb8' },
+  },
   {
     id: 'coelhinha',
     name: 'Coelhinha',
@@ -45,13 +54,22 @@ export const THEMES: ThemeInfo[] = [
     heart: '❤️',
     preview: { bg: '#141518', surface: '#1f2125', accent: '#d6343a', accent2: '#9fb0c4' },
   },
+  {
+    id: 'tigrao',
+    name: 'Tigrão',
+    description: 'Cinza e azul',
+    assets: '/themes/tigrao',
+    themeColor: '#E3EAF3',
+    heart: '💙',
+    preview: { bg: '#f3f5f8', surface: '#ffffff', accent: '#3b82c4', accent2: '#e8894a' },
+  },
 ]
 
 const KEY = 'dt_theme'
 
 export function storedTheme(): ThemeId {
   const t = localStorage.getItem(KEY)
-  return THEMES.some((x) => x.id === t) ? (t as ThemeId) : 'coelhinha'
+  return THEMES.some((x) => x.id === t) ? (t as ThemeId) : 'neutro'
 }
 
 function setLink(rel: string, href: string, sizes?: string) {

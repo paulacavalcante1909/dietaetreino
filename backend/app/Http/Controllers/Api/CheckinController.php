@@ -7,13 +7,12 @@ use App\Models\Checkin;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutSession;
+use App\Services\ImageStore;
 use App\Services\TrainingLog;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -46,7 +45,7 @@ class CheckinController extends Controller
         ]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, ImageStore $images): JsonResponse
     {
         $user = $request->user();
         $data = $request->validate([
@@ -55,6 +54,7 @@ class CheckinController extends Controller
             'session_id' => ['nullable', 'integer'],
             'photo' => ['nullable', 'image', 'mimes:jpeg,png,webp,heic,heif', 'max:12288'],
             'note' => ['nullable', 'string', 'max:280'],
+            'remove_photo' => ['sometimes', 'boolean'],
             'date' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:today'],
         ], [
             'workout_id.required_without' => 'Escolha um treino da ficha ou um exercício.',
@@ -68,10 +68,25 @@ class CheckinController extends Controller
         if (! $workout && ! $session) {
             throw ValidationException::withMessages(['session_id' => 'Escolha um treino da ficha ou um exercício.']);
         }
-        $path = isset($data['photo']) ? $this->storePhoto($data['photo'], $user->id) : null;
+        $path = isset($data['photo']) ? $images->store($data['photo'], "checkins/{$user->id}") : null;
+
+        // Um treino tem uma foto só: enviar de novo troca a foto e/ou a anotação
+        $existing = $session ? Checkin::where('user_id', $user->id)->where('session_id', $session->id)->first() : null;
+        if ($existing) {
+            $removePhoto = (bool) ($data['remove_photo'] ?? false);
+            if (($path || $removePhoto) && $existing->photo_path) {
+                Storage::disk('local')->delete($existing->photo_path);
+            }
+            $existing->update([
+                'photo_path' => $path ?? ($removePhoto ? null : $existing->photo_path),
+                'note' => array_key_exists('note', $data) ? $data['note'] : $existing->note,
+            ]);
+
+            return response()->json(['checkin' => $existing->load('session')]);
+        }
 
         $checkin = new Checkin([
-            'workout_id' => $workout?->id,
+            'workout_id' => $workout?->id ?? $session?->workout_id,
             'session_id' => $session?->id,
             // Avulso: o nome vem do registro (ex.: "Corrida na esteira")
             'workout_name' => $workout?->name ?? $session->workout_name,
@@ -100,35 +115,6 @@ class CheckinController extends Controller
         return Storage::disk('local')->response($checkin->photo_path, null, [
             'Cache-Control' => 'private, max-age=21600',
         ]);
-    }
-
-    /**
-     * Regrava a imagem com GD: remove metadados (EXIF, inclusive localização GPS)
-     * e limita o tamanho a 1600 px.
-     */
-    private function storePhoto(UploadedFile $file, int $userId): string
-    {
-        $img = @imagecreatefromstring((string) file_get_contents($file->getRealPath()));
-        if (! $img) {
-            throw ValidationException::withMessages(['photo' => 'Não foi possível ler a imagem. Tente outra foto.']);
-        }
-
-        $w = imagesx($img);
-        $h = imagesy($img);
-        $scale = min(1, 1600 / max($w, $h));
-        if ($scale < 1) {
-            $resized = imagescale($img, (int) round($w * $scale), (int) round($h * $scale), IMG_BICUBIC);
-            $img = $resized;
-        }
-
-        ob_start();
-        imagejpeg($img, null, 82);
-        $jpeg = ob_get_clean();
-
-        $path = "checkins/{$userId}/".Str::uuid().'.jpg';
-        Storage::disk('local')->put($path, $jpeg);
-
-        return $path;
     }
 
     /**

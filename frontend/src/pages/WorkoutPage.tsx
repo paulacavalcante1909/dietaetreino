@@ -1,4 +1,6 @@
+import { ask } from '../components/Dialog'
 import { motion, Reorder } from 'framer-motion'
+import { HoldToDragItem } from '../components/HoldToDrag'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ExerciseImage } from '../components/ExerciseImage'
@@ -78,7 +80,7 @@ export function WorkoutPage() {
   }
 
   const remove = async () => {
-    if (!confirm(`Excluir “${workout?.name}”? Os treinos já feitos continuam no histórico.`)) return
+    if (!(await ask({ title: `Excluir “${workout?.name}”?`, text: 'Os treinos já feitos continuam no histórico.', confirmLabel: 'Excluir treino', danger: true }))) return
     await api(`/workouts/${id}`, { method: 'DELETE' })
     toast({ text: 'Treino excluído' })
     navigate('/treinos', { replace: true })
@@ -111,7 +113,7 @@ export function WorkoutPage() {
       {editing ? (
         <Reorder.Group axis="y" values={items} onReorder={setItems} className="space-y-2">
           {items.map((it, idx) => (
-            <Reorder.Item key={it.key} value={it} className="touch-none">
+            <HoldToDragItem key={it.key} value={it}>
               <div className="flex items-center gap-3 rounded-2xl bg-surface p-2 pr-3 shadow-[0_2px_12px_-4px_rgba(31,23,36,0.08)]">
                 <span className="cursor-grab pl-1 text-lg text-muted select-none" aria-hidden>⋮⋮</span>
                 <ExerciseImage image={it.exercise.image} name={it.exercise.name} size={48} animate={false} />
@@ -123,7 +125,7 @@ export function WorkoutPage() {
                   <X className="size-5" />
                 </button>
               </div>
-            </Reorder.Item>
+            </HoldToDragItem>
           ))}
         </Reorder.Group>
       ) : (

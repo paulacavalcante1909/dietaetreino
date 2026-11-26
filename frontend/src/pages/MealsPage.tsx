@@ -1,4 +1,6 @@
+import { ask } from '../components/Dialog'
 import { Reorder } from 'framer-motion'
+import { HoldToDragItem } from '../components/HoldToDrag'
 import { Eye, EyeOff, GripVertical, Trash2 } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -27,7 +29,7 @@ export function MealsPage() {
   }
 
   const remove = async (m: Meal) => {
-    if (!confirm(`Excluir a refeição “${m.name}”? Se ela tiver alimentos registrados, será só ocultada.`)) return
+    if (!(await ask({ title: `Excluir “${m.name}”?`, text: 'Se ela tiver alimentos registrados, será só ocultada.', confirmLabel: 'Excluir refeição', danger: true }))) return
     const r = await api<{ hidden?: boolean }>(`/meals/${m.id}`, { method: 'DELETE' })
     if (r.hidden) {
       setMeals((list) => list.map((x) => (x.id === m.id ? { ...x, active: false } : x)))
@@ -57,7 +59,7 @@ export function MealsPage() {
 
       <Reorder.Group axis="y" values={meals} onReorder={setMeals} className="space-y-2">
         {meals.map((m) => (
-          <Reorder.Item key={m.id} value={m} onDragEnd={saveOrder} className="touch-none">
+          <HoldToDragItem key={m.id} value={m} onDragEnd={saveOrder}>
             <Card className={`flex items-center gap-3 !py-3 ${m.active ? '' : 'opacity-50'}`}>
               <GripVertical className="size-5 shrink-0 cursor-grab text-muted" aria-hidden />
               <input
@@ -77,7 +79,7 @@ export function MealsPage() {
                 <Trash2 className="size-4" />
               </button>
             </Card>
-          </Reorder.Item>
+          </HoldToDragItem>
         ))}
       </Reorder.Group>
 

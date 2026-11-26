@@ -15,6 +15,7 @@ export interface RunItem {
   setsDone: number
   loads?: (number | null)[] // carga (kg) registrada em cada série
   lastLoads?: number[] // cargas da última vez que fez este exercício
+  distanceKm?: number | null // cardio: km percorridos
   done: boolean
 }
 
@@ -54,6 +55,12 @@ export function loadRun(): RunState | null {
 export function clearRun() {
   localStorage.removeItem(KEY)
 }
+
+/** Endereço do treino em andamento (avulso = sem ficha) */
+export const runPath = (r: { workoutId: number }) => `/treinos/${r.workoutId || 'avulso'}/iniciar`
+
+/** Nome de um treino avulso: os exercícios feitos (ex.: "Corrida + Prancha") */
+export const looseName = (items: { exercise: { name: string } }[]) => items.map((i) => i.exercise.name).join(' + ').slice(0, 80) || 'Treino avulso'
 
 export function newRun(w: Workout): RunState {
   return {

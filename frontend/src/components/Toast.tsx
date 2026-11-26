@@ -5,6 +5,8 @@ interface ToastData {
   id: number
   text: string
   action?: { label: string; run: () => void }
+  /** Mais de uma ação (ex.: Desfazer e Ajustar) */
+  actions?: { label: string; run: () => void }[]
 }
 
 const ToastContext = createContext<(t: Omit<ToastData, 'id'>) => void>(() => {})
@@ -19,7 +21,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const show = useCallback((t: Omit<ToastData, 'id'>) => {
     window.clearTimeout(timer.current)
     setToast({ ...t, id: Date.now() })
-    timer.current = window.setTimeout(() => setToast(null), 4000)
+    timer.current = window.setTimeout(() => setToast(null), t.actions ? 6000 : 4000)
   }, [])
 
   return (
@@ -33,21 +35,22 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               initial={{ opacity: 0, y: -20, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10 }}
-              className="pointer-events-auto flex max-w-sm items-center gap-4 rounded-2xl bg-scrim px-4 py-3 text-sm text-white shadow-xl"
+              className="pointer-events-auto flex max-w-sm items-center gap-3 rounded-2xl bg-scrim px-4 py-3 text-sm text-white shadow-xl"
               role="status"
             >
               <span>{toast.text}</span>
-              {toast.action && (
+              {[...(toast.action ? [toast.action] : []), ...(toast.actions ?? [])].map((a) => (
                 <button
+                  key={a.label}
                   className="shrink-0 font-semibold text-orchid"
                   onClick={() => {
-                    toast.action!.run()
+                    a.run()
                     setToast(null)
                   }}
                 >
-                  {toast.action.label}
+                  {a.label}
                 </button>
-              )}
+              ))}
             </motion.div>
           )}
         </AnimatePresence>

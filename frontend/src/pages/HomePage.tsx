@@ -1,7 +1,8 @@
-import { AnimatePresence, motion, type PanInfo } from 'framer-motion'
+import { animate, AnimatePresence, motion, useMotionValue, type PanInfo } from 'framer-motion'
 import { ChevronDown, ChevronLeft, ChevronRight, Droplet, Dumbbell, Flame, Pencil, Plus, RotateCcw, Scale, Trash2, Utensils } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Avatar } from '../components/Avatar'
 import { DeficitCard } from '../components/DeficitCard'
 import { EntrySheet } from '../components/EntrySheet'
 import { openTrain, QuickTile } from '../components/Layout'
@@ -77,18 +78,11 @@ export function HomePage() {
     <div className="safe-top px-5 pt-5">
       {/* Cabeçalho */}
       <header className="mb-3 flex items-center gap-3">
-        <motion.img
-          key={theme.id}
-          src={`${theme.assets}/mascote.png`}
-          alt=""
-          width={52}
-          height={52}
-          className="size-13 shrink-0 rounded-full shadow-md"
-          initial={{ scale: 0.6, rotate: -12, opacity: 0 }}
-          animate={{ scale: 1, rotate: 0, opacity: 1 }}
-          transition={{ type: 'spring', stiffness: 320, damping: 14 }}
-          whileTap={{ scale: 1.15, rotate: [0, -10, 10, -6, 0] }}
-        />
+        <Link to="/ajustes" aria-label="Seu perfil e ajustes" className="shrink-0">
+          <motion.div key={`${theme.id}-${user?.avatar_url ?? ''}`} initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 320, damping: 14 }} whileTap={{ scale: 1.1 }}>
+            <Avatar size={52} />
+          </motion.div>
+        </Link>
         <div className="min-w-0">
           <p className="text-sm text-muted">
             Oi, {user?.name.split(' ')[0]} {theme.heart}
@@ -123,7 +117,7 @@ export function HomePage() {
               {/* Atalhos: treinar, refeição do momento e água */}
               {date <= isoDate() && (
                 <motion.div variants={item}>
-                  <QuickCards day={day} date={date} onChange={load} />
+                  <QuickCards day={day} date={date} />
                 </motion.div>
               )}
 
@@ -174,6 +168,10 @@ export function HomePage() {
                 </Card>
               </motion.div>
 
+              <motion.div variants={item}>
+                <WaterCard date={date} total={t.water} goal={goal.water_ml} logs={day.water} onChange={load} />
+              </motion.div>
+
               {/* Déficit calórico (gasto estimado − consumido); não faz sentido em dias futuros */}
               {day.energy && date <= isoDate() && (
                 <motion.div variants={item}>
@@ -199,9 +197,6 @@ export function HomePage() {
                 ))}
               </motion.div>
 
-              <motion.div variants={item}>
-                <WaterCard date={date} total={t.water} goal={goal.water_ml} logs={day.water} onChange={load} />
-              </motion.div>
 
               <motion.div variants={item} className="pb-6">
                 <WeightMini />
@@ -218,45 +213,22 @@ export function HomePage() {
 
 /* ───────────── Atalhos ───────────── */
 
-const liters = (ml: number) => (ml / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })
 
-function QuickCards({ day, date, onChange }: { day: DayData; date: string; onChange: () => void }) {
+function QuickCards({ day, date }: { day: DayData; date: string }) {
   const navigate = useNavigate()
-  const toast = useToast()
-  const [busy, setBusy] = useState(false)
   const meal = mealForNow(day.meals)
   const isToday = date === isoDate()
   const trained = day.trainings.length > 0
 
-  const water = async () => {
-    setBusy(true)
-    try {
-      const r = await api<{ water: WaterLog }>('/water', { method: 'POST', body: { date, ml: 250 } })
-      onChange()
-      toast({
-        text: '+250 ml de água 💧',
-        action: { label: 'Desfazer', run: () => api(`/water/${r.water.id}`, { method: 'DELETE' }).then(onChange).catch(() => {}) },
-      })
-    } catch (e) {
-      toast({ text: (e as ApiError).message })
-    } finally {
-      setBusy(false)
-    }
-  }
-
   return (
-    <div>
-      <div className="grid grid-cols-3 gap-2">
-        <QuickTile icon={Dumbbell} label="Treinar" hint={trained ? `${day.trainings.length === 1 ? 'Feito' : `${day.trainings.length} feitos`} ✓` : isToday ? 'Bora?' : 'Registrar'} done={trained} onClick={openTrain} />
-        <QuickTile
-          icon={Utensils}
-          label="Alimento"
-          hint={meal ? (meal.kcal > 0 ? `${meal.name} · ${fmtKcal(meal.kcal)} kcal` : meal.name) : 'Adicionar'}
-          onClick={() => navigate(`/adicionar?${new URLSearchParams({ ...(meal ? { refeicao: String(meal.id) } : {}), ...(isToday ? {} : { data: date }) })}`)}
-        />
-        <QuickTile icon={Droplet} label="+250 ml" hint={`${liters(day.totals.water)} de ${liters(day.goal?.water_ml ?? 0)} L`} tone="water" disabled={busy} onClick={water} />
-      </div>
-
+    <div className="grid grid-cols-2 gap-2">
+      <QuickTile icon={Dumbbell} label="Treinar" hint={trained ? `${day.trainings.length === 1 ? 'Feito' : `${day.trainings.length} feitos`} ✓` : isToday ? 'Ficha ou avulso' : 'Registrar'} done={trained} onClick={openTrain} />
+      <QuickTile
+        icon={Utensils}
+        label="Alimento"
+        hint={meal ? (meal.kcal > 0 ? `${meal.name} · ${fmtKcal(meal.kcal)} kcal` : meal.name) : 'Adicionar'}
+        onClick={() => navigate(`/adicionar?${new URLSearchParams({ ...(meal ? { refeicao: String(meal.id) } : {}), ...(isToday ? {} : { data: date }) })}`)}
+      />
     </div>
   )
 }
@@ -542,13 +514,23 @@ function MealCard({ meal, date, onEdit, onChange }: { meal: DayMeal; date: strin
   )
 }
 
-/** Linha que desliza para a esquerda e revela "Excluir". Toque abre a edição. */
+/**
+ * Linha que desliza para a esquerda e revela "Excluir". Toque abre a edição.
+ * Só desliza com gesto claramente horizontal (rolar a tela não mexe na linha)
+ * e sempre volta para o lugar: aberta ou fechada, nunca "presa" no meio.
+ */
 function SwipeRow({ children, onTap, onDelete, label }: { children: ReactNode; onTap: () => void; onDelete: () => void; label: string }) {
   const [open, setOpen] = useState(false)
   const dragged = useRef(false)
+  const x = useMotionValue(0)
+
+  const settle = (next: boolean) => {
+    setOpen(next)
+    animate(x, next ? -96 : 0, { type: 'spring', stiffness: 500, damping: 40 })
+  }
 
   const onDragEnd = (_: unknown, info: PanInfo) => {
-    setOpen(info.offset.x < -50)
+    settle(info.offset.x < -60 || info.velocity.x < -500)
     setTimeout(() => (dragged.current = false), 0)
   }
 
@@ -563,16 +545,18 @@ function SwipeRow({ children, onTap, onDelete, label }: { children: ReactNode; o
         <Trash2 className="size-4" /> Excluir
       </button>
       <motion.button
+        style={{ x }}
         drag="x"
+        dragDirectionLock
         dragConstraints={{ left: -96, right: 0 }}
         dragElastic={0.05}
+        dragMomentum={false}
         onDragStart={() => (dragged.current = true)}
         onDragEnd={onDragEnd}
-        animate={{ x: open ? -96 : 0 }}
-        transition={{ type: 'spring', stiffness: 500, damping: 40 }}
+        onPointerCancel={() => settle(open)}
         onClick={() => {
           if (dragged.current) return
-          if (open) setOpen(false)
+          if (open) settle(false)
           else onTap()
         }}
         className="relative flex w-full touch-pan-y items-center justify-between gap-3 bg-surface px-5 py-3 text-left"

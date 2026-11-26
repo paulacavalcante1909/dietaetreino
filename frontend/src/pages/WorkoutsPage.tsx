@@ -1,4 +1,5 @@
 import { motion, Reorder } from 'framer-motion'
+import { HoldToDragItem } from '../components/HoldToDrag'
 import { Calendar, CheckCircle2, ChevronRight, CloudUpload, Flame, Pencil, Play, Plus, Trophy, Zap } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
@@ -10,7 +11,7 @@ import { Button, Card, EmptyState } from '../components/ui'
 import { api } from '../lib/api'
 import { isoDate } from '../lib/date'
 import { useOutboxCount } from '../lib/outbox'
-import { loadRun } from '../lib/run'
+import { loadRun, runPath } from '../lib/run'
 import type { Checkin, CheckinStats, Workout, WorkoutSessionData } from '../lib/types'
 import { letter } from '../lib/workout'
 
@@ -67,7 +68,7 @@ export function WorkoutsPage() {
 
       {/* Treino em andamento (salvo no aparelho) */}
       {running && (
-        <Link to={`/treinos/${running.workoutId}/iniciar`} className="flex items-center gap-3 rounded-[var(--radius-card)] bg-scrim p-4 text-white shadow-lg active:scale-[0.98]">
+        <Link to={runPath(running)} className="flex items-center gap-3 rounded-[var(--radius-card)] bg-scrim p-4 text-white shadow-lg active:scale-[0.98]">
           <span className="relative flex size-3">
             <span className="absolute inline-flex size-full animate-ping rounded-full bg-orchid opacity-75" />
             <span className="relative inline-flex size-3 rounded-full bg-orchid" />
@@ -89,36 +90,46 @@ export function WorkoutsPage() {
 
       {/* Semana + Treinar */}
       <Card className="overflow-hidden !p-0">
-        <div className="bg-gradient-to-br from-orchid to-violet p-5 text-white">
-          <div className="flex items-center gap-4">
+        <div className="relative bg-gradient-to-br from-orchid to-primary p-5 text-white">
+          {stats && (
+            <button
+              onClick={() => setGoalOpen(true)}
+              aria-label={`Editar meta da semana (${stats.weekly_goal} ${stats.weekly_goal === 1 ? 'treino' : 'treinos'})`}
+              title="Editar meta da semana"
+              className="absolute top-3 right-3 flex size-9 items-center justify-center rounded-full bg-white/20 active:bg-white/30"
+            >
+              <Pencil className="size-4" />
+            </button>
+          )}
+          <div className="flex items-center gap-4 pr-8">
             {stats && (
-              <button onClick={() => setGoalOpen(true)} aria-label={`Meta da semana: ${stats.week_days} de ${stats.weekly_goal} treinos. Toque para mudar`} className="shrink-0">
-                <Ring value={weekDone} max={stats.weekly_goal} size={92} stroke={9} color="#ffffff">
-                  <span className="text-xl leading-none font-extrabold text-white">
-                    {stats.week_days}/{stats.weekly_goal}
-                  </span>
-                  <span className="text-xs text-white/80">treinos</span>
-                </Ring>
-              </button>
+              <Ring value={weekDone} max={stats.weekly_goal} size={88} stroke={9} color="#ffffff">
+                <span className="text-xl leading-none font-extrabold text-white">
+                  {stats.week_days}/{stats.weekly_goal}
+                </span>
+                <span className="text-xs text-white/85">na semana</span>
+              </Ring>
             )}
             <div className="min-w-0 flex-1">
-              <p className="text-sm text-white/80">{todayCheckin ? 'Treinou hoje 💪' : stats && stats.week_days >= stats.weekly_goal ? 'Meta da semana batida!' : 'Bora treinar?'}</p>
-              <p className="truncate text-xl font-extrabold">{todayCheckin ? todayCheckin.workout_name : 'Treino de hoje'}</p>
-              {stats && (
-                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold text-white/90">
-                  <span className="flex items-center gap-1" title="Dias seguidos treinando"><Flame className="size-3.5" />{stats.streak} {stats.streak === 1 ? 'dia seguido' : 'dias seguidos'}</span>
-                  <span className="flex items-center gap-1"><Calendar className="size-3.5" />{stats.month_count} no mês</span>
-                  <span className="flex items-center gap-1"><Trophy className="size-3.5" />{stats.total_count} no total</span>
-                </div>
-              )}
-              {stats && (
-                <button onClick={() => setGoalOpen(true)} className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-bold text-white active:bg-white/30">
-                  Meta: {stats.weekly_goal} {stats.weekly_goal === 1 ? 'treino' : 'treinos'} por semana <Pencil className="size-3" />
-                </button>
-              )}
+              <p className="text-sm text-white/85">{todayCheckin ? 'Treinou hoje 💪' : stats && stats.week_days >= stats.weekly_goal ? 'Meta da semana batida! 🎉' : 'Bora treinar?'}</p>
+              <p className="truncate text-xl font-extrabold">{todayCheckin ? todayCheckin.workout_name : stats ? `Faltam ${Math.max(0, stats.weekly_goal - stats.week_days)} na semana` : 'Treino de hoje'}</p>
             </div>
             {todayCheckin?.photo_url && <img src={todayCheckin.photo_url} alt="Foto do treino de hoje" className="size-14 shrink-0 rounded-2xl border-2 border-white/70 object-cover" />}
           </div>
+          {stats && (
+            <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+              {([
+                [Flame, stats.streak, stats.streak === 1 ? 'dia seguido' : 'dias seguidos'],
+                [Calendar, stats.month_count, 'no mês'],
+                [Trophy, stats.total_count, 'no total'],
+              ] as const).map(([Icon, v, l]) => (
+                <div key={l} className="rounded-xl bg-white/15 px-1 py-2">
+                  <p className="flex items-center justify-center gap-1 text-lg leading-none font-extrabold"><Icon className="size-4" />{v}</p>
+                  <p className="mt-1 text-xs text-white/85">{l}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <div className="flex gap-2 p-3">
           <button onClick={openTrain} className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-primary font-bold text-white active:scale-[0.98]">
@@ -132,7 +143,7 @@ export function WorkoutsPage() {
 
       <div className="flex items-center justify-between px-1 pt-2">
         <h2 className="font-bold">Minha ficha</h2>
-        {workouts && workouts.length > 1 && <span className="text-xs text-muted">arraste para reordenar</span>}
+        {workouts && workouts.length > 1 && <span className="text-xs text-muted">segure e arraste para reordenar</span>}
       </div>
 
       {!workouts && <div className="h-32 animate-pulse rounded-2xl bg-soft" />}
@@ -145,10 +156,10 @@ export function WorkoutsPage() {
       {workouts && workouts.length > 0 && (
         <Reorder.Group axis="y" values={workouts} onReorder={setWorkouts} className="space-y-2">
           {workouts.map((w) => (
-            <Reorder.Item key={w.id} value={w} onDragEnd={saveOrder}>
+            <HoldToDragItem key={w.id} value={w} onDragEnd={saveOrder}>
               <div className="overflow-hidden rounded-[var(--radius-card)] bg-surface shadow-[0_2px_12px_-4px_rgba(31,23,36,0.08)]">
                 <motion.button onClick={() => navigate(`/treinos/${w.id}`)} whileTap={{ scale: 0.98 }} className="flex w-full items-center gap-3 p-3 text-left">
-                  <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-orchid to-violet text-lg font-extrabold text-white">
+                  <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-orchid to-primary text-lg font-extrabold text-white">
                     {letter(w.name)}
                   </div>
                   <div className="min-w-0 flex-1">
@@ -178,7 +189,7 @@ export function WorkoutsPage() {
                   </div>
                 )}
               </div>
-            </Reorder.Item>
+            </HoldToDragItem>
           ))}
         </Reorder.Group>
       )}

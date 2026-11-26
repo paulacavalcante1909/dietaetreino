@@ -1,3 +1,4 @@
+import { ask } from '../components/Dialog'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { IngredientList, IngredientPicker, ItemSheet, sumItems } from '../components/RecipeIngredients'
@@ -64,7 +65,7 @@ export function RecipeEditorPage() {
   }
 
   const remove = async () => {
-    if (!confirm('Excluir esta refeição pronta? O que você já registrou no diário continua no histórico.')) return
+    if (!(await ask({ title: 'Excluir esta refeição pronta?', text: 'O que você já registrou no diário continua no histórico.', confirmLabel: 'Excluir', danger: true }))) return
     await api(`/recipes/${id}`, { method: 'DELETE' })
     toast({ text: 'Excluída' })
     navigate(-1)

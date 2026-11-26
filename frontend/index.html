@@ -16,10 +16,10 @@
     <script>
       // Tema salvo no aparelho, aplicado antes da tela aparecer (o app atualiza o resto depois)
       ;(function () {
+        var dirs = { neutro: 'neutro', coelhinha: 'coelhinha', onca: 'onca', dark: 'rato', tigrao: 'tigrao' }
+        var colors = { neutro: '#141518', coelhinha: '#F8CCDB', onca: '#FDE7D3', dark: '#141518', tigrao: '#E3EAF3' }
         var t = localStorage.getItem('dt_theme')
-        var dirs = { coelhinha: 'coelhinha', onca: 'onca', dark: 'rato' }
-        var colors = { coelhinha: '#F8CCDB', onca: '#FDE7D3', dark: '#141518' }
-        if (!dirs[t]) return
+        if (!dirs[t]) t = 'neutro' // padrão
         document.documentElement.dataset.theme = t
         var d = '/themes/' + dirs[t] + '/'
         document.querySelector('link[rel="icon"][sizes="32x32"]').href = d + 'favicon-32.png'

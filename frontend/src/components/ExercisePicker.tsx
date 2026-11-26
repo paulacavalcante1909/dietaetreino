@@ -1,6 +1,8 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useState, type FormEvent } from 'react'
+import { Star } from 'lucide-react'
 import { ExerciseImage } from './ExerciseImage'
+import { useToast } from './Toast'
 import { Sheet } from './Sheet'
 import { Alert, BackButton, Button, Field } from './ui'
 import { api, ApiError } from '../lib/api'
@@ -19,6 +21,23 @@ export function ExercisePicker({ open, onClose, onPick }: Props) {
   const [q, setQ] = useState('')
   const [list, setList] = useState<Exercise[] | null>(null)
   const [creating, setCreating] = useState(false)
+  const toast = useToast()
+
+  // Favoritar na hora (otimista); desfazer pelo aviso
+  const toggleFavorite = async (e: Exercise) => {
+    const on = !e.favorite
+    const apply = (v: boolean) => setList((l) => l?.map((x) => (x.id === e.id ? { ...x, favorite: v } : x)) ?? l)
+    apply(on)
+    try {
+      await api(`/exercises/${e.id}/favorite`, { method: on ? 'POST' : 'DELETE' })
+      toast({
+        text: on ? '★ Favoritado: aparece primeiro na lista' : 'Tirado dos favoritos',
+        action: { label: 'Desfazer', run: () => toggleFavorite({ ...e, favorite: on }) },
+      })
+    } catch {
+      apply(!on)
+    }
+  }
 
   useEffect(() => {
     if (!open) return
@@ -57,24 +76,34 @@ export function ExercisePicker({ open, onClose, onPick }: Props) {
               className="mb-3 h-12 w-full rounded-2xl border border-line bg-surface px-4 outline-none focus:border-orchid focus:ring-4 focus:ring-orchid/15"
             />
 
-            <div className="-mx-5 mb-4 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none]">
-              {[['', 'Todos'], ...Object.entries(groups)].map(([key, label]) => (
+            <p className="mb-2 text-xs font-semibold tracking-wide text-muted uppercase">Categorias</p>
+            <div className="-mx-5 mb-4 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none]" role="tablist" aria-label="Categorias de exercício">
+              {[['', 'Todos'], ['favoritos', 'Favoritos'], ...Object.entries(groups)].map(([key, label]) => (
                 <button
                   key={key}
+                  role="tab"
+                  aria-selected={group === key}
                   onClick={() => setGroup(key)}
-                  className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${group === key ? 'bg-primary text-white' : 'bg-surface text-muted'}`}
+                  className={`flex shrink-0 items-center gap-1.5 rounded-full border-2 px-4 py-2 text-sm font-semibold transition-colors ${
+                    group === key ? 'border-primary bg-primary text-white' : 'border-line bg-surface text-ink active:bg-soft'
+                  }`}
                 >
+                  {key === 'favoritos' && <Star className={`size-4 ${group === key ? 'fill-white' : 'fill-amber-400 text-amber-400'}`} />}
                   {label}
                 </button>
               ))}
             </div>
 
             {!list && <div className="h-64 animate-pulse rounded-2xl bg-soft" />}
-            {list && list.length === 0 && <p className="py-8 text-center text-sm text-muted">Nenhum exercício encontrado.</p>}
+            {list && list.length === 0 && (
+              <p className="py-8 text-center text-sm text-muted">
+                {group === 'favoritos' ? 'Toque na ☆ de um exercício para ele aparecer aqui e sempre no topo da lista.' : 'Nenhum exercício encontrado.'}
+              </p>
+            )}
             <ul className="space-y-2">
               {list?.map((e) => (
-                <li key={e.id}>
-                  <button onClick={() => onPick(e)} className="flex w-full items-center gap-3 rounded-2xl bg-surface p-2 pr-4 text-left shadow-[0_2px_12px_-4px_rgba(31,23,36,0.08)] active:bg-soft">
+                <li key={e.id} className="flex items-center rounded-2xl bg-surface shadow-[0_2px_12px_-4px_rgba(31,23,36,0.08)]">
+                  <button onClick={() => onPick(e)} className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl p-2 text-left active:bg-soft">
                     <ExerciseImage image={e.image} name={e.name} size={56} animate={false} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{e.name}</p>
@@ -83,7 +112,15 @@ export function ExercisePicker({ open, onClose, onPick }: Props) {
                         {e.user_id ? ' · meu' : ''}
                       </p>
                     </div>
-                    <span className="text-xl text-primary">+</span>
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-soft text-xl text-primary">+</span>
+                  </button>
+                  <button
+                    onClick={() => toggleFavorite(e)}
+                    aria-label={e.favorite ? `Tirar ${e.name} dos favoritos` : `Favoritar ${e.name}`}
+                    aria-pressed={!!e.favorite}
+                    className="flex size-12 shrink-0 items-center justify-center rounded-full active:scale-90"
+                  >
+                    <Star className={`size-5 ${e.favorite ? 'fill-amber-400 text-amber-400' : 'text-muted'}`} />
                   </button>
                 </li>
               ))}

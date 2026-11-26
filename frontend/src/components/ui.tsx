@@ -35,6 +35,7 @@ interface FieldProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string
   error?: string
   suffix?: string
+  hint?: string
   /** Elemento no fim do campo (ex.: botão de mostrar senha). */
   trailing?: ReactNode
 }
@@ -68,7 +69,7 @@ export function PasswordField(props: Omit<FieldProps, 'type' | 'trailing'>) {
   )
 }
 
-export function Field({ label, error, suffix, trailing, id, className = '', ...rest }: FieldProps) {
+export function Field({ label, error, hint, suffix, trailing, id, className = '', ...rest }: FieldProps) {
   const inputId = id ?? rest.name
   return (
     <label htmlFor={inputId} className={`block ${className}`}>
@@ -87,6 +88,7 @@ export function Field({ label, error, suffix, trailing, id, className = '', ...r
           {error}
         </motion.span>
       )}
+      {hint && !error && <span className="mt-1 block text-xs text-muted">{hint}</span>}
     </label>
   )
 }
@@ -126,7 +128,7 @@ export function BackButton({ onClick, label = 'Voltar', icon = 'back' }: { onCli
   )
 }
 
-/** Mascote do tema atual (coelhinha, onça ou ratão). */
+/** Mascote do tema atual (ou o símbolo do app, no tema Neutro). */
 export function Mascot({ size = 96, className = '' }: { size?: number; className?: string }) {
   const { theme } = useTheme()
   return <img src={`${theme.assets}/mascote.png`} width={size} height={size} alt="" className={`rounded-full shadow-md ${className}`} style={{ width: size, height: size }} />

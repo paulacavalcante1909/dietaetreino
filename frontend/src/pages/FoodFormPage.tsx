@@ -1,3 +1,4 @@
+import { ask } from '../components/Dialog'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
@@ -92,7 +93,7 @@ export function FoodFormPage() {
   }
 
   const remove = async () => {
-    if (!id || !confirm('Excluir este alimento? Os registros que você já fez continuam no histórico.')) return
+    if (!id || !(await ask({ title: 'Excluir este alimento?', text: 'Os registros que você já fez continuam no histórico.', confirmLabel: 'Excluir alimento', danger: true }))) return
     await api(`/foods/${id}`, { method: 'DELETE' })
     toast({ text: 'Alimento excluído' })
     navigate(-1)

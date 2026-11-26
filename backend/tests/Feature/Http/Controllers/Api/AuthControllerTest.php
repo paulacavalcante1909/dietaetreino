@@ -4,6 +4,8 @@ namespace Tests\Feature\Http\Controllers\Api;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -89,5 +91,23 @@ class AuthControllerTest extends TestCase
     public function test_energy_requires_authentication_and_returns_401(): void
     {
         $this->getJson('/api/me/energy')->assertUnauthorized();
+    }
+
+    public function test_profile_photo_can_be_uploaded_viewed_by_signed_link_and_removed(): void
+    {
+        Storage::fake('local');
+        $user = User::factory()->create();
+
+        $url = $this->actingAs($user)->post('/api/me/avatar', ['avatar' => UploadedFile::fake()->image('eu.jpg', 800, 600)], ['Accept' => 'application/json'])
+            ->assertOk()->json('user.avatar_url');
+
+        $this->assertNotNull($url);
+        $this->get($url)->assertOk();
+        $this->get('/api/users/'.$user->id.'/avatar')->assertForbidden();
+        [$w, $h] = getimagesizefromstring(Storage::disk('local')->get($user->fresh()->avatar_path));
+        $this->assertSame([512, 512], [$w, $h]);
+
+        $this->actingAs($user)->deleteJson('/api/me/avatar')->assertOk()->assertJsonPath('user.avatar_url', null);
+        $this->assertCount(0, Storage::disk('local')->allFiles());
     }
 }

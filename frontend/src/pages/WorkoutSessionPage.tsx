@@ -1,6 +1,8 @@
-import { Camera, Check, CloudUpload, Dumbbell, Flame, Pause, Play, Timer, X } from 'lucide-react'
+import { ask } from '../components/Dialog'
+import { Camera, Check, CloudUpload, Dumbbell, Flame, Pause, Pencil, Play, Timer, X } from 'lucide-react'
+import { HoldToDragItem } from '../components/HoldToDrag'
 import { enqueue, isOffline, newRef } from '../lib/outbox'
-import { exerciseLine } from '../components/SessionSummary'
+import { ExerciseRow, exerciseLine } from '../components/SessionSummary'
 import { AnimatePresence, motion, Reorder } from 'framer-motion'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -8,12 +10,12 @@ import { ExerciseImage } from '../components/ExerciseImage'
 import { ExercisePicker } from '../components/ExercisePicker'
 import { Ring } from '../components/Ring'
 import { SetsSheet } from '../components/SetsSheet'
-import { isTimed, minutesOf, prescription } from '../lib/workout'
+import { hasDistance, isTimed, minutesOf, prescription, secondsOf } from '../lib/workout'
 import { useToast } from '../components/Toast'
 import { Alert, BackButton, Button, Mascot, Spinner } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import {
-  clearRun, clock, durationLabel, loadRun, newRun, REST_OPTIONS, restDoneAlert, unlockAudio, useNow, useRun, useWakeLock,
+  clearRun, clock, durationLabel, loadRun, looseName, newRun, REST_OPTIONS, runPath, restDoneAlert, unlockAudio, useNow, useRun, useWakeLock,
   type RunItem, type RunState,
 } from '../lib/run'
 import type { Exercise, Workout, WorkoutSessionData } from '../lib/types'
@@ -21,12 +23,12 @@ import type { Exercise, Workout, WorkoutSessionData } from '../lib/types'
 const restLabel = (s: number) => (s < 60 ? `${s} s` : s % 60 ? `${Math.floor(s / 60)} min ${s % 60} s` : `${s / 60} min`)
 
 /**
- * Executar um treino da ficha:
- * prep (ajustar só para hoje) → active (cronômetro, séries, descanso) → finished (resumo + check-in).
+ * Executar um treino da ficha ou avulso (`/treinos/avulso/iniciar`):
+ * prep (ajustar só para hoje) → active (cronômetro, séries, descanso; dá para editar) → finished (resumo).
  */
 export function WorkoutSessionPage() {
   const { id } = useParams()
-  const workoutId = Number(id)
+  const workoutId = id === 'avulso' ? 0 : Number(id)
   const navigate = useNavigate()
   const { run, setRun, start } = useRun(() => {
     const saved = loadRun()
@@ -38,9 +40,13 @@ export function WorkoutSessionPage() {
   })
   const [error, setError] = useState<string | null>(null)
 
-  // Sem treino salvo para esta ficha: carrega a ficha e cria a cópia de hoje
+  // Sem treino salvo: carrega a ficha (ou começa um avulso vazio) e cria a cópia de hoje
   useEffect(() => {
     if (run || other) return
+    if (workoutId === 0) {
+      start(newRun({ id: 0, name: 'Treino avulso', items: [] } as unknown as Workout))
+      return
+    }
     api<{ workout: Workout }>(`/workouts/${workoutId}`)
       .then((r) => start(newRun(r.workout)))
       .catch((e: ApiError) => setError(e.message))
@@ -52,11 +58,11 @@ export function WorkoutSessionPage() {
         <p className="text-4xl">⏱️</p>
         <p className="text-lg font-semibold">Você tem um treino em andamento</p>
         <p className="text-muted">“{other.workoutName}” ainda não foi finalizado.</p>
-        <Button onClick={() => navigate(`/treinos/${other.workoutId}/iniciar`, { replace: true })}>Continuar “{other.workoutName}”</Button>
+        <Button onClick={() => navigate(runPath(other), { replace: true })}>Continuar “{other.workoutName}”</Button>
         <Button
           variant="danger"
-          onClick={() => {
-            if (!confirm('Descartar o treino em andamento? O progresso dele será perdido.')) return
+          onClick={async () => {
+            if (!(await ask({ title: 'Descartar o treino em andamento?', text: 'O progresso dele será perdido.', confirmLabel: 'Descartar', danger: true }))) return
             clearRun()
             setOther(null)
           }}
@@ -77,18 +83,101 @@ export function WorkoutSessionPage() {
 
 type SetRun = (fn: (r: RunState) => RunState) => void
 
+/* ───────────────────────── Lista editável (antes e durante o treino) ───────────────────────── */
+
+/**
+ * Ajustar os exercícios de hoje: ordem, séries, tirar e incluir.
+ * Durante o treino, mantém o que já foi feito (séries concluídas, cargas).
+ */
+function RunItemsEditor({ items, setItems, openPicker = false, onPickerClosedEmpty }: {
+  items: RunItem[]
+  setItems: (items: RunItem[]) => void
+  openPicker?: boolean
+  onPickerClosedEmpty?: () => void
+}) {
+  const [picking, setPicking] = useState(openPicker)
+  const [editing, setEditing] = useState<{ item: RunItem; index: number | null } | null>(null)
+
+  return (
+    <>
+      {items.length === 0 && (
+        <p className="py-6 text-center text-sm text-muted">Nenhum exercício ainda.</p>
+      )}
+      <Reorder.Group axis="y" values={items} onReorder={setItems} className="space-y-2">
+        {items.map((it, idx) => (
+          <HoldToDragItem key={it.key} value={it}>
+            <div className={`flex items-center gap-3 rounded-2xl p-2 pr-1 shadow-[0_2px_12px_-4px_rgba(31,23,36,0.08)] ${it.done ? 'bg-soft/70' : 'bg-surface'}`}>
+              <ExerciseImage image={it.exercise.image} name={it.exercise.name} size={48} animate={false} />
+              <button onClick={() => setEditing({ item: it, index: idx })} className="min-w-0 flex-1 text-left">
+                <p className={`truncate text-sm font-medium ${it.done ? 'text-muted' : ''}`}>{it.exercise.name}</p>
+                <p className="text-xs font-semibold text-primary">
+                  {prescription(it)}
+                  {it.setsDone > 0 && !isTimed(it) && <span className="ml-1.5 font-normal text-muted">· {it.setsDone} feitas</span>}
+                </p>
+              </button>
+              <button aria-label={`Tirar ${it.exercise.name} de hoje`} onClick={() => setItems(items.filter((_, j) => j !== idx))} className="flex size-10 shrink-0 items-center justify-center rounded-full text-muted active:bg-soft">
+                <X className="size-5" />
+              </button>
+            </div>
+          </HoldToDragItem>
+        ))}
+      </Reorder.Group>
+      {items.length > 1 && <p className="mt-2 text-center text-xs text-muted">Segure um exercício e arraste para mudar a ordem.</p>}
+
+      <button onClick={() => setPicking(true)} className="mt-3 w-full rounded-2xl border-2 border-dashed border-line py-4 text-sm font-semibold text-primary">
+        + {items.length ? 'Incluir exercício' : 'Escolher exercício'}
+      </button>
+
+      <ExercisePicker
+        open={picking}
+        onClose={() => {
+          setPicking(false)
+          if (items.length === 0) onPickerClosedEmpty?.()
+        }}
+        onPick={(e: Exercise) => {
+          setPicking(false)
+          setEditing({ item: { key: `n-${Date.now()}`, exercise: e, sets: 3, reps: '12', notes: null, setsDone: 0, done: false }, index: null })
+        }}
+      />
+      <SetsSheet
+        item={editing ? { ...editing.item, distance_km: editing.item.distanceKm ?? null } : null}
+        isNew={editing?.index === null}
+        withDistance
+        saveLabel={editing && editing.index !== null ? 'Salvar para hoje' : undefined}
+        onClose={() => setEditing(null)}
+        onSave={(v) => {
+          const old = editing!.item
+          const timed = isTimed(v)
+          const setsDone = timed ? old.setsDone : Math.min(old.setsDone, v.sets)
+          const it: RunItem = {
+            ...old,
+            sets: v.sets,
+            reps: v.reps,
+            distanceKm: v.distance_km ?? null,
+            setsDone,
+            // Mais séries num exercício já feito: ele volta a ficar pendente
+            done: timed ? old.done : setsDone > 0 && setsDone >= v.sets,
+          }
+          if (editing?.index === null) setItems([...items, it])
+          else setItems(items.map((x, j) => (j === editing!.index ? it : x)))
+          setEditing(null)
+        }}
+      />
+    </>
+  )
+}
+
 /* ───────────────────────── Preparação ───────────────────────── */
 
 function PrepView({ run, setRun }: { run: RunState; setRun: SetRun }) {
   const navigate = useNavigate()
-  const [picking, setPicking] = useState(false)
-  const [editing, setEditing] = useState<{ item: RunItem; index: number | null } | null>(null)
+  const loose = run.workoutId === 0
 
   const setItems = (items: RunItem[]) => setRun((r) => ({ ...r, items }))
 
   const begin = () => {
     unlockAudio()
-    setRun((r) => ({ ...r, phase: 'active', startedAt: Date.now() }))
+    setRun((r) => ({ ...r, phase: 'active', startedAt: Date.now(), ...(loose ? { workoutName: looseName(r.items) } : {}) }))
     // Última carga usada em cada exercício (pré-preenche a série)
     const names = run.items.filter((i) => !isTimed(i)).map((i) => `names[]=${encodeURIComponent(i.exercise.name)}`).join('&')
     if (names)
@@ -99,7 +188,8 @@ function PrepView({ run, setRun }: { run: RunState; setRun: SetRun }) {
 
   const cancel = () => {
     clearRun()
-    navigate('/treinos', { replace: true })
+    if ((window.history.state?.idx ?? 0) > 0) navigate(-1)
+    else navigate('/treinos', { replace: true })
   }
 
   return (
@@ -107,33 +197,19 @@ function PrepView({ run, setRun }: { run: RunState; setRun: SetRun }) {
       <header className="mb-2 flex items-center gap-3">
         <BackButton onClick={cancel} label="Cancelar" />
         <div className="min-w-0">
-          <p className="text-xs font-medium text-muted uppercase">Iniciar treino</p>
-          <h1 className="truncate text-xl font-bold">{run.workoutName}</h1>
+          <p className="text-xs font-medium text-muted uppercase">{loose ? 'Treinar agora' : 'Iniciar treino'}</p>
+          <h1 className="truncate text-xl font-bold">{loose ? 'Exercício avulso' : run.workoutName}</h1>
         </div>
       </header>
       <p className="mb-4 rounded-2xl bg-lavender/10 px-4 py-3 text-sm text-violet">
-        Ajuste o que quiser para hoje: séries, repetições, ordem, tirar ou incluir exercícios. <strong>Sua ficha não muda.</strong>
+        {loose ? (
+          'Escolha o que vai fazer hoje: um ou vários exercícios.'
+        ) : (
+          <>Ajuste o que quiser para hoje: séries, repetições, ordem, tirar ou incluir exercícios. <strong>Sua ficha não muda.</strong></>
+        )}
       </p>
 
-      <Reorder.Group axis="y" values={run.items} onReorder={setItems} className="space-y-2">
-        {run.items.map((it, idx) => (
-          <Reorder.Item key={it.key} value={it} className="touch-none">
-            <div className="flex items-center gap-3 rounded-2xl bg-surface p-2 pr-3 shadow-[0_2px_12px_-4px_rgba(31,23,36,0.08)]">
-              <span className="cursor-grab pl-1 text-lg text-muted select-none" aria-hidden>⋮⋮</span>
-              <ExerciseImage image={it.exercise.image} name={it.exercise.name} size={48} animate={false} />
-              <button onClick={() => setEditing({ item: it, index: idx })} className="min-w-0 flex-1 text-left">
-                <p className="truncate text-sm font-medium">{it.exercise.name}</p>
-                <p className="text-xs font-semibold text-primary">{prescription(it)}</p>
-              </button>
-              <button aria-label={`Tirar ${it.exercise.name} de hoje`} onClick={() => setItems(run.items.filter((_, j) => j !== idx))} className="text-xl text-muted">×</button>
-            </div>
-          </Reorder.Item>
-        ))}
-      </Reorder.Group>
-
-      <button onClick={() => setPicking(true)} className="mt-3 w-full rounded-2xl border-2 border-dashed border-line py-4 text-sm font-semibold text-primary">
-        + Incluir exercício hoje
-      </button>
+      <RunItemsEditor items={run.items} setItems={setItems} openPicker={loose && run.items.length === 0} onPickerClosedEmpty={loose ? cancel : undefined} />
 
       <div className="mt-6">
         <p className="mb-2 text-sm font-medium text-muted">Descanso entre séries</p>
@@ -145,27 +221,6 @@ function PrepView({ run, setRun }: { run: RunState; setRun: SetRun }) {
           <Button onClick={begin} disabled={run.items.length === 0}><Play className="size-5 fill-current" /> Começar treino</Button>
         </div>
       </div>
-
-      <ExercisePicker
-        open={picking}
-        onClose={() => setPicking(false)}
-        onPick={(e: Exercise) => {
-          setPicking(false)
-          setEditing({ item: { key: `n-${Date.now()}`, exercise: e, sets: 3, reps: '12', notes: null, setsDone: 0, done: false }, index: null })
-        }}
-      />
-      <SetsSheet
-        item={editing?.item ?? null}
-        isNew={editing?.index === null}
-        saveLabel={editing && editing.index !== null ? 'Salvar para hoje' : undefined}
-        onClose={() => setEditing(null)}
-        onSave={(v) => {
-          const it = { ...editing!.item, sets: v.sets, reps: v.reps, setsDone: Math.min(editing!.item.setsDone, v.sets) }
-          if (editing?.index === null) setItems([...run.items, it])
-          else setItems(run.items.map((x, j) => (j === editing!.index ? it : x)))
-          setEditing(null)
-        }}
-      />
     </div>
   )
 }
@@ -262,20 +317,65 @@ function ActiveView({ run, setRun }: { run: RunState; setRun: SetRun }) {
     setRun((r) => ({ ...r, items, current: null, restEndsAt: null, ...(allDone ? { phase: 'finished' as const, finishedAt: Date.now() } : {}) }))
   }
 
-  const askFinish = () => {
+  const askFinish = async () => {
     const pending = run.items.length - doneCount
-    if (pending > 0 && !confirm(`Ainda ${pending === 1 ? 'falta 1 exercício' : `faltam ${pending} exercícios`}. Finalizar o treino assim mesmo?`)) return
+    if (pending > 0 && !(await ask({ title: 'Finalizar o treino?', text: `Ainda ${pending === 1 ? 'falta 1 exercício' : `faltam ${pending} exercícios`}. Eles ficam marcados como pulados.`, confirmLabel: 'Finalizar assim mesmo', cancelLabel: 'Continuar treinando' }))) return
     finish()
   }
 
   const cur = run.current !== null ? run.items[run.current] : null
+  const [editing, setEditing] = useState(false)
+
+  // Editar no meio do treino: o progresso fica; se um exercício sair, o cronômetro dele para
+  const setItems = (items: RunItem[]) =>
+    setRun((r) => {
+      const keep = r.timerKey && items.some((x) => x.key === r.timerKey)
+      return {
+        ...r,
+        items,
+        current: null,
+        ...(keep ? {} : { timerKey: null, timerEndsAt: null, timerLeftMs: null }),
+        ...(r.workoutId === 0 ? { workoutName: looseName(items) } : {}),
+      }
+    })
+
+  if (editing)
+    return (
+      <div className="safe-top mx-auto max-w-lg px-5 pt-4 pb-32">
+        <header className="mb-2 flex items-center gap-3">
+          <BackButton onClick={() => setEditing(false)} label="Voltar ao treino" />
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-muted uppercase">Editar treino de hoje</p>
+            <h1 className="truncate text-xl font-bold">{run.workoutName}</h1>
+          </div>
+        </header>
+        <p className="mb-4 rounded-2xl bg-lavender/10 px-4 py-3 text-sm text-violet">
+          O que você já fez continua salvo. O cronômetro do treino segue rodando. <strong>Sua ficha não muda.</strong>
+        </p>
+        <RunItemsEditor items={run.items} setItems={setItems} />
+        <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/90 backdrop-blur-lg">
+          <div className="mx-auto max-w-lg px-5 py-3">
+            <Button onClick={() => setEditing(false)} disabled={run.items.length === 0}>
+              <Play className="size-5 fill-current" /> Voltar ao treino
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
 
   return (
     <div className="mx-auto max-w-lg pb-32">
       {/* Topo: treino e progresso (o tempo é medido em segundo plano e aparece no resumo/check-in) */}
-      <div className="safe-top sticky top-0 z-10 bg-gradient-to-br from-orchid to-violet px-5 pt-4 pb-5 text-white shadow-lg">
-        <p className="text-xs font-medium text-white/80 uppercase">Treino em andamento</p>
-        <p className="line-clamp-2 text-2xl leading-tight font-bold">{run.workoutName}</p>
+      <div className="safe-top sticky top-0 z-10 bg-gradient-to-br from-orchid to-primary px-5 pt-4 pb-5 text-white shadow-lg">
+        <div className="flex items-start gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-white/80 uppercase">Treino em andamento</p>
+            <p className="line-clamp-2 text-2xl leading-tight font-bold">{run.workoutName}</p>
+          </div>
+          <button onClick={() => setEditing(true)} className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/20 px-3.5 py-2 text-sm font-semibold active:bg-white/30">
+            <Pencil className="size-4" /> Editar
+          </button>
+        </div>
         <div className="mt-3 flex items-center gap-3">
           <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/25">
             <motion.div className="h-full rounded-full bg-white" animate={{ width: `${(doneCount / Math.max(run.items.length, 1)) * 100}%` }} />
@@ -295,7 +395,7 @@ function ActiveView({ run, setRun }: { run: RunState; setRun: SetRun }) {
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className={`truncate font-semibold ${it.done ? 'text-muted line-through' : ''}`}>{it.exercise.name}</p>
+                <p className={`truncate font-semibold ${it.done ? 'text-muted' : ''}`}>{it.exercise.name}</p>
                 <p className="text-sm text-muted">
                   {prescription(it)}
                   {it.setsDone > 0 && !it.done && !isTimed(it) && <span className="ml-2 font-semibold text-primary">{it.setsDone}/{it.sets} séries</span>}
@@ -336,6 +436,7 @@ function ActiveView({ run, setRun }: { run: RunState; setRun: SetRun }) {
             onPause={pauseTimer}
             onResume={resumeTimer}
             onFinish={() => finishTimed(cur.key)}
+            onDistance={(km) => setRun((r) => ({ ...r, items: r.items.map((x) => (x.key === cur.key ? { ...x, distanceKm: km } : x)) }))}
             onClose={() => setRun((r) => ({ ...r, current: null }))}
           />
         )}
@@ -373,9 +474,11 @@ function TimedRunner(props: {
   onPause: () => void
   onResume: () => void
   onFinish: () => void
+  onDistance: (km: number | null) => void
   onClose: () => void
 }) {
   const { item, now, endsAt, leftMs } = props
+  const [km, setKm] = useState(item.distanceKm ? String(item.distanceKm).replace('.', ',') : '')
   const total = minutesOf(item.reps) * 60_000
   const running = endsAt !== null
   const paused = !running && leftMs !== null
@@ -403,6 +506,25 @@ function TimedRunner(props: {
           </Ring>
           {item.notes && <p className="rounded-2xl bg-soft px-3 py-2 text-sm">{item.notes}</p>}
           {props.otherRunning && <p className="text-sm text-muted">Há outro cronômetro em andamento; ao iniciar este, ele é substituído.</p>}
+          {hasDistance(item.exercise) && (
+            <label className="flex items-center gap-3 rounded-2xl bg-soft/70 px-4 py-2.5">
+              <span className="text-sm font-medium">Distância</span>
+              <input
+                aria-label="Distância em km"
+                inputMode="decimal"
+                placeholder="opcional"
+                value={km}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/[^\d.,]/g, '').slice(0, 6)
+                  setKm(v)
+                  const n = Number(v.replace(',', '.'))
+                  props.onDistance(n > 0 ? Math.min(n, 500) : null)
+                }}
+                className="w-20 rounded-xl border border-line bg-surface py-1.5 text-center font-semibold outline-none focus:border-orchid"
+              />
+              <span className="text-sm text-muted">km</span>
+            </label>
+          )}
         </div>
 
         <div className="mt-6 space-y-3">
@@ -447,6 +569,18 @@ function ExerciseRunner(props: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item.setsDone])
   const kgNum = kg.trim() ? Math.max(0, Number(kg.replace(',', '.'))) || null : null
+  // Série por tempo (prancha): cronômetro da série; no fim, avisa e conclui a série
+  const holdSeconds = secondsOf(item.reps)
+  const [holdEndsAt, setHoldEndsAt] = useState<number | null>(null)
+  const holdLeft = holdEndsAt ? Math.max(0, holdEndsAt - now) : holdSeconds * 1000
+  useEffect(() => {
+    if (holdEndsAt && holdEndsAt <= now) {
+      setHoldEndsAt(null)
+      restDoneAlert()
+      props.onCompleteSet(kgNum)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [now, holdEndsAt])
   const bump = (d: number) => setKg(String(Math.max(0, Math.round(((kgNum ?? 0) + d) * 10) / 10)).replace('.', ','))
 
   return (
@@ -493,13 +627,17 @@ function ExerciseRunner(props: {
               <ExerciseImage image={item.exercise.image} name={item.exercise.name} size={240} />
               <div>
                 <p className="text-sm font-semibold tracking-wide text-muted uppercase">Série {nextSet} de {item.sets}</p>
-                <p className="mt-1 text-5xl font-bold text-primary">{item.reps}</p>
+                {holdSeconds > 0 ? (
+                  <p className="mt-1 font-mono text-5xl font-bold text-primary tabular-nums" role="timer" aria-live="off">{clock(holdLeft + (holdEndsAt ? 999 : 0))}</p>
+                ) : (
+                  <p className="mt-1 text-5xl font-bold text-primary">{item.reps}</p>
+                )}
                 <p className="text-sm text-muted">{/^\d/.test(item.reps) && !/s$/.test(item.reps) ? 'repetições' : ''}</p>
                 {item.notes && <p className="mt-2 rounded-2xl bg-soft px-3 py-2 text-sm">{item.notes}</p>}
               </div>
 
-              {/* Carga desta série */}
-              <div className="w-full rounded-2xl bg-soft/70 p-3">
+              {/* Carga desta série (não vale para séries por tempo, como a prancha) */}
+              <div className={`w-full rounded-2xl bg-soft/70 p-3 ${holdSeconds > 0 ? 'hidden' : ''}`}>
                 <div className="flex items-center justify-center gap-3">
                   <button onClick={() => bump(-2.5)} aria-label="Menos 2,5 kg" className="flex size-12 items-center justify-center rounded-xl bg-surface font-bold text-primary active:scale-90">−2,5</button>
                   <div className="flex items-baseline gap-1">
@@ -522,9 +660,20 @@ function ExerciseRunner(props: {
               </div>
 
               <div className="mt-auto w-full space-y-3">
-                <Button onClick={() => props.onCompleteSet(kgNum)} className="!h-16 text-lg">
-                  <Check className="size-6" strokeWidth={3} /> Concluir série {nextSet}
-                </Button>
+                {holdSeconds > 0 && !holdEndsAt && (
+                  <Button onClick={() => { unlockAudio(); setHoldEndsAt(Date.now() + holdSeconds * 1000) }} className="!h-16 text-lg">
+                    <Play className="size-6 fill-current" /> Iniciar {holdSeconds} s
+                  </Button>
+                )}
+                {holdEndsAt ? (
+                  <Button variant="ghost" onClick={() => { setHoldEndsAt(null); props.onCompleteSet(kgNum) }} className="!h-16 text-lg">
+                    <Check className="size-6" strokeWidth={3} /> Concluir agora
+                  </Button>
+                ) : (
+                  <Button variant={holdSeconds > 0 ? 'ghost' : undefined} onClick={() => props.onCompleteSet(kgNum)} className="!h-16 text-lg">
+                    <Check className="size-6" strokeWidth={3} /> Concluir série {nextSet}
+                  </Button>
+                )}
                 <button onClick={props.onFinishExercise} className="w-full py-2 text-sm font-medium text-muted underline-offset-2 hover:underline">
                   Encerrar este exercício
                 </button>
@@ -558,7 +707,7 @@ function FinishedView({ run, setRun }: { run: RunState; setRun: SetRun }) {
     setSaving(true)
     setError(null)
     const body = {
-          workout_id: run.workoutId,
+          workout_id: run.workoutId || null,
           workout_name: run.workoutName,
           started_at: new Date(run.startedAt!).toISOString(),
           finished_at: new Date(run.finishedAt!).toISOString(),
@@ -571,6 +720,7 @@ function FinishedView({ run, setRun }: { run: RunState; setRun: SetRun }) {
             sets_done: i.setsDone,
             done: i.done && i.setsDone > 0,
             loads: (i.loads ?? []).slice(0, i.sets),
+            distance_km: i.distanceKm ?? null,
           })),
     }
     try {
@@ -601,7 +751,7 @@ function FinishedView({ run, setRun }: { run: RunState; setRun: SetRun }) {
 
   // Desfazer: apaga o treino salvo (e as calorias gastas dele)
   const undo = async () => {
-    if (!confirm('Cancelar este treino? Ele não será registrado e as calorias gastas são removidas.')) return
+    if (!(await ask({ title: 'Cancelar este treino?', text: 'Ele não será registrado e as calorias gastas são removidas.', confirmLabel: 'Cancelar treino', cancelLabel: 'Manter treino', danger: true }))) return
     if (run.sessionId) await api(`/workout-sessions/${run.sessionId}`, { method: 'DELETE' }).catch(() => {})
     toast({ text: 'Treino cancelado' })
     leave('/treinos')
@@ -635,12 +785,13 @@ function FinishedView({ run, setRun }: { run: RunState; setRun: SetRun }) {
 
       <ul className="mt-5 space-y-1.5">
         {run.items.map((i) => (
-          <li key={i.key} className="flex items-center justify-between rounded-xl bg-surface px-4 py-2.5 text-sm">
-            <span className={`truncate ${i.done && i.setsDone > 0 ? '' : 'text-muted line-through'}`}>{i.exercise.name}</span>
-            <span className="shrink-0 pl-2 text-muted">
-              {exerciseLine({ name: i.exercise.name, muscle_group: null, image: null, sets: i.sets, reps: i.reps, sets_done: i.setsDone, done: i.done, loads: i.loads })}
-            </span>
-          </li>
+          <ExerciseRow
+            key={i.key}
+            done={i.done && i.setsDone > 0}
+            name={i.exercise.name}
+            detail={exerciseLine({ name: i.exercise.name, muscle_group: null, image: null, sets: i.sets, reps: i.reps, sets_done: i.setsDone, done: i.done, loads: i.loads, distance_km: i.distanceKm })}
+            className="rounded-xl bg-surface px-4 py-2.5"
+          />
         ))}
       </ul>
 
@@ -662,10 +813,10 @@ function FinishedView({ run, setRun }: { run: RunState; setRun: SetRun }) {
         </Button>
         <Button
           variant="ghost"
-          onClick={() => leave(run.sessionId ? `/registrar-treino?sessao=${run.sessionId}` : `/registrar-treino?ref=${run.sessionRef}`)}
+          onClick={() => leave(run.sessionId ? `/treino/${run.sessionId}` : `/registrar-treino?ref=${run.sessionRef}`)}
           disabled={!run.sessionId && !run.sessionRef}
         >
-          <Camera className="size-5" /> Adicionar foto (opcional)
+          <Camera className="size-5" /> Foto e compartilhar
         </Button>
       </div>
     </div>

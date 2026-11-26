@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { Layout } from './components/Layout'
+import { DialogHost } from './components/Dialog'
 import { ToastProvider } from './components/Toast'
 import { Spinner } from './components/ui'
 import { AuthProvider, useAuth } from './lib/auth'
@@ -18,6 +19,7 @@ import { ProgressPage } from './pages/ProgressPage'
 import { ErrorBoundary, InstallBanner, OfflineBanner, OutboxSync } from './components/AppChrome'
 import { SettingsPage } from './pages/SettingsPage'
 import { CheckinPage } from './pages/CheckinPage'
+import { TrainingPage } from './pages/TrainingPage'
 import { CheckinsPage } from './pages/CheckinsPage'
 import { WorkoutPage } from './pages/WorkoutPage'
 import { WorkoutSessionPage } from './pages/WorkoutSessionPage'
@@ -79,6 +81,7 @@ export default function App() {
             <Route path="/treinos/:id/iniciar" element={<Private><WorkoutSessionPage /></Private>} />
             <Route path="/registrar-treino" element={<Private><CheckinPage /></Private>} />
             <Route path="/historico-treinos" element={<Private><CheckinsPage /></Private>} />
+            <Route path="/treino/:id" element={<Private><TrainingPage /></Private>} />
             {/* Endereços antigos (atalhos e PWA instalada) */}
             <Route path="/checkin" element={<Private><CheckinPage /></Private>} />
             <Route path="/checkins" element={<Private><CheckinsPage /></Private>} />
@@ -93,6 +96,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
+        <DialogHost />
       </ToastProvider>
     </AuthProvider>
     </ThemeProvider>
