@@ -17,7 +17,7 @@
   --color-bg: #fbf7fc;
   --color-surface: #ffffff;
   --color-ink: #1f1724;
-  --color-muted: #6b6072;
+  --color-muted: #5f5466;
   --color-line: #ece3ef;
   --color-soft: #f5ecf7;
   --color-scrim: #1f1724; /* fundo sempre escuro: avisos, leitor de código, sombra de painéis */
@@ -88,7 +88,7 @@ input[type='number'] {
   --color-bg: #fdf6ee;
   --color-surface: #ffffff;
   --color-ink: #3a2418;
-  --color-muted: #7b6252;
+  --color-muted: #6b5444;
   --color-line: #efe0cf;
   --color-soft: #f8ead9;
   --color-scrim: #3a2418;
@@ -111,7 +111,7 @@ input[type='number'] {
   --color-bg: #141518;
   --color-surface: #1f2125;
   --color-ink: #eef0f3;
-  --color-muted: #a3a8b1;
+  --color-muted: #b4b9c1;
   --color-line: #363a41;
   --color-soft: #2a2d33;
   --color-scrim: #000000;

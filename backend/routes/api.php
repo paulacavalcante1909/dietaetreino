@@ -2,19 +2,19 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CheckinController;
-use App\Http\Controllers\Api\ExerciseController;
-use App\Http\Controllers\Api\WorkoutController;
-use App\Http\Controllers\Api\WorkoutSessionController;
 use App\Http\Controllers\Api\DayController;
 use App\Http\Controllers\Api\EntryController;
+use App\Http\Controllers\Api\ExerciseController;
 use App\Http\Controllers\Api\FoodController;
 use App\Http\Controllers\Api\GoalController;
 use App\Http\Controllers\Api\MealController;
 use App\Http\Controllers\Api\PasswordResetController;
-use App\Http\Controllers\Api\StatsController;
 use App\Http\Controllers\Api\RecipeController;
+use App\Http\Controllers\Api\StatsController;
 use App\Http\Controllers\Api\WaterController;
 use App\Http\Controllers\Api\WeightController;
+use App\Http\Controllers\Api\WorkoutController;
+use App\Http\Controllers\Api\WorkoutSessionController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('throttle:10,1')->group(function () {
@@ -35,6 +35,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/me', [AuthController::class, 'updateProfile']);
     Route::put('/me/password', [AuthController::class, 'updatePassword']);
     Route::put('/me/preferences', [AuthController::class, 'updatePreferences']);
+    Route::put('/me/body', [AuthController::class, 'updateBody']);
+    Route::get('/me/energy', [AuthController::class, 'energy']);
     Route::delete('/me', [AuthController::class, 'destroy']);
 
     // Metas

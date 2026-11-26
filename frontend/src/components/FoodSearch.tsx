@@ -28,8 +28,8 @@ export function FoodSearch({ withRecipes, onPickFood, onPickRecipe, onScan, onQu
     { key: 'buscar', label: 'Buscar' },
     { key: 'recentes', label: 'Recentes' },
     { key: 'favoritos', label: 'Favoritos' },
-    ...(withRecipes ? [{ key: 'receitas' as Tab, label: 'Refeições prontas' }] : []),
-    { key: 'meus', label: 'Meus alimentos' },
+    ...(withRecipes ? [{ key: 'receitas' as Tab, label: 'Prontas' }] : []),
+    { key: 'meus', label: 'Meus' },
   ]
   const [tab, setTab] = useState<Tab>('recentes')
   const [query, setQuery] = useState('')
@@ -115,11 +115,12 @@ export function FoodSearch({ withRecipes, onPickFood, onPickRecipe, onScan, onQu
         </button>
       </div>
 
-      <div className="-mx-5 mb-4 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none]">
+      {/* Abas de largura igual: todas visíveis, sem rolagem lateral escondida */}
+      <div className="mb-4 grid gap-1 rounded-full bg-soft p-1" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }} role="tablist" aria-label="Onde procurar">
         {tabs.map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)} className="relative shrink-0 rounded-full px-4 py-2 text-sm font-medium">
+          <button key={t.key} role="tab" aria-selected={tab === t.key} onClick={() => setTab(t.key)} className="relative min-w-0 rounded-full px-1 py-2 text-xs font-semibold">
             {tab === t.key && <motion.span layoutId="food-tab" className="absolute inset-0 rounded-full bg-primary" transition={{ type: 'spring', stiffness: 500, damping: 38 }} />}
-            <span className={`relative ${tab === t.key ? 'text-white' : 'text-muted'}`}>{t.label}</span>
+            <span className={`relative block truncate ${tab === t.key ? 'text-white' : 'text-muted'}`}>{t.label}</span>
           </button>
         ))}
       </div>
@@ -145,7 +146,7 @@ export function FoodSearch({ withRecipes, onPickFood, onPickRecipe, onScan, onQu
                   {offLoading && !off && <ListSkeleton rows={3} />}
                   {off && off.length === 0 && <p className="px-1 text-sm text-muted">Nenhum produto encontrado.</p>}
                   {off && off.length > 0 && (
-                    <p className="mt-2 px-1 text-[11px] text-muted">
+                    <p className="mt-2 px-1 text-xs text-muted">
                       Dados da{' '}
                       <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener noreferrer" className="underline">
                         Open Food Facts

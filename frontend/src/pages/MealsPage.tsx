@@ -1,4 +1,5 @@
 import { Reorder } from 'framer-motion'
+import { Eye, EyeOff, GripVertical, Trash2 } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useToast } from '../components/Toast'
@@ -26,6 +27,7 @@ export function MealsPage() {
   }
 
   const remove = async (m: Meal) => {
+    if (!confirm(`Excluir a refeição “${m.name}”? Se ela tiver alimentos registrados, será só ocultada.`)) return
     const r = await api<{ hidden?: boolean }>(`/meals/${m.id}`, { method: 'DELETE' })
     if (r.hidden) {
       setMeals((list) => list.map((x) => (x.id === m.id ? { ...x, active: false } : x)))
@@ -51,26 +53,28 @@ export function MealsPage() {
         <BackButton onClick={() => navigate(-1)} />
         <h1 className="text-xl font-bold">Organizar refeições do dia</h1>
       </header>
-      <p className="mb-4 text-sm text-muted">Arraste ⋮⋮ para reordenar. Toque no nome para renomear.</p>
+      <p className="mb-4 text-sm text-muted">Arraste pela alça para reordenar. Toque no nome para renomear. Ocultar tira a refeição da tela inicial sem apagar nada.</p>
 
       <Reorder.Group axis="y" values={meals} onReorder={setMeals} className="space-y-2">
         {meals.map((m) => (
           <Reorder.Item key={m.id} value={m} onDragEnd={saveOrder} className="touch-none">
             <Card className={`flex items-center gap-3 !py-3 ${m.active ? '' : 'opacity-50'}`}>
-              <span className="cursor-grab text-lg text-muted select-none" aria-hidden>
-                ⋮⋮
-              </span>
+              <GripVertical className="size-5 shrink-0 cursor-grab text-muted" aria-hidden />
               <input
                 aria-label="Nome da refeição"
                 defaultValue={m.name}
                 onBlur={(e) => e.target.value.trim() && e.target.value !== m.name && patch(m, { name: e.target.value.trim() })}
                 className="min-w-0 flex-1 bg-transparent font-medium outline-none focus:text-primary"
               />
-              <button onClick={() => patch(m, { active: !m.active })} className="text-xs font-semibold text-primary">
-                {m.active ? 'Ocultar' : 'Mostrar'}
+              <button
+                onClick={() => patch(m, { active: !m.active })}
+                aria-label={m.active ? `Ocultar ${m.name}` : `Mostrar ${m.name}`}
+                className="flex h-10 shrink-0 items-center gap-1 rounded-full bg-soft px-3 text-xs font-semibold text-primary"
+              >
+                {m.active ? <EyeOff className="size-4" /> : <Eye className="size-4" />} {m.active ? 'Ocultar' : 'Mostrar'}
               </button>
-              <button onClick={() => remove(m)} aria-label="Excluir refeição" className="text-xl text-muted">
-                ×
+              <button onClick={() => remove(m)} aria-label={`Excluir ${m.name}`} className="ml-1 flex size-10 shrink-0 items-center justify-center rounded-full text-muted active:bg-soft">
+                <Trash2 className="size-4" />
               </button>
             </Card>
           </Reorder.Item>

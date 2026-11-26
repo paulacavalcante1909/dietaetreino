@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\Checkin;
 use App\Models\User;
 use App\Models\Weight;
 use Carbon\CarbonImmutable;
@@ -11,7 +10,7 @@ use Carbon\CarbonImmutable;
  * Gasto energético estimado e déficit calórico.
  *
  * TMB (Mifflin-St Jeor): 10 × peso + 6,25 × altura − 5 × idade − 161 (mulheres) | + 5 (homens).
- * GET = TMB × fator de atividade. O fator vem da frequência de check-ins (média por semana
+ * GET = TMB × fator de atividade. O fator vem da frequência de dias treinados (check-in ou treino no app) (média por semana
  * nas últimas 4 semanas, ou desde a criação da conta, se for mais recente).
  * Déficit = GET − calorias consumidas no dia. O gasto dos treinos NÃO é somado de novo,
  * porque já está embutido no fator de atividade.
@@ -20,7 +19,7 @@ class EnergyEstimator
 {
     private const WINDOW_DAYS = 28;
 
-    /** [mínimo de check-ins por semana, fator, nome] */
+    /** [mínimo de dias treinados por semana, fator, nome] */
     private const LEVELS = [
         [6.5, 1.9, 'Extremamente ativo'],
         [5.0, 1.725, 'Muito ativo'],
@@ -80,7 +79,7 @@ class EnergyEstimator
     }
 
     /**
-     * Média de dias com check-in por semana até a data (janela de até 4 semanas).
+     * Média de dias treinados por semana até a data (janela de até 4 semanas).
      *
      * @return array{float, int} [check-ins por semana, dias da janela]
      */
@@ -90,9 +89,7 @@ class EnergyEstimator
         $window = (int) min(self::WINDOW_DAYS, max(7, $since->diffInDays($day->startOfDay()) + 1));
         $from = $day->subDays($window - 1)->toDateString();
 
-        $days = Checkin::where('user_id', $user->id)
-            ->whereBetween('date', [$from, $day->toDateString()])
-            ->distinct()->count('date');
+        $days = app(TrainingLog::class)->dates($user->id, $from, $day->toDateString())->count();
 
         return [$days * 7 / $window, $window];
     }

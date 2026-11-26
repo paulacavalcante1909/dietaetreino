@@ -139,7 +139,7 @@ function Mini({ label, value, className }: { label: string; value: number; class
   return (
     <div>
       <p className={`font-bold ${className}`}>{fmt(Math.round(value * 10) / 10)}</p>
-      <p className="text-[11px] text-muted">{label}</p>
+      <p className="text-xs text-muted">{label}</p>
     </div>
   )
 }

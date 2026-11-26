@@ -6,6 +6,7 @@ use App\Models\Checkin;
 use App\Models\Food;
 use App\Models\User;
 use App\Models\Weight;
+use App\Models\WorkoutSession;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -101,6 +102,21 @@ class DayControllerTest extends TestCase
         $this->assertSame(28, $energy['window_days']);
         $this->assertSame(1.0, (float) $energy['checkins_per_week']); // o JSON envia 1.0 como 1
         $this->assertSame(1.375, $energy['factor']);
+    }
+
+    public function test_activity_factor_counts_workouts_done_in_app_without_checkin(): void
+    {
+        $user = $this->profiledUser('f');
+        foreach ([0, 1, 2] as $daysAgo) {
+            WorkoutSession::forceCreate([
+                'user_id' => $user->id, 'workout_name' => 'Treino A', 'date' => now()->subDays($daysAgo)->toDateString(),
+                'started_at' => now(), 'finished_at' => now(), 'duration_seconds' => 3600, 'exercises' => [], 'kcal_burned' => 300,
+            ]);
+        }
+
+        $energy = $this->actingAs($user)->getJson('/api/day/'.self::TODAY)->json('energy');
+
+        $this->assertSame(1.55, $energy['factor']);
     }
 
     public function test_uses_latest_weight_recorded_up_to_the_requested_day(): void

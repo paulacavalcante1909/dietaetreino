@@ -70,10 +70,15 @@ function WeightTab() {
                 <Button className="!h-10 !w-auto !px-4 text-sm" onClick={() => setEditing('new')}>+ Registrar</Button>
               </div>
               <p className="mt-1 text-xs text-muted">em {longDate(summary.current_date!)}</p>
-              <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
-                <Delta label="Desde o início" value={summary.change_total} hint={summary.start !== null ? `de ${kg(summary.start)} kg · ${shortDate(summary.start_date!)}` : ''} />
-                <Delta label="No período" value={summary.change_range} hint={RANGES.find((r) => r[0] === range)?.[1] ?? ''} />
-              </div>
+              {summary.start_date === summary.current_date ? (
+                // Só um registro: comparar não faz sentido ainda
+                <p className="mt-4 rounded-2xl bg-soft p-3 text-sm text-muted">Primeiro registro feito! Registre de novo em alguns dias para ver sua evolução aqui.</p>
+              ) : (
+                <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                  <Delta label="Desde o início" value={summary.change_total} hint={summary.start !== null ? `de ${kg(summary.start)} kg · ${shortDate(summary.start_date!)}` : ''} />
+                  <Delta label="No período" value={summary.change_range} hint={RANGES.find((r) => r[0] === range)?.[1] ?? ''} />
+                </div>
+              )}
             </Card>
 
             <Card>
@@ -139,7 +144,7 @@ function Delta({ label, value, hint }: { label: string; value: number | null; hi
     <div className="rounded-2xl bg-soft p-3">
       <p className="text-xs text-muted">{label}</p>
       <p className="text-lg font-bold">{value === null ? '—' : signed(value)}</p>
-      <p className="truncate text-[11px] text-muted">{hint}</p>
+      <p className="truncate text-xs text-muted">{hint}</p>
     </div>
   )
 }
@@ -350,7 +355,7 @@ function WeekTab() {
             <div className="relative flex h-40 items-end gap-2" role="img" aria-label={`Calorias por dia; meta ${goal ? fmtKcal(goal.kcal) : '-'} kcal`}>
               {goal && (
                 <div className="pointer-events-none absolute inset-x-0 border-t-2 border-dashed border-muted/40" style={{ bottom: `${(goal.kcal / max) * 100}%` }}>
-                  <span className="absolute -top-5 right-0 text-[10px] font-semibold text-muted">meta {fmtKcal(goal.kcal)}</span>
+                  <span className="absolute -top-5 right-0 text-xs font-semibold text-muted">meta {fmtKcal(goal.kcal)}</span>
                 </div>
               )}
               {days.map((d, i) => {
@@ -437,7 +442,7 @@ function WorkoutsTab() {
       <Card className="flex items-center gap-4">
         <Ring value={Math.min(current?.days ?? 0, data.weekly_goal)} max={data.weekly_goal} size={96} stroke={10} color="var(--color-orchid)">
           <span className="text-xl font-extrabold">{current?.days ?? 0}/{data.weekly_goal}</span>
-          <span className="text-[10px] text-muted">treinos</span>
+          <span className="text-xs text-muted">treinos</span>
         </Ring>
         <div className="min-w-0">
           <p className="font-bold">{(current?.days ?? 0) >= data.weekly_goal ? 'Meta da semana batida! 🎉' : `Faltam ${data.weekly_goal - (current?.days ?? 0)} treino(s) nesta semana`}</p>
@@ -459,7 +464,7 @@ function WorkoutsTab() {
         <p className="mb-3 text-sm font-bold">Dias treinados por semana</p>
         <div className="relative flex h-36 items-end gap-2" role="img" aria-label={`Dias treinados por semana nas últimas ${data.weeks.length} semanas; meta ${data.weekly_goal}`}>
           <div className="pointer-events-none absolute inset-x-0 border-t-2 border-dashed border-muted/40" style={{ bottom: `${(data.weekly_goal / max) * 100}%` }}>
-            <span className="absolute -top-5 right-0 text-[10px] font-semibold text-muted">meta {data.weekly_goal}</span>
+            <span className="absolute -top-5 right-0 text-xs font-semibold text-muted">meta {data.weekly_goal}</span>
           </div>
           {data.weeks.map((w, i) => (
             <div key={w.week_start} className="flex h-full flex-1 flex-col items-center justify-end">
@@ -476,14 +481,14 @@ function WorkoutsTab() {
         </div>
         <div className="mt-1 flex gap-2">
           {data.weeks.map((w, i) => (
-            <span key={w.week_start} className={`flex-1 text-center text-[10px] font-semibold ${i === data.weeks.length - 1 ? 'text-primary' : 'text-muted'}`}>
+            <span key={w.week_start} className={`flex-1 text-center text-xs font-semibold ${i === data.weeks.length - 1 ? 'text-primary' : 'text-muted'}`}>
               {i === data.weeks.length - 1 ? 'esta' : shortDate(w.week_start)}
             </span>
           ))}
         </div>
       </Card>
 
-      <Link to="/checkins" className="block text-center text-sm font-bold text-primary">Ver histórico de check-ins</Link>
+      <Link to="/checkins" className="block text-center text-sm font-bold text-primary">Ver histórico de treinos</Link>
     </div>
   )
 }
@@ -492,7 +497,7 @@ function MiniStat({ icon, value, label }: { icon: ReactNode; value: string; labe
   return (
     <Card className="!p-3">
       <p className="flex items-center justify-center gap-1 text-lg font-extrabold">{icon}{value}</p>
-      <p className="text-[11px] leading-tight text-muted">{label}</p>
+      <p className="text-xs leading-tight text-muted">{label}</p>
     </Card>
   )
 }

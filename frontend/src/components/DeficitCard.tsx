@@ -1,4 +1,4 @@
-import { Activity, ChevronRight, Info, X } from 'lucide-react'
+import { Activity, ChevronRight, Info, TrendingDown, TrendingUp, X } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Energy } from '../lib/types'
@@ -21,7 +21,7 @@ const list = (items: string[]) => (items.length > 1 ? `${items.slice(0, -1).join
  * Déficit calórico do dia: gasto estimado (TMB × fator de atividade) − consumido.
  * Sem os dados do perfil, convida a completar (pode ser dispensado).
  */
-export function DeficitCard({ energy, consumed, isToday }: { energy: Energy; consumed: number; isToday: boolean }) {
+export function DeficitCard({ energy, consumed, isToday, goalKcal, burned = 0 }: { energy: Energy; consumed: number; isToday: boolean; goalKcal?: number; burned?: number }) {
   const [info, setInfo] = useState(false)
   const [hidden, setHidden] = useState(() => localStorage.getItem(HIDE_KEY) === '1')
 
@@ -34,8 +34,8 @@ export function DeficitCard({ energy, consumed, isToday }: { energy: Energy; con
           <Activity className="size-5" />
         </span>
         <div className="min-w-0 flex-1 pr-6">
-          <p className="font-bold">Veja seu déficit calórico</p>
-          <p className="text-sm text-muted">Preencha {list(energy.missing.map((m) => MISSING_LABEL[m]))} para calcular quanto você gasta por dia.</p>
+          <p className="font-bold">Descubra quanto você gasta por dia</p>
+          <p className="text-sm text-muted">Preencha {list(energy.missing.map((m) => MISSING_LABEL[m]))} para ver se está comendo mais ou menos do que gasta.</p>
           <Link
             to={onlyWeight ? '/progresso?aba=peso&registrar=1' : '/ajustes?abrir=dados'}
             className="mt-2 inline-flex items-center gap-1 text-sm font-bold text-primary"
@@ -57,58 +57,84 @@ export function DeficitCard({ energy, consumed, isToday }: { energy: Energy; con
     )
   }
 
-  const deficit = energy.deficit ?? Math.round(energy.get - consumed)
-  const surplus = deficit < 0
+  const balance = energy.deficit ?? Math.round(energy.get - consumed) // positivo = comeu menos do que gasta
+  const ateLess = balance >= 0
+  const pct = Math.min(consumed / energy.get, 1)
 
   return (
     <>
       <Card className="!py-4">
-        <button onClick={() => setInfo(true)} className="flex w-full items-center gap-3 text-left" aria-haspopup="dialog">
-          <span className={`flex size-10 shrink-0 items-center justify-center rounded-full ${surplus ? 'bg-coral/15 text-coral' : 'bg-fiber/15 text-fiber'}`}>
-            <Activity className="size-5" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-muted">
-              {surplus ? 'Superávit calórico' : 'Déficit calórico'}
-              {isToday && ' até agora'}
-            </p>
-            <p className="text-2xl font-extrabold">
-              {fmtKcal(Math.abs(deficit))} <span className="text-sm font-semibold text-muted">kcal</span>
-            </p>
-            <p className="truncate text-xs text-muted">
-              Gasto estimado {fmtKcal(energy.get)} − consumido {fmtKcal(consumed)}
-            </p>
+        <button onClick={() => setInfo(true)} className="w-full text-left" aria-haspopup="dialog" aria-label="Gasto do dia: ver como calculamos">
+          <div className="flex items-center gap-3">
+            <span className={`flex size-10 shrink-0 items-center justify-center rounded-full ${ateLess ? 'bg-fiber/15 text-fiber' : 'bg-coral/15 text-coral'}`}>
+              {isToday ? <Activity className="size-5" /> : ateLess ? <TrendingDown className="size-5" /> : <TrendingUp className="size-5" />}
+            </span>
+            <div className="min-w-0 flex-1">
+              {isToday ? (
+                <>
+                  <p className="text-xs font-semibold text-muted">Seu corpo gasta hoje cerca de</p>
+                  <p className="text-2xl font-extrabold">
+                    {fmtKcal(energy.get)} <span className="text-sm font-semibold text-muted">kcal</span>
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs font-semibold text-muted">Balanço do dia</p>
+                  <p className="text-base leading-snug font-extrabold">
+                    Você comeu {fmtKcal(Math.abs(balance))} kcal {ateLess ? 'a menos' : 'a mais'} do que gastou
+                  </p>
+                </>
+              )}
+            </div>
+            <Info className="size-5 shrink-0 text-muted" />
           </div>
-          <Info className="size-5 shrink-0 text-muted" />
+
+          {isToday && (
+            <div className="mt-3">
+              <div className="h-2.5 overflow-hidden rounded-full bg-soft">
+                <div className="h-full rounded-full transition-[width] duration-700" style={{ width: `${pct * 100}%`, background: ateLess ? 'var(--color-fiber)' : 'var(--color-coral)' }} />
+              </div>
+              <p className="mt-1.5 text-xs text-muted">
+                {consumed <= 0
+                  ? 'Registre suas refeições para ver se vai comer mais ou menos do que gasta.'
+                  : ateLess
+                    ? `Você comeu ${fmtKcal(consumed)} kcal até agora · ${fmtKcal(balance)} abaixo do que gasta`
+                    : `Você já comeu ${fmtKcal(-balance)} kcal a mais do que gasta hoje`}
+              </p>
+            </div>
+          )}
         </button>
       </Card>
 
-      <Sheet open={info} onClose={() => setInfo(false)} title="Como calculamos">
-        <div className="space-y-4 text-sm">
+      <Sheet open={info} onClose={() => setInfo(false)} title="Quanto você gasta por dia">
+        <div className="space-y-4 text-sm text-muted [&_strong]:text-ink">
+          <p>
+            Estimamos quanto seu corpo gasta num dia com base no seu <strong>peso ({energy.weight.toLocaleString('pt-BR')} kg)</strong>,{' '}
+            <strong>altura ({energy.height_cm} cm)</strong>, <strong>idade ({energy.age} anos)</strong> e em{' '}
+            <strong>quantas vezes você treina</strong> ({energy.checkins_per_week.toLocaleString('pt-BR')}× por semana em média →{' '}
+            {energy.level.toLowerCase()}).
+          </p>
           <div className="space-y-2 rounded-2xl bg-soft p-4">
-            <Row label="Metabolismo basal (TMB)" value={`${fmtKcal(energy.tmb)} kcal`} />
-            <Row label={`Fator de atividade · ${energy.level}`} value={`× ${energy.factor.toLocaleString('pt-BR')}`} />
+            <Row label="Gasto em repouso" value={`${fmtKcal(energy.tmb)} kcal`} />
+            <Row label={`Atividade (${energy.level.toLowerCase()})`} value={`× ${energy.factor.toLocaleString('pt-BR')}`} />
             <div className="border-t border-line pt-2">
-              <Row label="Gasto estimado do dia (GET)" value={`${fmtKcal(energy.get)} kcal`} strong />
+              <Row label="Gasto estimado do dia" value={`${fmtKcal(energy.get)} kcal`} strong />
             </div>
-            <Row label="Consumido" value={`− ${fmtKcal(consumed)} kcal`} />
-            <div className="border-t border-line pt-2">
-              <Row label={surplus ? 'Superávit' : 'Déficit'} value={`${fmtKcal(Math.abs(deficit))} kcal`} strong />
-            </div>
+            <Row label={isToday ? 'Comido até agora' : 'Comido no dia'} value={`${fmtKcal(consumed)} kcal`} />
           </div>
-          <p className="text-muted">
-            <strong className="text-ink">TMB</strong> é o que seu corpo gasta em repouso. Usamos a fórmula de Mifflin-St Jeor com{' '}
-            {energy.weight.toLocaleString('pt-BR')} kg, {energy.height_cm} cm, {energy.age} anos ({energy.sex === 'f' ? 'feminino' : 'masculino'}).
+          <p>
+            <strong>Comer menos do que gasta</strong> (déficit calórico) tende a fazer perder peso. <strong>Comer mais</strong> (superávit) tende a fazer ganhar.
           </p>
-          <p className="text-muted">
-            <strong className="text-ink">Fator de atividade</strong>: {energy.checkins_per_week.toLocaleString('pt-BR')} check-in(s) por semana em média
-            {energy.window_days >= 28 ? ' nas últimas 4 semanas' : ` nos últimos ${energy.window_days} dias`}. Sedentário 1,2 · 1–2×/sem 1,375 · 3–4× 1,55 · 5–6× 1,725 · todo dia 1,9.
+          <p>
+            <strong>Isso é diferente da sua meta.</strong> O anel lá em cima mostra quanto falta para a meta que você escolheu
+            {goalKcal ? ` (${fmtKcal(goalKcal)} kcal)` : ''}. Este cartão mostra o que seu corpo gasta de verdade.
           </p>
-          <p className="text-muted">
-            O gasto dos treinos já está no fator de atividade, por isso não é somado de novo.
-            {isToday && ' Hoje ainda está em andamento: o déficit diminui conforme você registra as refeições.'}
-          </p>
-          <p className="text-xs text-muted">É uma estimativa e não substitui a orientação de um nutricionista.</p>
+          {burned > 0 && (
+            <p>
+              As ~{fmtKcal(burned)} kcal dos treinos de hoje já estão incluídas no seu nível de atividade, por isso não somamos de novo.
+            </p>
+          )}
+          <p className="text-xs">Fórmula de Mifflin-St Jeor. É uma estimativa e não substitui a orientação de um nutricionista.</p>
           <Link to="/ajustes?abrir=dados" className="block text-center font-bold text-primary">
             Editar meus dados
           </Link>

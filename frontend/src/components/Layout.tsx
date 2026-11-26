@@ -6,6 +6,7 @@ import { Sheet } from './Sheet'
 import { useToast } from './Toast'
 import { api, ApiError } from '../lib/api'
 import { isoDate } from '../lib/date'
+import { mealForNow } from '../lib/meals'
 import type { Meal } from '../lib/types'
 
 const tabs = [
@@ -83,14 +84,6 @@ export function Layout() {
       <QuickActions open={quick} onClose={() => setQuick(false)} />
     </div>
   )
-}
-
-/** Refeição sugerida pelo horário. */
-function mealForNow(meals: Meal[]): Meal | undefined {
-  const h = new Date().getHours()
-  const order = h < 10 ? 0 : h < 12 ? 1 : h < 15 ? 2 : h < 18 ? 3 : h < 21 ? 4 : 5
-  const active = meals.filter((m) => m.active)
-  return active[Math.min(order, active.length - 1)]
 }
 
 function QuickActions({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -176,7 +169,7 @@ function QuickActions({ open, onClose }: { open: boolean; onClose: () => void })
             <button key={a.label} onClick={() => go(a.to)} className="flex flex-col items-center gap-1.5 rounded-2xl bg-soft px-2 py-3 text-center active:scale-95">
               <a.icon className="size-6 text-primary" />
               <span className="text-sm font-bold">{a.label}</span>
-              <span className="text-[11px] leading-tight text-muted">{a.hint}</span>
+              <span className="text-xs leading-tight text-muted">{a.hint}</span>
             </button>
           ))}
         </div>

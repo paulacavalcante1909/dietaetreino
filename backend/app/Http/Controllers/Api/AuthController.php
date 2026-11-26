@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\Weight;
+use App\Services\EnergyEstimator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -13,6 +15,20 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    /** Regras dos dados do corpo usados no gasto estimado (todos opcionais). */
+    private const BODY_RULES = [
+        'sex' => ['sometimes', 'nullable', 'in:f,m'],
+        'birth_date' => ['sometimes', 'nullable', 'date_format:Y-m-d', 'before:-10 years', 'after:1900-01-01'],
+        'height_cm' => ['sometimes', 'nullable', 'integer', 'min:100', 'max:250'],
+    ];
+
+    private const BODY_MESSAGES = [
+        'birth_date.before' => 'Confira a data de nascimento.',
+        'birth_date.after' => 'Confira a data de nascimento.',
+        'height_cm.min' => 'Informe a altura em centímetros (ex.: 165).',
+        'height_cm.max' => 'Informe a altura em centímetros (ex.: 165).',
+    ];
+
     public function register(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -76,20 +92,42 @@ class AuthController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'max:190', 'unique:users,email,'.$user->id],
-            'sex' => ['sometimes', 'nullable', 'in:f,m'],
-            'birth_date' => ['sometimes', 'nullable', 'date_format:Y-m-d', 'before:-10 years', 'after:1900-01-01'],
-            'height_cm' => ['sometimes', 'nullable', 'integer', 'min:100', 'max:250'],
-        ], [
-            'email.unique' => 'Já existe uma conta com este e-mail.',
-            'birth_date.before' => 'Confira a data de nascimento.',
-            'birth_date.after' => 'Confira a data de nascimento.',
-            'height_cm.min' => 'Informe a altura em centímetros (ex.: 165).',
-            'height_cm.max' => 'Informe a altura em centímetros (ex.: 165).',
-        ]);
+            ...self::BODY_RULES,
+        ], ['email.unique' => 'Já existe uma conta com este e-mail.', ...self::BODY_MESSAGES]);
 
         $user->update([...$data, 'email' => strtolower($data['email'])]);
 
         return response()->json(['user' => $user]);
+    }
+
+    /**
+     * Dados do corpo (passo "Sobre você"): sexo, nascimento, altura e, opcionalmente, o peso de hoje.
+     * Devolve o gasto estimado já recalculado.
+     */
+    public function updateBody(Request $request, EnergyEstimator $energy): JsonResponse
+    {
+        $user = $request->user();
+        $data = $request->validate([
+            ...self::BODY_RULES,
+            'weight_kg' => ['sometimes', 'nullable', 'numeric', 'min:20', 'max:400'],
+        ], [
+            ...self::BODY_MESSAGES,
+            'weight_kg.min' => 'Confira o peso informado.',
+            'weight_kg.max' => 'Confira o peso informado.',
+        ]);
+
+        $user->update(collect($data)->except('weight_kg')->all());
+        if (! empty($data['weight_kg'])) {
+            Weight::updateOrCreate(['user_id' => $user->id, 'date' => now()->toDateString()], ['kg' => $data['weight_kg']]);
+        }
+
+        return response()->json(['user' => $user->fresh(), 'energy' => $energy->forDate($user, now()->toDateString())]);
+    }
+
+    /** Gasto estimado de hoje (para sugerir metas). */
+    public function energy(Request $request, EnergyEstimator $energy): JsonResponse
+    {
+        return response()->json(['energy' => $energy->forDate($request->user(), now()->toDateString())]);
     }
 
     /** Preferências do app (ex.: somar calorias do treino à meta do dia). */

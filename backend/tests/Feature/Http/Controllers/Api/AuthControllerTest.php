@@ -55,4 +55,39 @@ class AuthControllerTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonValidationErrors($field);
     }
+
+    public function test_body_update_saves_profile_and_todays_weight_and_returns_energy(): void
+    {
+        $this->travelTo('2026-11-25 12:00:00');
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->putJson('/api/me/body', ['sex' => 'f', 'birth_date' => '1996-01-01', 'height_cm' => 165, 'weight_kg' => 65])
+            ->assertOk()
+            ->assertJsonPath('user.height_cm', 165)
+            ->assertJsonPath('energy.available', true)
+            ->assertJsonPath('energy.tmb', 1370);
+
+        $this->assertDatabaseHas('weights', ['user_id' => $user->id, 'kg' => 65]);
+    }
+
+    public function test_body_update_without_weight_reports_weight_as_missing(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->putJson('/api/me/body', ['sex' => 'm', 'birth_date' => '1990-05-10', 'height_cm' => 180])
+            ->assertOk()
+            ->assertJsonPath('energy.missing', ['weight']);
+    }
+
+    public function test_body_update_rejects_implausible_weight_with_422(): void
+    {
+        $this->actingAs(User::factory()->create())->putJson('/api/me/body', ['weight_kg' => 5])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('weight_kg');
+    }
+
+    public function test_energy_requires_authentication_and_returns_401(): void
+    {
+        $this->getJson('/api/me/energy')->assertUnauthorized();
+    }
 }

@@ -10,14 +10,20 @@ import { useToast } from '../components/Toast'
 import { api, ApiError } from '../lib/api'
 import { isoDate } from '../lib/date'
 import { fmtKcal } from '../components/Ring'
+import { ChevronDown } from 'lucide-react'
+import { mealForNow } from '../lib/meals'
 import type { Entry, FoodDetail, FoodLite, Meal, RecipeSummary } from '../lib/types'
+
+const QUICK_ADD_MAX_KCAL = 600
+const QUICK_ADD_MAX_AMOUNT = 400 // g ou ml sem porção caseira
 
 export function AddFoodPage() {
   const navigate = useNavigate()
   const toast = useToast()
   const [params] = useSearchParams()
   const date = params.get('data') ?? isoDate()
-  const mealId = Number(params.get('refeicao'))
+  // Sem refeição válida no link: usa a sugerida pelo horário (dá para trocar no cabeçalho)
+  const [mealId, setMealId] = useState(() => Number(params.get('refeicao')) || 0)
 
   const [meals, setMeals] = useState<Meal[]>([])
   // Volta do cadastro manual já com o alimento novo aberto
@@ -30,7 +36,10 @@ export function AddFoodPage() {
   const [added, setAdded] = useState<{ id: number; name: string; kcal: number }[]>([])
 
   useEffect(() => {
-    api<{ meals: Meal[] }>('/meals').then((r) => setMeals(r.meals))
+    api<{ meals: Meal[] }>('/meals').then((r) => {
+      setMeals(r.meals)
+      setMealId((id) => (r.meals.some((m) => m.id === id) ? id : (mealForNow(r.meals)?.id ?? r.meals[0]?.id ?? 0)))
+    })
   }, [])
 
   const goHome = () => navigate(`/${date === isoDate() ? '' : `?data=${date}`}`, { replace: true })
@@ -47,6 +56,11 @@ export function AddFoodPage() {
   // Recentes: adiciona de novo com a mesma porção da última vez (1 toque)
   const quickAdd = async (f: FoodLite) => {
     if (!f.last) return
+    // Porção grande (ex.: 1000 g): abre a ficha para confirmar em vez de adicionar direto
+    if (f.last.kcal > QUICK_ADD_MAX_KCAL || (!f.last.portion_id && f.last.quantity > QUICK_ADD_MAX_AMOUNT)) {
+      setTarget({ id: f.id })
+      return
+    }
     try {
       const r = await api<{ entry: Entry }>('/entries', {
         method: 'POST',
@@ -101,7 +115,6 @@ export function AddFoodPage() {
     query.current = q
   }, [])
 
-  const meal = meals.find((m) => m.id === mealId)
 
   return (
     <div className={`safe-top mx-auto flex min-h-full max-w-lg flex-col px-5 pt-4 ${added.length ? 'pb-32' : 'pb-8'}`}>
@@ -109,7 +122,19 @@ export function AddFoodPage() {
         <BackButton onClick={() => (added.length ? goHome() : navigate(-1))} />
         <div>
           <h1 className="text-xl font-bold">Adicionar alimento</h1>
-          <p className="text-sm text-muted">{meal?.name ?? '…'}</p>
+          {meals.length > 0 ? (
+            <label className="relative -ml-1 inline-flex items-center gap-1 rounded-lg px-1 text-sm font-semibold text-primary">
+              <span className="sr-only">Refeição</span>
+              <select value={mealId} onChange={(e) => setMealId(Number(e.target.value))} className="appearance-none bg-transparent pr-5 outline-none">
+                {meals.filter((m) => m.active || m.id === mealId).map((m) => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-0 size-4" aria-hidden />
+            </label>
+          ) : (
+            <p className="h-5 w-24 animate-pulse rounded bg-soft" />
+          )}
         </div>
       </header>
 

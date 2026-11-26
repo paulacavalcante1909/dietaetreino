@@ -90,7 +90,7 @@ export function WorkoutsPage() {
                   <span className="text-xl leading-none font-extrabold text-white">
                     {stats.week_days}/{stats.weekly_goal}
                   </span>
-                  <span className="text-[10px] text-white/80">treinos</span>
+                  <span className="text-xs text-white/80">treinos</span>
                 </Ring>
               </button>
             )}
@@ -98,10 +98,10 @@ export function WorkoutsPage() {
               <p className="text-sm text-white/80">{todayCheckin ? 'Treinou hoje 💪' : stats && stats.week_days >= stats.weekly_goal ? 'Meta da semana batida!' : 'Bora treinar?'}</p>
               <p className="truncate text-xl font-extrabold">{todayCheckin ? todayCheckin.workout_name : 'Treino de hoje'}</p>
               {stats && (
-                <div className="mt-2 flex gap-3 text-xs font-semibold text-white/90">
-                  <span className="flex items-center gap-1"><Flame className="size-3.5" />{stats.streak} {stats.streak === 1 ? 'dia' : 'dias'}</span>
+                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold text-white/90">
+                  <span className="flex items-center gap-1" title="Dias seguidos treinando"><Flame className="size-3.5" />{stats.streak} {stats.streak === 1 ? 'dia seguido' : 'dias seguidos'}</span>
                   <span className="flex items-center gap-1"><Calendar className="size-3.5" />{stats.month_count} no mês</span>
-                  <span className="flex items-center gap-1"><Trophy className="size-3.5" />{stats.total_count}</span>
+                  <span className="flex items-center gap-1"><Trophy className="size-3.5" />{stats.total_count} no total</span>
                 </div>
               )}
               {stats && (

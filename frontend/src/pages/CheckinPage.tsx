@@ -188,7 +188,7 @@ export function CheckinPage() {
   }
 
   return (
-    <div className="safe-top mx-auto max-w-lg px-5 pt-4 pb-10">
+    <div className="safe-top mx-auto max-w-lg px-5 pt-4 pb-28">
       <header className="mb-5 flex items-center gap-3">
         <BackButton onClick={() => navigate(-1)} />
         <h1 className="text-xl font-bold">Check-in do treino</h1>
@@ -292,19 +292,21 @@ export function CheckinPage() {
                   </button>
                 </motion.div>
               ) : (
-                <motion.div key="pick" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid aspect-[4/5] w-full place-content-center gap-3 rounded-[var(--radius-card)] border-2 border-dashed border-orchid/40 bg-soft/60 p-6 text-center">
+                <motion.div key="pick" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="rounded-[var(--radius-card)] border-2 border-dashed border-orchid/40 bg-soft/60 p-4">
                   {preparing ? (
-                    <Spinner />
+                    <div className="flex justify-center py-3"><Spinner /></div>
                   ) : (
-                    <>
-                      <Camera className="mx-auto size-12 text-primary" strokeWidth={1.5} />
-                      <p className="font-semibold">Registre seu treino de hoje</p>
-                      <p className="text-xs text-muted">A foto é opcional</p>
-                      <div className="mt-2 grid gap-2">
-                        <Button onClick={() => camera.current?.click()}>Tirar foto</Button>
-                        <Button variant="ghost" onClick={() => gallery.current?.click()}>Escolher da galeria</Button>
+                    <div className="flex items-center gap-3">
+                      <Camera className="size-9 shrink-0 text-primary" strokeWidth={1.5} />
+                      <div className="grid min-w-0 flex-1 grid-cols-2 gap-2">
+                        <button type="button" onClick={() => camera.current?.click()} className="h-11 rounded-xl bg-primary text-sm font-bold text-white active:scale-[0.98]">
+                          Tirar foto
+                        </button>
+                        <button type="button" onClick={() => gallery.current?.click()} className="h-11 rounded-xl bg-surface text-sm font-bold text-primary shadow-sm active:scale-[0.98]">
+                          Galeria
+                        </button>
                       </div>
-                    </>
+                    </div>
                   )}
                 </motion.div>
               )}
@@ -326,16 +328,16 @@ export function CheckinPage() {
             />
           </label>
 
-          {photo ? (
-            <Button onClick={() => submit(true)} loading={sending} disabled={!canSubmit}>
-              Fazer check-in 🔥
-            </Button>
-          ) : (
-            <Button variant="ghost" onClick={() => submit(false)} loading={sending} disabled={!canSubmit}>
-              Fazer check-in sem foto
-            </Button>
-          )}
           <p className="text-center text-xs text-muted">Sua foto é privada: só você vê.</p>
+
+          {/* Ação principal sempre visível no rodapé */}
+          <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/90 backdrop-blur-lg">
+            <div className="mx-auto max-w-lg px-5 py-3">
+              <Button onClick={() => submit(!!photo)} loading={sending} disabled={!canSubmit}>
+                {photo ? 'Fazer check-in 🔥' : 'Fazer check-in sem foto'}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 

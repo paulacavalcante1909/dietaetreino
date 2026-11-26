@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Checkin;
+use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutSession;
+use App\Services\TrainingLog;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -30,9 +32,16 @@ class CheckinController extends Controller
             ->orderByDesc('date')->orderByDesc('id')
             ->get();
 
+        // Treinos feitos no app sem check-in também aparecem no histórico
+        $sessions = app(TrainingLog::class)->sessionsWithoutCheckin($user->id)
+            ->whereBetween('date', [$start->toDateString(), $start->endOfMonth()->toDateString()])
+            ->orderByDesc('date')->orderByDesc('id')
+            ->get();
+
         return response()->json([
             'month' => $month,
             'checkins' => $checkins,
+            'sessions' => $sessions,
             'stats' => $this->stats($user->id, $start),
         ]);
     }
@@ -121,25 +130,19 @@ class CheckinController extends Controller
         return $path;
     }
 
-    private function weekDays(int $userId): int
-    {
-        $start = CarbonImmutable::today()->startOfWeek()->toDateString();
-        $end = CarbonImmutable::today()->endOfWeek()->toDateString();
-        $a = Checkin::where('user_id', $userId)->whereBetween('date', [$start, $end])->pluck('date')->map(fn ($d) => substr((string) $d, 0, 10));
-        $b = WorkoutSession::where('user_id', $userId)->whereBetween('date', [$start, $end])->pluck('date')->map(fn ($d) => substr((string) $d, 0, 10));
-
-        return $a->merge($b)->unique()->count();
-    }
-
+    /**
+     * Estatísticas de treino: sequência, mês, total e semana atual.
+     * Contam check-ins e também treinos feitos no app sem check-in.
+     *
+     * @return array{streak: int, month_count: int, total_count: int, today: bool, week_days: int, weekly_goal: int}
+     */
     private function stats(int $userId, CarbonImmutable $monthStart): array
     {
-        $dates = Checkin::where('user_id', $userId)
-            ->selectRaw('DISTINCT date')->orderByDesc('date')->pluck('date')
-            ->map(fn ($d) => substr((string) $d, 0, 10))->all();
+        $log = app(TrainingLog::class);
+        $set = $log->dates($userId)->flip();
 
-        // Sequência: dias seguidos com check-in terminando hoje (ou ontem, se hoje ainda não treinou)
+        // Sequência: dias seguidos com treino terminando hoje (ou ontem, se hoje ainda não treinou)
         $streak = 0;
-        $set = array_flip($dates);
         $day = CarbonImmutable::today();
         if (! isset($set[$day->toDateString()])) {
             $day = $day->subDay();
@@ -149,18 +152,15 @@ class CheckinController extends Controller
             $day = $day->subDay();
         }
 
-        // Mês e total contam TODOS os check-ins (2 no mesmo dia = 2); a sequência conta dias
-        $all = Checkin::where('user_id', $userId);
-        $inMonth = (clone $all)->whereBetween('date', [$monthStart->toDateString(), $monthStart->endOfMonth()->toDateString()])->count();
+        $weekStart = CarbonImmutable::today()->startOfWeek();
 
         return [
             'streak' => $streak,
-            'month_count' => $inMonth,
-            'total_count' => $all->count(),
+            'month_count' => $log->count($userId, $monthStart->toDateString(), $monthStart->endOfMonth()->toDateString()),
+            'total_count' => $log->count($userId),
             'today' => isset($set[CarbonImmutable::today()->toDateString()]),
-            // Semana atual (seg–dom): dias com treino (check-in ou treino executado) × meta
-            'week_days' => $this->weekDays($userId),
-            'weekly_goal' => (int) (\App\Models\User::whereKey($userId)->value('weekly_workout_goal') ?? 3),
+            'week_days' => $log->dates($userId, $weekStart->toDateString(), $weekStart->endOfWeek()->toDateString())->count(),
+            'weekly_goal' => (int) (User::whereKey($userId)->value('weekly_workout_goal') ?? 3),
         ];
     }
 }

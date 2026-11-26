@@ -168,7 +168,7 @@ export function HomePage() {
               {/* Déficit calórico (gasto estimado − consumido); não faz sentido em dias futuros */}
               {day.energy && date <= isoDate() && (
                 <motion.div variants={item}>
-                  <DeficitCard energy={day.energy} consumed={t.kcal} isToday={date === isoDate()} />
+                  <DeficitCard energy={day.energy} consumed={t.kcal} isToday={date === isoDate()} goalKcal={target} burned={day.burned} />
                 </motion.div>
               )}
 
@@ -242,7 +242,7 @@ function WeekStrip({ date, onPick, refreshKey }: { date: string; onPick: (d: str
               aria-current={active ? 'date' : undefined}
               className={`relative flex flex-col items-center rounded-2xl py-1.5 transition-colors ${active ? 'bg-primary text-white shadow-md' : d === today ? 'bg-soft text-primary' : 'text-ink'}`}
             >
-              <span className={`text-[11px] font-semibold ${active ? 'text-white/80' : 'text-muted'}`}>{WD[i]}</span>
+              <span className={`text-xs font-semibold ${active ? 'text-white/80' : 'text-muted'}`}>{WD[i]}</span>
               <span className="text-base font-bold">{parseIso(d).getDate()}</span>
               <span className="mt-0.5 flex h-1.5 gap-0.5" aria-hidden>
                 {m?.entries ? <span className={`size-1.5 rounded-full ${active ? 'bg-white' : 'bg-orchid'}`} /> : null}
@@ -437,18 +437,29 @@ function MealCard({ meal, date, onEdit, onChange }: { meal: DayMeal; date: strin
 
   return (
     <Card className="!p-0">
-      <div className="flex items-center justify-between gap-3 px-5 py-4">
-        <div className="min-w-0">
-          <p className="font-bold">{meal.name}</p>
-          <p className="text-sm text-muted">{fmtKcal(meal.kcal)} kcal</p>
-        </div>
+      {/* Refeição vazia: linha compacta (nome + adicionar); com itens: cabeçalho com o total */}
+      <div className={`flex items-center justify-between gap-3 px-5 ${empty ? 'py-2.5' : 'py-4'}`}>
+        {empty ? (
+          <button onClick={add} className="min-w-0 flex-1 py-1 text-left font-semibold text-muted">
+            {meal.name}
+          </button>
+        ) : (
+          <div className="min-w-0">
+            <p className="font-bold">{meal.name}</p>
+            <p className="text-sm text-muted">{fmtKcal(meal.kcal)} kcal</p>
+          </div>
+        )}
         <div className="flex shrink-0 items-center gap-2">
           {empty && meal.yesterday_count > 0 && (
             <button onClick={copyYesterday} disabled={copying} className="flex items-center gap-1 rounded-full bg-soft px-3 py-2 text-xs font-bold text-primary active:scale-95 disabled:opacity-50">
               <RotateCcw className="size-3.5" /> Repetir de ontem
             </button>
           )}
-          <button onClick={add} aria-label={`Adicionar em ${meal.name}`} className="flex size-10 items-center justify-center rounded-full bg-primary text-white shadow-md transition-transform active:scale-90">
+          <button
+            onClick={add}
+            aria-label={`Adicionar em ${meal.name}`}
+            className={`flex items-center justify-center rounded-full transition-transform active:scale-90 ${empty ? 'size-9 bg-soft text-primary' : 'size-10 bg-primary text-white shadow-md'}`}
+          >
             <Plus className="size-5" strokeWidth={2.75} />
           </button>
         </div>

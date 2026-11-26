@@ -112,9 +112,9 @@ function Nut({ label, value, unit = '', color, strong }: { label: string; value:
     <div>
       <p className={`${strong ? 'text-lg' : 'text-base'} font-bold ${color}`}>
         {fmt(value)}
-        <span className="text-[10px] font-medium">{unit}</span>
+        <span className="text-xs font-medium">{unit}</span>
       </p>
-      <p className="text-[11px] text-muted">{label}</p>
+      <p className="text-xs text-muted">{label}</p>
     </div>
   )
 }

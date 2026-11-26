@@ -1,4 +1,4 @@
-import { Calendar, CheckCircle2, ChevronLeft, ChevronRight, Flame, Timer, Trophy } from 'lucide-react'
+import { Calendar, Camera, CheckCircle2, ChevronLeft, ChevronRight, Flame, Timer, Trophy } from 'lucide-react'
 import { useTheme } from '../lib/theme'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -8,7 +8,7 @@ import { useToast } from '../components/Toast'
 import { BackButton, Button, Card, EmptyState } from '../components/ui'
 import { api } from '../lib/api'
 import { isoDate, parseIso } from '../lib/date'
-import type { Checkin, CheckinStats } from '../lib/types'
+import type { Checkin, CheckinStats, WorkoutSessionData } from '../lib/types'
 import { SessionSummary } from '../components/SessionSummary'
 import { durationLabel } from '../lib/run'
 
@@ -20,21 +20,37 @@ const shiftMonth = (m: string, n: number) => {
   return isoDate(d).slice(0, 7)
 }
 
-/** Histórico de check-ins: calendário do mês com as fotos + estatísticas. */
+/** Item do histórico: um check-in, ou um treino feito no app que ainda não virou check-in. */
+type HistoryItem = Checkin & { onlySession?: boolean }
+
+const fromSession = (s: WorkoutSessionData): HistoryItem => ({
+  id: -s.id,
+  workout_id: s.workout_id,
+  workout_name: s.workout_name,
+  date: s.date,
+  note: null,
+  photo_url: null,
+  created_at: s.finished_at,
+  session: s,
+  onlySession: true,
+})
+
+/** Histórico de treinos: calendário do mês (check-ins com foto e treinos feitos no app) + estatísticas. */
 export function CheckinsPage() {
   const { theme } = useTheme()
   const navigate = useNavigate()
   const toast = useToast()
   const [month, setMonth] = useState(isoDate().slice(0, 7))
-  const [checkins, setCheckins] = useState<Checkin[] | null>(null)
+  const [checkins, setCheckins] = useState<HistoryItem[] | null>(null)
   const [stats, setStats] = useState<CheckinStats | null>(null)
-  const [open, setOpen] = useState<Checkin | null>(null)
+  const [open, setOpen] = useState<HistoryItem | null>(null)
   const [dir, setDir] = useState(0)
 
   const load = useCallback(() => {
     setCheckins(null)
-    api<{ checkins: Checkin[]; stats: CheckinStats }>(`/checkins?month=${month}`).then((r) => {
-      setCheckins(r.checkins)
+    api<{ checkins: Checkin[]; sessions: WorkoutSessionData[]; stats: CheckinStats }>(`/checkins?month=${month}`).then((r) => {
+      const items: HistoryItem[] = [...r.checkins, ...r.sessions.map(fromSession)]
+      setCheckins(items.sort((a, b) => b.date.localeCompare(a.date) || b.created_at.localeCompare(a.created_at)))
       setStats(r.stats)
     })
   }, [month])
@@ -42,7 +58,7 @@ export function CheckinsPage() {
   useEffect(load, [load])
 
   const byDay = useMemo(() => {
-    const map: Record<string, Checkin[]> = {}
+    const map: Record<string, HistoryItem[]> = {}
     checkins?.forEach((c) => (map[c.date] ??= []).push(c))
     return map
   }, [checkins])
@@ -58,7 +74,7 @@ export function CheckinsPage() {
     setMonth((m) => shiftMonth(m, n))
   }
 
-  const remove = async (c: Checkin) => {
+  const remove = async (c: HistoryItem) => {
     if (!confirm('Excluir este check-in e a foto?')) return
     await api(`/checkins/${c.id}`, { method: 'DELETE' })
     setOpen(null)
@@ -70,15 +86,15 @@ export function CheckinsPage() {
     <div className="safe-top mx-auto max-w-lg px-5 pt-4 pb-10">
       <header className="mb-5 flex items-center gap-3">
         <BackButton onClick={() => navigate(-1)} />
-        <h1 className="text-xl font-bold">Meus check-ins</h1>
+        <h1 className="text-xl font-bold">Histórico de treinos</h1>
       </header>
 
       {stats && (
         <div className="mb-4 grid grid-cols-3 gap-2 text-center">
           {([
             [Flame, stats.streak, stats.streak === 1 ? 'dia seguido' : 'dias seguidos'],
-            [Calendar, stats.month_count, stats.month_count === 1 ? 'check-in no mês' : 'check-ins no mês'],
-            [Trophy, stats.total_count, 'no total'],
+            [Calendar, stats.month_count, stats.month_count === 1 ? 'treino no mês' : 'treinos no mês'],
+            [Trophy, stats.total_count, stats.total_count === 1 ? 'treino no total' : 'treinos no total'],
           ] as const).map(([Icon, v, l]) => (
             <Card key={String(l)} className="!p-3">
               <p className="flex items-center justify-center gap-1 text-xl font-extrabold text-primary">
@@ -129,7 +145,7 @@ export function CheckinsPage() {
         </AnimatePresence>
       </Card>
 
-      {checkins && checkins.length === 0 && <EmptyState title="Nenhum check-in neste mês" text="Treinou? Registre pelo botão Treinar ou pelo “+” da barra." />}
+      {checkins && checkins.length === 0 && <EmptyState title="Nenhum treino neste mês" text="Treinou? Registre pelo botão Treinar ou pelo “+” da barra." />}
 
       <div className="mt-4 grid grid-cols-3 gap-2">
         {checkins?.map((c) => (
@@ -141,7 +157,7 @@ export function CheckinsPage() {
                 <img src={`${theme.assets}/mascote.png`} alt="" className="size-14 rounded-full ring-2 ring-white/70" />
               </span>
             )}
-            <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-scrim/70 to-transparent px-2 pt-6 pb-1.5 text-left text-[11px] font-semibold text-white">
+            <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-scrim/70 to-transparent px-2 pt-6 pb-1.5 text-left text-xs font-semibold text-white">
               {parseIso(c.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} · {c.workout_name}
               {c.session && <span className="flex items-center gap-1 font-normal text-white/85"><Timer className="size-3" /> {durationLabel(c.session.duration_seconds)}</span>}
             </span>
@@ -160,7 +176,16 @@ export function CheckinsPage() {
             {open.photo_url && <img src={open.photo_url} alt={`Foto do check-in ${open.workout_name}`} className="w-full rounded-2xl object-cover" />}
             {open.session && <SessionSummary session={open.session} />}
             {open.note && <p className="rounded-2xl bg-soft p-3 text-sm">{open.note}</p>}
-            <Button variant="danger" onClick={() => remove(open)}>Excluir check-in</Button>
+            {open.onlySession ? (
+              <>
+                <p className="rounded-2xl bg-soft p-3 text-sm text-muted">Treino feito no app, ainda sem check-in. Ele já conta na sua sequência e na meta da semana.</p>
+                <Button onClick={() => navigate(`/checkin?sessao=${open.session!.id}`)}>
+                  <Camera className="size-5" /> Adicionar foto / check-in
+                </Button>
+              </>
+            ) : (
+              <Button variant="danger" onClick={() => remove(open)}>Excluir check-in</Button>
+            )}
           </div>
         )}
       </Sheet>

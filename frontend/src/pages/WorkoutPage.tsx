@@ -5,7 +5,7 @@ import { ExerciseImage } from '../components/ExerciseImage'
 import { ExercisePicker } from '../components/ExercisePicker'
 import { Sheet } from '../components/Sheet'
 import { WeightChart } from '../components/WeightChart'
-import { Trophy } from 'lucide-react'
+import { Copy, Trash2, Trophy, X } from 'lucide-react'
 import { SetsSheet } from '../components/SetsSheet'
 import { isTimed, minutesOf, prescription } from '../lib/workout'
 import { useToast } from '../components/Toast'
@@ -78,7 +78,7 @@ export function WorkoutPage() {
   }
 
   const remove = async () => {
-    if (!confirm(`Excluir “${workout?.name}”? Seus check-ins continuam no histórico.`)) return
+    if (!confirm(`Excluir “${workout?.name}”? Seus treinos e check-ins continuam no histórico.`)) return
     await api(`/workouts/${id}`, { method: 'DELETE' })
     toast({ text: 'Treino excluído' })
     navigate('/treinos', { replace: true })
@@ -119,7 +119,9 @@ export function WorkoutPage() {
                   <p className="truncate text-sm font-medium">{it.exercise.name}</p>
                   <p className="text-xs font-semibold text-primary">{prescription(it)}</p>
                 </button>
-                <button aria-label="Remover" onClick={() => setItems((l) => l.filter((_, j) => j !== idx))} className="text-xl text-muted">×</button>
+                <button aria-label={`Tirar ${it.exercise.name} do treino`} onClick={() => setItems((l) => l.filter((_, j) => j !== idx))} className="-mr-1 flex size-10 items-center justify-center rounded-full text-muted active:bg-soft">
+                  <X className="size-5" />
+                </button>
               </div>
             </Reorder.Item>
           ))}
@@ -149,9 +151,16 @@ export function WorkoutPage() {
           <button onClick={() => setPicking(true)} className="w-full rounded-2xl border-2 border-dashed border-line py-4 text-sm font-semibold text-primary">
             + Adicionar exercício
           </button>
-          <div className="grid grid-cols-2 gap-3">
-            <Button variant="ghost" onClick={duplicate}>Duplicar</Button>
-            <Button variant="danger" onClick={remove}>Excluir treino</Button>
+          {/* Ações secundárias longe do botão principal; excluir pede confirmação */}
+          <div className="mt-10 flex justify-center gap-6 border-t border-line pt-5 text-sm font-semibold">
+            {items.length > 0 && (
+              <button onClick={duplicate} className="flex items-center gap-1.5 px-2 py-2 text-primary">
+                <Copy className="size-4" /> Duplicar treino
+              </button>
+            )}
+            <button onClick={remove} className="flex items-center gap-1.5 px-2 py-2 text-danger">
+              <Trash2 className="size-4" /> Excluir treino
+            </button>
           </div>
         </div>
       )}
