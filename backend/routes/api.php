@@ -100,6 +100,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/workouts/{workout}/duplicate', [WorkoutController::class, 'duplicate']);
     Route::post('/workout-sessions', [WorkoutSessionController::class, 'store']);
     Route::get('/workout-sessions/{session}', [WorkoutSessionController::class, 'show']);
+    Route::delete('/workout-sessions/{session}', [WorkoutSessionController::class, 'destroy']);
     Route::get('/checkins', [CheckinController::class, 'index']);
     Route::post('/checkins', [CheckinController::class, 'store'])->middleware('throttle:20,1');
     Route::delete('/checkins/{checkin}', [CheckinController::class, 'destroy']);

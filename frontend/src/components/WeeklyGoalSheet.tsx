@@ -43,7 +43,7 @@ export function WeeklyGoalSheet({ open, onClose, value, onSaved }: { open: boole
             </button>
           ))}
         </div>
-        <p className="text-xs text-muted">Conta os dias com treino feito no app ou check-in, de domingo a sábado.</p>
+        <p className="text-xs text-muted">Conta os dias com treino registrado, de domingo a sábado.</p>
       </div>
     </Sheet>
   )

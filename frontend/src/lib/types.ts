@@ -140,6 +140,15 @@ export interface DayData {
   kcal_target: number | null // meta + treino (se a preferência estiver ligada)
   meals: DayMeal[]
   water: WaterLog[]
+  trainings: DayTraining[] // treinos feitos no dia
+}
+
+export interface DayTraining {
+  session_id: number | null // treino registrado (null = check-in antigo sem registro)
+  checkin_id: number | null // foto/anotação ligada ao treino
+  name: string
+  kcal: number
+  photo_url: string | null
 }
 
 export interface Exercise {

@@ -1,9 +1,10 @@
 import { AnimatePresence, motion, type PanInfo } from 'framer-motion'
-import { ChevronDown, ChevronLeft, ChevronRight, Droplet, Flame, Pencil, Plus, RotateCcw, Scale, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, Droplet, Dumbbell, Flame, Pencil, Plus, RotateCcw, Scale, Trash2, Utensils } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { DeficitCard } from '../components/DeficitCard'
 import { EntrySheet } from '../components/EntrySheet'
+import { openTrain, QuickTile } from '../components/Layout'
 import { Bar, Ring, fmt, fmtKcal } from '../components/Ring'
 import { Sheet } from '../components/Sheet'
 import { useToast } from '../components/Toast'
@@ -12,6 +13,7 @@ import { api, ApiError } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { addDays, dayLabel, isoDate, parseIso } from '../lib/date'
 import { entryQtyLabel, num } from '../lib/nutrition'
+import { mealForNow } from '../lib/meals'
 import { useTheme } from '../lib/theme'
 import type { DayData, DayMeal, Entry, WaterLog, WeightSummary } from '../lib/types'
 
@@ -118,6 +120,13 @@ export function HomePage() {
             transition={{ duration: 0.22 }}
           >
             <motion.div variants={container} initial="hidden" animate="show" className="space-y-4">
+              {/* Atalhos: treinar, refeição do momento e água */}
+              {date <= isoDate() && (
+                <motion.div variants={item}>
+                  <QuickCards day={day} date={date} onChange={load} />
+                </motion.div>
+              )}
+
               <motion.div variants={item}>
                 <Card className="flex flex-col items-center gap-5">
                   <Ring value={t.kcal} max={target} color="var(--color-orchid)">
@@ -203,6 +212,51 @@ export function HomePage() {
       </AnimatePresence>
 
       <EntrySheet entry={editing} meals={day?.meals ?? []} onClose={() => setEditing(null)} onChanged={load} />
+    </div>
+  )
+}
+
+/* ───────────── Atalhos ───────────── */
+
+const liters = (ml: number) => (ml / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })
+
+function QuickCards({ day, date, onChange }: { day: DayData; date: string; onChange: () => void }) {
+  const navigate = useNavigate()
+  const toast = useToast()
+  const [busy, setBusy] = useState(false)
+  const meal = mealForNow(day.meals)
+  const isToday = date === isoDate()
+  const trained = day.trainings.length > 0
+
+  const water = async () => {
+    setBusy(true)
+    try {
+      const r = await api<{ water: WaterLog }>('/water', { method: 'POST', body: { date, ml: 250 } })
+      onChange()
+      toast({
+        text: '+250 ml de água 💧',
+        action: { label: 'Desfazer', run: () => api(`/water/${r.water.id}`, { method: 'DELETE' }).then(onChange).catch(() => {}) },
+      })
+    } catch (e) {
+      toast({ text: (e as ApiError).message })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div>
+      <div className="grid grid-cols-3 gap-2">
+        <QuickTile icon={Dumbbell} label="Treinar" hint={trained ? `${day.trainings.length === 1 ? 'Feito' : `${day.trainings.length} feitos`} ✓` : isToday ? 'Bora?' : 'Registrar'} done={trained} onClick={openTrain} />
+        <QuickTile
+          icon={Utensils}
+          label="Alimento"
+          hint={meal ? (meal.kcal > 0 ? `${meal.name} · ${fmtKcal(meal.kcal)} kcal` : meal.name) : 'Adicionar'}
+          onClick={() => navigate(`/adicionar?${new URLSearchParams({ ...(meal ? { refeicao: String(meal.id) } : {}), ...(isToday ? {} : { data: date }) })}`)}
+        />
+        <QuickTile icon={Droplet} label="+250 ml" hint={`${liters(day.totals.water)} de ${liters(day.goal?.water_ml ?? 0)} L`} tone="water" disabled={busy} onClick={water} />
+      </div>
+
     </div>
   )
 }

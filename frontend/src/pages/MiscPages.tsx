@@ -28,7 +28,7 @@ export function TermsPage() {
         <ul className="list-disc space-y-1 pl-5">
           <li><strong>Conta:</strong> nome, e-mail e senha (guardada de forma criptografada, nunca em texto).</li>
           <li><strong>Saúde e hábitos</strong> (dados pessoais sensíveis pela LGPD): metas, alimentos registrados, água, peso, fichas e treinos realizados, gasto calórico estimado.</li>
-          <li><strong>Fotos de check-in</strong>, se você optar por enviar.</li>
+          <li><strong>Fotos dos treinos</strong>, se você optar por enviar.</li>
           <li>Preferências do app (tema, metas, refeições). Não coletamos localização, contatos nem dados de outros apps.</li>
         </ul>
 

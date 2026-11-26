@@ -3,8 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Workout;
+use App\Models\Checkin;
 use App\Models\Weight;
+use App\Models\Workout;
 use App\Models\WorkoutSession;
 use App\Services\CalorieEstimator;
 use Carbon\CarbonImmutable;
@@ -71,6 +72,21 @@ class WorkoutSessionController extends Controller
         $session->save();
 
         return response()->json(['session' => $session], 201);
+    }
+
+    /**
+     * Desfaz um treino feito: apaga o registro, as fotos ligadas a ele e, com isso,
+     * as calorias gastas daquele dia.
+     */
+    public function destroy(Request $request, WorkoutSession $session): JsonResponse
+    {
+        abort_unless($session->user_id === $request->user()->id, 404);
+
+        // Um a um para o evento do model apagar o arquivo da foto
+        Checkin::where('session_id', $session->id)->get()->each->delete();
+        $session->delete();
+
+        return response()->json(['ok' => true]);
     }
 
     public function show(Request $request, WorkoutSession $session): JsonResponse

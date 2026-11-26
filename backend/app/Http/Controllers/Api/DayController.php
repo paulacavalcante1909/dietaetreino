@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Checkin;
 use App\Models\WorkoutSession;
 use App\Services\EnergyEstimator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Validator;
 
 class DayController extends Controller
@@ -43,7 +45,8 @@ class DayController extends Controller
         $water = $user->waterLogs()->whereDate('date', $date)->orderBy('id')->get();
 
         // Gasto estimado nos treinos do dia; só entra na meta se a usuária escolheu em Ajustes
-        $burned = (int) WorkoutSession::where('user_id', $user->id)->whereDate('date', $date)->sum('kcal_burned');
+        $sessions = WorkoutSession::where('user_id', $user->id)->whereDate('date', $date)->orderBy('finished_at')->get();
+        $burned = (int) $sessions->sum('kcal_burned');
         $goal = $user->goalFor($date);
         $consumed = round($all->sum('kcal'), 1);
         $est = $energy->forDate($user, $date);
@@ -69,6 +72,39 @@ class DayController extends Controller
             'energy' => $est,
             'meals' => $meals,
             'water' => $water,
+            'trainings' => $this->trainings($user->id, $date, $sessions),
         ]);
+    }
+
+    /**
+     * Treinos feitos no dia: os registrados no app (com a foto, se houver)
+     * e check-ins antigos sem registro de treino.
+     *
+     * @param  Collection<int, WorkoutSession>  $sessions
+     * @return list<array{session_id: int|null, checkin_id: int|null, name: string, kcal: int, photo_url: string|null}>
+     */
+    private function trainings(int $userId, string $date, Collection $sessions): array
+    {
+        $checkins = Checkin::where('user_id', $userId)->whereDate('date', $date)->orderBy('id')->get();
+        $bySession = $checkins->whereNotNull('session_id')->keyBy('session_id');
+
+        $list = $sessions->map(fn (WorkoutSession $s) => [
+            'session_id' => $s->id,
+            'checkin_id' => $bySession->get($s->id)?->id,
+            'name' => $s->workout_name,
+            'kcal' => (int) $s->kcal_burned,
+            'photo_url' => $bySession->get($s->id)?->photo_url,
+        ]);
+
+        $loose = $checkins->filter(fn (Checkin $c) => $c->session_id === null || ! $sessions->contains('id', $c->session_id))
+            ->map(fn (Checkin $c) => [
+                'session_id' => null,
+                'checkin_id' => $c->id,
+                'name' => $c->workout_name,
+                'kcal' => 0,
+                'photo_url' => $c->photo_url,
+            ]);
+
+        return $list->concat($loose)->values()->all();
     }
 }

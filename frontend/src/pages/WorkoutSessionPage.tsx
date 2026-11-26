@@ -1,4 +1,4 @@
-import { Camera, Check, CloudUpload, Dumbbell, Flame, Pause, Play, Timer } from 'lucide-react'
+import { Camera, Check, CloudUpload, Dumbbell, Flame, Pause, Play, Timer, X } from 'lucide-react'
 import { enqueue, isOffline, newRef } from '../lib/outbox'
 import { exerciseLine } from '../components/SessionSummary'
 import { AnimatePresence, motion, Reorder } from 'framer-motion'
@@ -541,6 +541,7 @@ function ExerciseRunner(props: {
 
 function FinishedView({ run, setRun }: { run: RunState; setRun: SetRun }) {
   const navigate = useNavigate()
+  const toast = useToast()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const seconds = Math.round(((run.finishedAt ?? Date.now()) - (run.startedAt ?? Date.now())) / 1000)
@@ -598,8 +599,24 @@ function FinishedView({ run, setRun }: { run: RunState; setRun: SetRun }) {
     navigate(to, { replace: true })
   }
 
+  // Desfazer: apaga o treino salvo (e as calorias gastas dele)
+  const undo = async () => {
+    if (!confirm('Cancelar este treino? Ele não será registrado e as calorias gastas são removidas.')) return
+    if (run.sessionId) await api(`/workout-sessions/${run.sessionId}`, { method: 'DELETE' }).catch(() => {})
+    toast({ text: 'Treino cancelado' })
+    leave('/treinos')
+  }
+
   return (
-    <div className="safe-top mx-auto flex min-h-full max-w-lg flex-col px-5 pt-10 pb-8">
+    <div className="safe-top mx-auto flex min-h-full max-w-lg flex-col px-5 pt-4 pb-8">
+      {/* Cancelar: não registra o treino (apaga o que já foi salvo) */}
+      <header className="mb-2 flex h-10 justify-end">
+        {(run.sessionId || error) && (
+          <button onClick={undo} className="flex items-center gap-1.5 rounded-full bg-soft px-4 py-2 text-sm font-semibold text-muted active:scale-95">
+            <X className="size-4" /> Cancelar
+          </button>
+        )}
+      </header>
       <motion.div initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 14 }} className="text-center">
         <Mascot size={120} className="mx-auto" />
         <h1 className="mt-4 text-2xl font-extrabold">Treino concluído!</h1>
@@ -640,15 +657,15 @@ function FinishedView({ run, setRun }: { run: RunState; setRun: SetRun }) {
       )}
 
       <div className="mt-auto space-y-3 pt-8">
-        <Button
-          onClick={() => leave(run.sessionId ? `/checkin?treino=${run.workoutId}&sessao=${run.sessionId}` : `/checkin?treino=${run.workoutId}&ref=${run.sessionRef}`)}
-          disabled={!run.sessionId && !run.sessionRef}
-          loading={saving}
-        >
-          <Camera className="size-5" /> Fazer check-in
+        <Button onClick={() => leave('/')} disabled={!run.sessionId && !run.sessionRef} loading={saving}>
+          <Check className="size-5" strokeWidth={3} /> Concluir
         </Button>
-        <Button variant="ghost" onClick={() => leave('/treinos')} disabled={!run.sessionId && !run.sessionRef && !error}>
-          Agora não
+        <Button
+          variant="ghost"
+          onClick={() => leave(run.sessionId ? `/registrar-treino?sessao=${run.sessionId}` : `/registrar-treino?ref=${run.sessionRef}`)}
+          disabled={!run.sessionId && !run.sessionRef}
+        >
+          <Camera className="size-5" /> Adicionar foto (opcional)
         </Button>
       </div>
     </div>

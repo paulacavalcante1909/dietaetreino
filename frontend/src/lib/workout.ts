@@ -17,3 +17,16 @@ export function minutesOf(reps: string): number {
 export function prescription(i: { sets: number; reps: string }) {
   return isTimed(i) ? `${minutesOf(i.reps)} min` : `${i.sets} × ${i.reps}`
 }
+
+/** "Treino A – Peito" → "A" */
+export function letter(name: string) {
+  const m = name.match(/treino\s+([a-z0-9])/i)
+  return (m ? m[1] : name[0] ?? '?').toUpperCase()
+}
+
+/** Duração sugerida para um treino já feito: cardio pelo tempo + ~2 min por série (mínimo 20 min). */
+export function suggestedMinutes(items: { sets: number; reps: string }[]) {
+  const timed = items.filter(isTimed).reduce((a, i) => a + minutesOf(i.reps), 0)
+  const sets = items.filter((i) => !isTimed(i)).reduce((a, i) => a + i.sets, 0)
+  return Math.max(20, Math.min(240, timed + sets * 2))
+}

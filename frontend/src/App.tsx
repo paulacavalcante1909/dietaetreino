@@ -77,6 +77,9 @@ export default function App() {
             <Route path="/receitas/:id" element={<Private><RecipeEditorPage /></Private>} />
             <Route path="/treinos/:id" element={<Private><WorkoutPage /></Private>} />
             <Route path="/treinos/:id/iniciar" element={<Private><WorkoutSessionPage /></Private>} />
+            <Route path="/registrar-treino" element={<Private><CheckinPage /></Private>} />
+            <Route path="/historico-treinos" element={<Private><CheckinsPage /></Private>} />
+            {/* Endereços antigos (atalhos e PWA instalada) */}
             <Route path="/checkin" element={<Private><CheckinPage /></Private>} />
             <Route path="/checkins" element={<Private><CheckinsPage /></Private>} />
 

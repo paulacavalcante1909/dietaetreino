@@ -1,17 +1,18 @@
 import { motion, Reorder } from 'framer-motion'
-import { Calendar, Camera, CheckCircle2, ChevronRight, CloudUpload, Dumbbell, Flame, Pencil, Play, Plus, Trophy, Zap } from 'lucide-react'
+import { Calendar, CheckCircle2, ChevronRight, CloudUpload, Flame, Pencil, Play, Plus, Trophy, Zap } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ExerciseImage } from '../components/ExerciseImage'
 import { Ring } from '../components/Ring'
-import { Sheet } from '../components/Sheet'
+import { openTrain } from '../components/Layout'
 import { WeeklyGoalSheet } from '../components/WeeklyGoalSheet'
 import { Button, Card, EmptyState } from '../components/ui'
 import { api } from '../lib/api'
 import { isoDate } from '../lib/date'
 import { useOutboxCount } from '../lib/outbox'
 import { loadRun } from '../lib/run'
-import type { Checkin, CheckinStats, Workout } from '../lib/types'
+import type { Checkin, CheckinStats, Workout, WorkoutSessionData } from '../lib/types'
+import { letter } from '../lib/workout'
 
 /** Aba Treinos: "Treinar" (ficha ou avulso), meta da semana, sequência e ficha. */
 export function WorkoutsPage() {
@@ -21,7 +22,6 @@ export function WorkoutsPage() {
   const [stats, setStats] = useState<CheckinStats | null>(null)
   const [todayCheckin, setTodayCheckin] = useState<Checkin | null>(null)
   const [creating, setCreating] = useState(false)
-  const [train, setTrain] = useState(params.get('treinar') === '1')
   const [goalOpen, setGoalOpen] = useState(false)
   const pending = useOutboxCount()
   const [running] = useState(() => {
@@ -30,9 +30,13 @@ export function WorkoutsPage() {
   })
 
   const loadStats = () =>
-    api<{ checkins: Checkin[]; stats: CheckinStats }>('/checkins').then((r) => {
+    api<{ checkins: Checkin[]; sessions: WorkoutSessionData[]; stats: CheckinStats }>('/checkins').then((r) => {
       setStats(r.stats)
-      setTodayCheckin(r.stats.today ? r.checkins[0] : null)
+      // Treino de hoje: com foto (check-in) ou só registrado no app
+      const today = isoDate()
+      const withPhoto = r.checkins.find((c) => c.date === today)
+      const session = r.sessions.find((s) => s.date === today)
+      setTodayCheckin(withPhoto ?? (session ? { id: 0, workout_id: session.workout_id, workout_name: session.workout_name, date: today, note: null, photo_url: null, created_at: session.finished_at, session } : null))
     })
 
   useEffect(() => {
@@ -40,10 +44,13 @@ export function WorkoutsPage() {
     loadStats()
   }, [])
 
-  const closeTrain = () => {
-    setTrain(false)
-    if (params.get('treinar')) setParams({}, { replace: true })
-  }
+  // Links antigos (?treinar=1) abrem a folha "Treinar"
+  useEffect(() => {
+    if (params.get('treinar')) {
+      setParams({}, { replace: true })
+      openTrain()
+    }
+  }, [params, setParams])
 
   const create = async () => {
     setCreating(true)
@@ -110,15 +117,15 @@ export function WorkoutsPage() {
                 </button>
               )}
             </div>
-            {todayCheckin?.photo_url && <img src={todayCheckin.photo_url} alt="Foto do check-in de hoje" className="size-14 shrink-0 rounded-2xl border-2 border-white/70 object-cover" />}
+            {todayCheckin?.photo_url && <img src={todayCheckin.photo_url} alt="Foto do treino de hoje" className="size-14 shrink-0 rounded-2xl border-2 border-white/70 object-cover" />}
           </div>
         </div>
         <div className="flex gap-2 p-3">
-          <button onClick={() => setTrain(true)} className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-primary font-bold text-white active:scale-[0.98]">
+          <button onClick={openTrain} className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-primary font-bold text-white active:scale-[0.98]">
             <Zap className="size-5" /> Treinar
           </button>
-          <Link to="/checkins" className="flex h-12 items-center justify-center rounded-xl bg-soft px-4 font-bold text-primary">
-            Histórico
+          <Link to="/historico-treinos" className="flex h-12 items-center justify-center rounded-xl bg-soft px-4 font-bold text-primary">
+            Feitos
           </Link>
         </div>
       </Card>
@@ -180,51 +187,8 @@ export function WorkoutsPage() {
         <Plus className="size-5" /> Novo treino
       </Button>
 
-      {/* Treinar: escolher o que fazer */}
-      <Sheet open={train} onClose={closeTrain} title="O que vamos treinar?">
-        <div className="space-y-3">
-          {workouts && workouts.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-sm font-semibold text-muted">Da minha ficha</p>
-              {workouts.filter((w) => w.items.length > 0).map((w) => (
-                <button
-                  key={w.id}
-                  onClick={() => navigate(`/treinos/${w.id}/iniciar`)}
-                  className="flex w-full items-center gap-3 rounded-2xl bg-soft p-3 text-left active:scale-[0.98]"
-                >
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orchid to-violet font-extrabold text-white">{letter(w.name)}</span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate font-bold">{w.name}</span>
-                    <span className="block text-xs text-muted">
-                      {w.items.length} exercícios{w.last_done_on === isoDate() ? ' · feito hoje' : ''}
-                    </span>
-                  </span>
-                  <Play className="size-5 shrink-0 fill-primary text-primary" />
-                </button>
-              ))}
-            </div>
-          )}
-          <button onClick={() => navigate('/checkin?avulso=1')} className="flex w-full items-center gap-3 rounded-2xl border-2 border-dashed border-line p-3 text-left active:scale-[0.98]">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-soft text-primary"><Dumbbell className="size-5" /></span>
-            <span className="min-w-0 flex-1">
-              <span className="block font-bold">Exercício avulso</span>
-              <span className="block text-xs text-muted">Corrida, aula, bike… sem precisar de ficha</span>
-            </span>
-          </button>
-          <button onClick={() => navigate('/checkin')} className="flex w-full items-center justify-center gap-2 py-2 text-sm font-semibold text-muted">
-            <Camera className="size-4" /> Só registrar check-in de um treino já feito
-          </button>
-        </div>
-      </Sheet>
-
       {/* Meta da semana */}
       <WeeklyGoalSheet open={goalOpen} onClose={() => setGoalOpen(false)} value={stats?.weekly_goal ?? 3} onSaved={(n) => setStats((s) => (s ? { ...s, weekly_goal: n } : s))} />
     </div>
   )
-}
-
-/** "Treino A – Peito" → "A" */
-export function letter(name: string) {
-  const m = name.match(/treino\s+([a-z0-9])/i)
-  return (m ? m[1] : name[0] ?? '?').toUpperCase()
 }

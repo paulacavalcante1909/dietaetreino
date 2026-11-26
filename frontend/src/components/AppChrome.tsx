@@ -104,7 +104,7 @@ export function OfflineBanner() {
           className="fixed inset-x-0 top-0 z-[60] bg-scrim py-2 text-center text-sm text-white"
           role="status"
         >
-          Sem internet. Treinos e check-ins ficam guardados e são enviados quando a conexão voltar.
+          Sem internet. Treinos e fotos ficam guardados e são enviados quando a conexão voltar.
         </motion.div>
       )}
     </AnimatePresence>

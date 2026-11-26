@@ -1,4 +1,4 @@
-import { Calendar, Camera, CheckCircle2, ChevronLeft, ChevronRight, Flame, Timer, Trophy } from 'lucide-react'
+import { Calendar, Camera, CheckCircle2, ChevronLeft, ChevronRight, Flame, Timer, Trash2, Trophy } from 'lucide-react'
 import { useTheme } from '../lib/theme'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -74,11 +74,22 @@ export function CheckinsPage() {
     setMonth((m) => shiftMonth(m, n))
   }
 
+  // Remover o treino: apaga o registro, a foto e as calorias gastas
   const remove = async (c: HistoryItem) => {
-    if (!confirm('Excluir este check-in e a foto?')) return
+    if (!confirm(`Remover “${c.workout_name}”? Ele sai do histórico${c.session ? ' e as calorias gastas são removidas' : ''}.`)) return
+    if (c.session) await api(`/workout-sessions/${c.session.id}`, { method: 'DELETE' })
+    else await api(`/checkins/${c.id}`, { method: 'DELETE' })
+    setOpen(null)
+    toast({ text: 'Treino removido' })
+    load()
+  }
+
+  // Só a foto/anotação: o treino continua contando
+  const removePhoto = async (c: HistoryItem) => {
+    if (!confirm('Remover só a foto? O treino continua no histórico.')) return
     await api(`/checkins/${c.id}`, { method: 'DELETE' })
     setOpen(null)
-    toast({ text: 'Check-in excluído' })
+    toast({ text: 'Foto removida' })
     load()
   }
 
@@ -86,7 +97,7 @@ export function CheckinsPage() {
     <div className="safe-top mx-auto max-w-lg px-5 pt-4 pb-10">
       <header className="mb-5 flex items-center gap-3">
         <BackButton onClick={() => navigate(-1)} />
-        <h1 className="text-xl font-bold">Histórico de treinos</h1>
+        <h1 className="text-xl font-bold">Treinos feitos</h1>
       </header>
 
       {stats && (
@@ -151,7 +162,7 @@ export function CheckinsPage() {
         {checkins?.map((c) => (
           <button key={c.id} onClick={() => setOpen(c)} className="relative aspect-[4/5] overflow-hidden rounded-2xl">
             {c.photo_url ? (
-              <img src={c.photo_url} alt={`Check-in ${c.workout_name}`} loading="lazy" className="size-full object-cover" />
+              <img src={c.photo_url} alt={`Foto do treino ${c.workout_name}`} loading="lazy" className="size-full object-cover" />
             ) : (
               <span className="flex size-full items-start justify-center bg-gradient-to-br from-orchid to-violet pt-4">
                 <img src={`${theme.assets}/mascote.png`} alt="" className="size-14 rounded-full ring-2 ring-white/70" />
@@ -173,19 +184,20 @@ export function CheckinsPage() {
               {' · '}
               {new Date(open.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
             </p>
-            {open.photo_url && <img src={open.photo_url} alt={`Foto do check-in ${open.workout_name}`} className="w-full rounded-2xl object-cover" />}
+            {open.photo_url && <img src={open.photo_url} alt={`Foto do treino ${open.workout_name}`} className="w-full rounded-2xl object-cover" />}
             {open.session && <SessionSummary session={open.session} />}
             {open.note && <p className="rounded-2xl bg-soft p-3 text-sm">{open.note}</p>}
-            {open.onlySession ? (
-              <>
-                <p className="rounded-2xl bg-soft p-3 text-sm text-muted">Treino feito no app, ainda sem check-in. Ele já conta na sua sequência e na meta da semana.</p>
-                <Button onClick={() => navigate(`/checkin?sessao=${open.session!.id}`)}>
-                  <Camera className="size-5" /> Adicionar foto / check-in
-                </Button>
-              </>
-            ) : (
-              <Button variant="danger" onClick={() => remove(open)}>Excluir check-in</Button>
+            {open.onlySession && (
+              <Button onClick={() => navigate(`/registrar-treino?sessao=${open.session!.id}`)}>
+                <Camera className="size-5" /> Adicionar foto
+              </Button>
             )}
+            {!open.onlySession && open.session && open.photo_url && (
+              <button onClick={() => removePhoto(open)} className="w-full py-1 text-sm font-semibold text-muted">Remover só a foto</button>
+            )}
+            <Button variant="danger" onClick={() => remove(open)}>
+              <Trash2 className="size-5" /> Remover este treino
+            </Button>
           </div>
         )}
       </Sheet>

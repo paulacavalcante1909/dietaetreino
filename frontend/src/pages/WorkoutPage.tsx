@@ -5,7 +5,7 @@ import { ExerciseImage } from '../components/ExerciseImage'
 import { ExercisePicker } from '../components/ExercisePicker'
 import { Sheet } from '../components/Sheet'
 import { WeightChart } from '../components/WeightChart'
-import { Copy, Trash2, Trophy, X } from 'lucide-react'
+import { Copy, Play, Trash2, Trophy, X } from 'lucide-react'
 import { SetsSheet } from '../components/SetsSheet'
 import { isTimed, minutesOf, prescription } from '../lib/workout'
 import { useToast } from '../components/Toast'
@@ -78,7 +78,7 @@ export function WorkoutPage() {
   }
 
   const remove = async () => {
-    if (!confirm(`Excluir “${workout?.name}”? Seus treinos e check-ins continuam no histórico.`)) return
+    if (!confirm(`Excluir “${workout?.name}”? Os treinos já feitos continuam no histórico.`)) return
     await api(`/workouts/${id}`, { method: 'DELETE' })
     toast({ text: 'Treino excluído' })
     navigate('/treinos', { replace: true })
@@ -171,9 +171,16 @@ export function WorkoutPage() {
           {editing ? (
             <Button onClick={save} loading={saving} disabled={!name.trim()}>Salvar treino</Button>
           ) : (
-            <Link to={`/checkin?treino=${workout.id}`} className="flex h-12 w-full items-center justify-center rounded-2xl bg-primary font-semibold text-white shadow-[0_6px_20px_-8px_rgba(155,63,168,0.7)] active:scale-[0.98]">
-              Fazer check-in deste treino
-            </Link>
+            <div className="flex gap-2">
+              {items.length > 0 && (
+                <Link to={`/treinos/${workout.id}/iniciar`} className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary font-semibold text-white shadow-[0_6px_20px_-8px_rgba(155,63,168,0.7)] active:scale-[0.98]">
+                  <Play className="size-4 fill-current" /> Iniciar treino
+                </Link>
+              )}
+              <Link to={`/registrar-treino?treino=${workout.id}`} className={`flex h-12 items-center justify-center rounded-2xl bg-soft px-4 font-semibold text-primary active:scale-[0.98] ${items.length > 0 ? '' : 'flex-1'}`}>
+                Já fiz
+              </Link>
+            </div>
           )}
         </div>
       </div>

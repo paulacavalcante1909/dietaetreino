@@ -75,7 +75,8 @@ class CheckinController extends Controller
             'session_id' => $session?->id,
             // Avulso: o nome vem do registro (ex.: "Corrida na esteira")
             'workout_name' => $workout?->name ?? $session->workout_name,
-            'date' => $data['date'] ?? now()->toDateString(),
+            // Foto de um treino registrado: vale para o dia do treino
+            'date' => $session?->date?->toDateString() ?? $data['date'] ?? now()->toDateString(),
             'photo_path' => $path,
             'note' => $data['note'] ?? null,
         ]);

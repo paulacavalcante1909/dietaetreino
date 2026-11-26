@@ -488,7 +488,7 @@ function WorkoutsTab() {
         </div>
       </Card>
 
-      <Link to="/checkins" className="block text-center text-sm font-bold text-primary">Ver histórico de treinos</Link>
+      <Link to="/historico-treinos" className="block text-center text-sm font-bold text-primary">Ver histórico de treinos</Link>
     </div>
   )
 }
