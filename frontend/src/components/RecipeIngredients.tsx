@@ -11,7 +11,7 @@ import { BackButton, Button } from './ui'
 import { entryQtyLabel, fmtQty, nutrientsFor, num } from '../lib/nutrition'
 import type { FoodDetail, Nutrients, RecipeItem } from '../lib/types'
 
-export const ZERO: Nutrients = { kcal: 0, carbs: 0, protein: 0, fat: 0, sodium: 0 }
+export const ZERO: Nutrients = { kcal: 0, carbs: 0, protein: 0, fat: 0, sodium: 0, fiber: 0 }
 
 export function itemAmount(i: Pick<RecipeItem, 'quantity' | 'portion_id' | 'food'>) {
   const p = i.food.portions.find((x) => x.id === i.portion_id)
@@ -35,7 +35,7 @@ export function sumItems(items: RecipeItem[]): Nutrients & { amount: number } {
     (acc, i) => {
       const a = itemAmount(i)
       const n = nutrientsFor(i.food, a)
-      return { kcal: acc.kcal + n.kcal, carbs: acc.carbs + n.carbs, protein: acc.protein + n.protein, fat: acc.fat + n.fat, sodium: acc.sodium + n.sodium, amount: acc.amount + a }
+      return { kcal: acc.kcal + n.kcal, carbs: acc.carbs + n.carbs, protein: acc.protein + n.protein, fat: acc.fat + n.fat, sodium: acc.sodium + n.sodium, fiber: acc.fiber + n.fiber, amount: acc.amount + a }
     },
     { ...ZERO, amount: 0 },
   )

@@ -13,13 +13,14 @@ const fields: { key: keyof Goal; label: string; suffix: string; placeholder: str
   { key: 'protein_g', label: 'Proteínas', suffix: 'g', placeholder: 'ex.: 120', decimal: true },
   { key: 'fat_g', label: 'Gorduras', suffix: 'g', placeholder: 'ex.: 60', decimal: true },
   { key: 'sodium_mg', label: 'Sódio', suffix: 'mg', placeholder: 'ex.: 2000' },
+  { key: 'fiber_g', label: 'Fibras', suffix: 'g', placeholder: 'ex.: 25' },
   { key: 'water_ml', label: 'Água', suffix: 'ml', placeholder: 'ex.: 2500' },
 ]
 
 type FormState = Record<string, string>
 
 const toForm = (g: Goal | null): FormState =>
-  Object.fromEntries(fields.map((f) => [f.key, g ? String(g[f.key] ?? '') : '']))
+  Object.fromEntries(fields.map((f) => [f.key, g ? String(g[f.key] ?? '') : f.key === 'fiber_g' ? '25' : '']))
 
 const num = (s: string) => Number(s.replace(',', '.'))
 

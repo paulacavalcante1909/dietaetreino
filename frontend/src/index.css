@@ -7,6 +7,7 @@
   --color-pink: #d66baa;
   --color-violet: #856bd6;
   --color-coral: #d66c6b;
+  --color-fiber: #4f9a6b; /* fibras */
 
   /* Complementos para contraste */
   --color-primary: #9b3fa8;
@@ -79,6 +80,7 @@ input[type='number'] {
   --color-pink: #e8919c; /* proteínas: rosa do top */
   --color-violet: #8b5a3c; /* gorduras: marrom das manchas */
   --color-coral: #cf6b5b; /* sódio / alerta */
+  --color-fiber: #7b8f3e; /* fibras */
   --color-primary: #96582f;
   --color-primary-hover: #7f4a27;
   --color-water: #6f9bc8;
@@ -101,6 +103,7 @@ input[type='number'] {
   --color-pink: #f2838a; /* proteínas: vermelho claro */
   --color-violet: #c9ced6; /* gorduras: cinza claro */
   --color-coral: #ffa36b; /* sódio / alerta: laranja */
+  --color-fiber: #6fc28f; /* fibras */
   --color-primary: #d6343a;
   --color-primary-hover: #e5484d;
   --color-water: #6ea8fe;

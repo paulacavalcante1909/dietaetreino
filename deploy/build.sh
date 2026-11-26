@@ -18,7 +18,8 @@ rsync -a "$ROOT/backend/" "$OUT/" \
   --exclude vendor --exclude node_modules --exclude tests \
   --exclude .env --exclude '.env.*' --exclude 'storage/' \
   --exclude 'bootstrap/cache/*.php' --exclude 'database/database.sqlite' \
-  --exclude CLAUDE.md --exclude AGENTS.md --exclude .phpunit.result.cache
+  --exclude CLAUDE.md --exclude AGENTS.md --exclude .phpunit.result.cache \
+  --exclude .claude --exclude .mcp.json --exclude boost.json --exclude .ai
 
 # Estrutura de storage vazia (no servidor ela é preservada entre deploys)
 mkdir -p "$OUT"/storage/app/private "$OUT"/storage/framework/{cache/data,sessions,views} "$OUT"/storage/logs

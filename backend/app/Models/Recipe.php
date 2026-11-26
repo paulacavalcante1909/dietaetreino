@@ -34,7 +34,7 @@ class Recipe extends Model
             $this->loadMissing('items.food', 'items.portion');
             $items = $this->items;
         }
-        $t = ['kcal' => 0, 'carbs' => 0, 'protein' => 0, 'fat' => 0, 'sodium' => 0, 'amount' => 0];
+        $t = ['kcal' => 0, 'carbs' => 0, 'protein' => 0, 'fat' => 0, 'sodium' => 0, 'fiber' => 0, 'amount' => 0];
         foreach ($items as $item) {
             if (! $item->food) {
                 continue;

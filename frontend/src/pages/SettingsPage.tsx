@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { useState, type FormEvent, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
 import { Alert, Button, Card, Field, PasswordField } from '../components/ui'
 import { api, ApiError } from '../lib/api'
@@ -59,12 +59,22 @@ function useSubmit(fn: () => Promise<void>) {
 
 export function SettingsPage() {
   const { user, setUser, logout, clear } = useAuth()
-  const [open, setOpen] = useState<string | null>(null)
+  const [params] = useSearchParams()
+  const [open, setOpen] = useState<string | null>(params.get('abrir') === 'dados' ? 'profile' : null)
   const toggle = (k: string) => setOpen(open === k ? null : k)
 
-  const [profile, setProfile] = useState({ name: user?.name ?? '', email: user?.email ?? '' })
+  const [profile, setProfile] = useState({
+    name: user?.name ?? '',
+    email: user?.email ?? '',
+    sex: user?.sex ?? '',
+    birth_date: user?.birth_date ?? '',
+    height_cm: user?.height_cm ? String(user.height_cm) : '',
+  })
   const profileForm = useSubmit(async () => {
-    const r = await api<{ user: User }>('/me', { method: 'PUT', body: profile })
+    const r = await api<{ user: User }>('/me', {
+      method: 'PUT',
+      body: { ...profile, sex: profile.sex || null, birth_date: profile.birth_date || null, height_cm: profile.height_cm ? Number(profile.height_cm) : null },
+    })
     setUser(r.user)
   })
 
@@ -124,6 +134,32 @@ export function SettingsPage() {
         <form onSubmit={profileForm.submit} className="space-y-3">
           <Field label="Nome" name="name" required value={profile.name} onChange={(e) => setProfile({ ...profile, name: e.target.value })} error={profileForm.error?.field('name')} />
           <Field label="E-mail" name="email" type="email" required value={profile.email} onChange={(e) => setProfile({ ...profile, email: e.target.value })} error={profileForm.error?.field('email')} />
+          <div className="space-y-3 rounded-2xl bg-soft p-3">
+            <p className="text-xs text-muted">Para estimar seu gasto calórico e o déficit (fórmula de Mifflin-St Jeor). Opcional.</p>
+            <div>
+              <p className="mb-1.5 text-sm font-medium">Sexo (para a fórmula)</p>
+              <div className="flex gap-2" role="radiogroup" aria-label="Sexo">
+                {([['f', 'Feminino'], ['m', 'Masculino']] as const).map(([k, l]) => (
+                  <button
+                    key={k}
+                    type="button"
+                    role="radio"
+                    aria-checked={profile.sex === k}
+                    onClick={() => setProfile({ ...profile, sex: profile.sex === k ? '' : k })}
+                    className={`h-11 flex-1 rounded-xl text-sm font-semibold transition ${profile.sex === k ? 'bg-primary text-white' : 'bg-surface text-ink'}`}
+                  >
+                    {l}
+                  </button>
+                ))}
+              </div>
+              {profileForm.error?.field('sex') && <p className="mt-1 text-xs text-danger">{profileForm.error.field('sex')}</p>}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Nascimento" name="birth_date" type="date" max={new Date().toISOString().slice(0, 10)} value={profile.birth_date} onChange={(e) => setProfile({ ...profile, birth_date: e.target.value })} error={profileForm.error?.field('birth_date')} />
+              <Field label="Altura" name="height_cm" suffix="cm" inputMode="numeric" placeholder="ex.: 165" value={profile.height_cm} onChange={(e) => setProfile({ ...profile, height_cm: e.target.value.replace(/\D/g, '').slice(0, 3) })} error={profileForm.error?.field('height_cm')} />
+            </div>
+            <p className="text-xs text-muted">O peso vem do seu último registro em Progresso → Peso.</p>
+          </div>
           <Button type="submit" loading={profileForm.loading}>
             {profileForm.done ? 'Salvo ✓' : 'Salvar'}
           </Button>

@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 
 class FoodController extends Controller
 {
-    private const LIST_COLUMNS = ['id', 'user_id', 'source', 'name', 'display_name', 'brand', 'base_qty', 'base_unit', 'kcal', 'carbs', 'protein', 'fat', 'sodium'];
+    private const LIST_COLUMNS = ['id', 'user_id', 'source', 'name', 'display_name', 'brand', 'base_qty', 'base_unit', 'kcal', 'carbs', 'protein', 'fat', 'sodium', 'fiber'];
 
     /**
      * Código de barras: 1) alimento da usuária com esse código, 2) cache global, 3) Open Food Facts.
@@ -192,6 +192,7 @@ class FoodController extends Controller
             'protein' => ['required', 'numeric', 'min:0', 'max:5000'],
             'fat' => ['required', 'numeric', 'min:0', 'max:5000'],
             'sodium' => ['required', 'numeric', 'min:0', 'max:100000'],
+            'fiber' => ['nullable', 'numeric', 'min:0', 'max:5000'],
             'portions' => ['nullable', 'array', 'max:10'],
             'portions.*.label' => ['required', 'string', 'max:60'],
             'portions.*.qty' => ['required', 'numeric', 'gt:0', 'max:5000'],

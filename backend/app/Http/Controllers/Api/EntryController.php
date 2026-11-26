@@ -119,7 +119,7 @@ class EntryController extends Controller
     private function scale(DiaryEntry $entry, float $quantity): void
     {
         $f = $entry->quantity > 0 ? $quantity / $entry->quantity : 1;
-        foreach (['amount', 'kcal', 'carbs', 'protein', 'fat', 'sodium'] as $k) {
+        foreach (['amount', 'kcal', 'carbs', 'protein', 'fat', 'sodium', 'fiber'] as $k) {
             $entry->{$k} = round($entry->{$k} * $f, 1);
         }
         $entry->quantity = $quantity;

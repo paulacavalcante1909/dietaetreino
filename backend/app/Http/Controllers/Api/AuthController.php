@@ -76,9 +76,18 @@ class AuthController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'max:190', 'unique:users,email,'.$user->id],
-        ], ['email.unique' => 'Já existe uma conta com este e-mail.']);
+            'sex' => ['sometimes', 'nullable', 'in:f,m'],
+            'birth_date' => ['sometimes', 'nullable', 'date_format:Y-m-d', 'before:-10 years', 'after:1900-01-01'],
+            'height_cm' => ['sometimes', 'nullable', 'integer', 'min:100', 'max:250'],
+        ], [
+            'email.unique' => 'Já existe uma conta com este e-mail.',
+            'birth_date.before' => 'Confira a data de nascimento.',
+            'birth_date.after' => 'Confira a data de nascimento.',
+            'height_cm.min' => 'Informe a altura em centímetros (ex.: 165).',
+            'height_cm.max' => 'Informe a altura em centímetros (ex.: 165).',
+        ]);
 
-        $user->update(['name' => $data['name'], 'email' => strtolower($data['email'])]);
+        $user->update([...$data, 'email' => strtolower($data['email'])]);
 
         return response()->json(['user' => $user]);
     }

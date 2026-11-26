@@ -5,12 +5,12 @@ import { Sheet } from '../components/Sheet'
 import { useToast } from '../components/Toast'
 import { WeightChart } from '../components/WeightChart'
 import { Bar, Ring, fmt, fmtKcal } from '../components/Ring'
-import { CalendarCheck, ChevronLeft, ChevronRight, Droplet, Flame, Timer, Target } from 'lucide-react'
+import { Activity, CalendarCheck, ChevronLeft, ChevronRight, Droplet, Flame, Timer, Target } from 'lucide-react'
 import { Alert, Button, Card, EmptyState, Field } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import { addDays, isoDate, parseIso } from '../lib/date'
 import { num } from '../lib/nutrition'
-import type { Weight, WeightSummary } from '../lib/types'
+import type { Energy, Weight, WeightSummary } from '../lib/types'
 
 const RANGES = [
   ['30', '30 dias'],
@@ -257,9 +257,11 @@ interface WeekDay {
   protein: number
   fat: number
   sodium: number
+  fiber: number
   water: number
   burned: number
-  goal: { kcal: number; carbs_g: number; protein_g: number; fat_g: number; sodium_mg: number; water_ml: number } | null
+  get: number | null // gasto estimado do dia (se o perfil estiver completo)
+  goal: { kcal: number; carbs_g: number; protein_g: number; fat_g: number; sodium_mg: number; fiber_g: number; water_ml: number } | null
 }
 
 const WD = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
@@ -270,10 +272,16 @@ function WeekTab() {
     return addDays(t, -parseIso(t).getDay())
   })
   const [days, setDays] = useState<WeekDay[] | null>(null)
+  const [energy, setEnergy] = useState<Energy | null>(null)
 
   useEffect(() => {
     setDays(null)
-    api<{ days: WeekDay[] }>(`/stats/week?start=${start}`).then((r) => setDays(r.days)).catch(() => setDays([]))
+    api<{ days: WeekDay[]; energy: Energy }>(`/stats/week?start=${start}`)
+      .then((r) => {
+        setDays(r.days)
+        setEnergy(r.energy)
+      })
+      .catch(() => setDays([]))
   }, [start])
 
   const thisWeek = start === addDays(isoDate(), -parseIso(isoDate()).getDay())
@@ -281,13 +289,17 @@ function WeekTab() {
   const title = thisWeek ? 'Esta semana' : `${shortDate(start)} – ${shortDate(end)}`
 
   const logged = days?.filter((d) => d.logged) ?? []
-  const avg = (k: keyof Pick<WeekDay, 'kcal' | 'carbs' | 'protein' | 'fat' | 'sodium' | 'water'>) =>
+  const avg = (k: keyof Pick<WeekDay, 'kcal' | 'carbs' | 'protein' | 'fat' | 'sodium' | 'fiber' | 'water'>) =>
     logged.length ? logged.reduce((a, d) => a + d[k], 0) / logged.length : 0
   const goal = days?.find((d) => d.goal)?.goal ?? null
   const inGoal = logged.filter((d) => d.goal && Math.abs(d.kcal - d.goal.kcal) <= d.goal.kcal * 0.1).length
   const burned = days?.reduce((a, d) => a + d.burned, 0) ?? 0
   const max = Math.max(goal?.kcal ?? 0, ...(days ?? []).map((d) => d.kcal), 1)
   const waterDays = days?.filter((d) => d.water > 0) ?? []
+  // Só dias já encerrados: hoje ainda está em andamento e inflaria o déficit
+  const withGet = logged.filter((d) => d.get != null && d.date < isoDate())
+  const todayPending = logged.some((d) => d.get != null && d.date === isoDate())
+  const deficitTotal = withGet.reduce((a, d) => a + (d.get! - d.kcal), 0)
   const waterAvg = waterDays.length ? waterDays.reduce((a, d) => a + d.water, 0) / waterDays.length : 0
 
   return (
@@ -316,6 +328,32 @@ function WeekTab() {
             <MiniStat icon={<Flame className="size-4 text-orchid" />} value={fmtKcal(avg('kcal'))} label="kcal/dia (média)" />
             <MiniStat icon={<Flame className="size-4 text-coral" />} value={`~${fmtKcal(burned)}`} label="gastas no treino" />
           </div>
+
+          {/* Déficit da semana: soma de (gasto estimado − consumido) nos dias registrados */}
+          {withGet.length > 0 ? (
+            <Card className="flex items-center gap-3">
+              <span className={`flex size-11 shrink-0 items-center justify-center rounded-full ${deficitTotal < 0 ? 'bg-coral/15 text-coral' : 'bg-fiber/15 text-fiber'}`}>
+                <Activity className="size-5" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-muted">{deficitTotal < 0 ? 'Superávit' : 'Déficit'} na semana ({withGet.length} {withGet.length === 1 ? 'dia completo' : 'dias completos'})</p>
+                <p className="text-xl font-extrabold">
+                  {fmtKcal(Math.abs(deficitTotal))} kcal <span className="text-sm font-semibold text-muted">· {fmtKcal(Math.abs(deficitTotal) / withGet.length)}/dia</span>
+                </p>
+                <p className="text-xs text-muted">
+                  ≈ {(Math.abs(deficitTotal) / 7700).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} kg de gordura {deficitTotal < 0 ? 'a mais' : 'a menos'} (estimativa)
+                </p>
+              </div>
+            </Card>
+          ) : todayPending ? (
+            <p className="rounded-2xl bg-soft p-3 text-sm text-muted">O déficit da semana soma os dias já encerrados. O de hoje está na tela inicial.</p>
+          ) : (
+            energy && !energy.available && (
+              <Link to="/ajustes?abrir=dados" className="flex items-center gap-2 rounded-2xl bg-soft p-3 text-sm font-semibold text-primary">
+                <Activity className="size-4" /> Complete seus dados para ver o déficit calórico <ChevronRight className="ml-auto size-4" />
+              </Link>
+            )
+          )}
 
           {/* Calorias por dia × meta */}
           <Card>
@@ -357,6 +395,7 @@ function WeekTab() {
               <Bar label="Proteínas" value={Math.round(avg('protein'))} max={goal.protein_g} unit="g" color="var(--color-pink)" />
               <Bar label="Gorduras" value={Math.round(avg('fat'))} max={goal.fat_g} unit="g" color="var(--color-violet)" />
               <Bar label="Sódio" value={Math.round(avg('sodium'))} max={goal.sodium_mg} unit="mg" color="var(--color-coral)" />
+              <Bar label="Fibras" value={Math.round(avg('fiber') * 10) / 10} max={goal.fiber_g || 25} unit="g" color="var(--color-fiber)" atLeast />
               <div className="flex items-center gap-2 pt-1 text-sm text-muted">
                 <Droplet className="size-4 text-water" /> Água: {fmt(Math.round(waterAvg))} ml/dia em média (meta {fmt(goal.water_ml)} ml)
               </div>

@@ -9,7 +9,7 @@ class DiaryEntry extends Model
 {
     protected $fillable = [
         'date', 'meal_id', 'food_id', 'recipe_id', 'portion_id', 'name', 'brand', 'quantity', 'unit_label',
-        'amount', 'base_unit', 'kcal', 'carbs', 'protein', 'fat', 'sodium',
+        'amount', 'base_unit', 'kcal', 'carbs', 'protein', 'fat', 'sodium', 'fiber',
     ];
 
     protected $hidden = ['user_id', 'created_at', 'updated_at'];
@@ -19,7 +19,7 @@ class DiaryEntry extends Model
         return [
             'date' => 'date:Y-m-d',
             'quantity' => 'float', 'amount' => 'float', 'kcal' => 'float', 'carbs' => 'float',
-            'protein' => 'float', 'fat' => 'float', 'sodium' => 'float',
+            'protein' => 'float', 'fat' => 'float', 'sodium' => 'float', 'fiber' => 'float',
         ];
     }
 
@@ -52,6 +52,7 @@ class DiaryEntry extends Model
             'protein' => round($per['protein'] * $servings, 1),
             'fat' => round($per['fat'] * $servings, 1),
             'sodium' => round($per['sodium'] * $servings, 1),
+            'fiber' => round($per['fiber'] * $servings, 1),
         ]);
 
         return $this;

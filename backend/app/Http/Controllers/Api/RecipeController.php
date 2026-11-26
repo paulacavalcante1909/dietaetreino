@@ -100,7 +100,7 @@ class RecipeController extends Controller
                 'portion_id' => $i->portion_id,
                 'quantity' => $i->quantity,
                 'amount' => $i->amount(),
-                'food' => $i->food?->only('id', 'name', 'brand', 'base_qty', 'base_unit', 'kcal', 'carbs', 'protein', 'fat', 'sodium', 'source', 'user_id')
+                'food' => $i->food?->only('id', 'name', 'brand', 'base_qty', 'base_unit', 'kcal', 'carbs', 'protein', 'fat', 'sodium', 'fiber', 'source', 'user_id')
                     + ['portions' => $i->food?->portions ?? [], 'deleted' => (bool) $i->food?->trashed()],
                 'nutrients' => $i->food?->nutrientsFor($i->amount()),
             ]),

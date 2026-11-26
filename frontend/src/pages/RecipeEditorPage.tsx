@@ -36,7 +36,7 @@ export function RecipeEditorPage() {
 
   const totals = useMemo(() => sumItems(items), [items])
   const s = num(servings) > 0 ? num(servings) : 1
-  const per = { kcal: totals.kcal / s, carbs: totals.carbs / s, protein: totals.protein / s, fat: totals.fat / s, sodium: totals.sodium / s }
+  const per = { kcal: totals.kcal / s, carbs: totals.carbs / s, protein: totals.protein / s, fat: totals.fat / s, sodium: totals.sodium / s, fiber: totals.fiber / s }
 
   const save = async () => {
     setSaving(true)
@@ -88,12 +88,13 @@ export function RecipeEditorPage() {
 
         <Card className="!p-4">
           <p className="mb-2 text-xs font-semibold tracking-wide text-muted uppercase">Por porção</p>
-          <div className="grid grid-cols-5 text-center">
+          <div className="grid grid-cols-6 text-center">
             <Mini label="kcal" value={Math.round(per.kcal)} className="text-primary" />
             <Mini label="carb" value={per.carbs} className="text-lavender" />
             <Mini label="prot" value={per.protein} className="text-pink" />
             <Mini label="gord" value={per.fat} className="text-violet" />
             <Mini label="sódio" value={per.sodium} className="text-coral" />
+            <Mini label="fibras" value={per.fiber} className="text-fiber" />
           </div>
           {s !== 1 && <p className="mt-2 text-center text-xs text-muted">Receita inteira: {fmtKcal(totals.kcal)} kcal</p>}
         </Card>

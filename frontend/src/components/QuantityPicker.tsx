@@ -70,12 +70,13 @@ export function QuantityPicker({ food, portions, value, onChange, hideGrams }: P
         </StepButton>
       </div>
 
-      <motion.div layout className="grid grid-cols-5 gap-1 rounded-2xl bg-soft p-3 text-center">
+      <motion.div layout className="grid grid-cols-6 gap-1 rounded-2xl bg-soft p-3 text-center">
         <Nut label="kcal" value={Math.round(n.kcal)} color="text-primary" strong />
         <Nut label="carb" value={n.carbs} unit="g" color="text-lavender" />
         <Nut label="prot" value={n.protein} unit="g" color="text-pink" />
         <Nut label="gord" value={n.fat} unit="g" color="text-violet" />
         <Nut label="sódio" value={n.sodium} unit="mg" color="text-coral" />
+        <Nut label="fibras" value={n.fiber} unit="g" color="text-fiber" />
       </motion.div>
       {portion && (
         <p className="-mt-2 text-center text-xs text-muted">

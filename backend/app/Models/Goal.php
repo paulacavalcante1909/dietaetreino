@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Goal extends Model
 {
     protected $fillable = [
-        'valid_from', 'kcal', 'carbs_g', 'protein_g', 'fat_g', 'sodium_mg', 'water_ml',
+        'valid_from', 'kcal', 'carbs_g', 'protein_g', 'fat_g', 'sodium_mg', 'fiber_g', 'water_ml',
     ];
 
     protected $hidden = ['user_id', 'created_at', 'updated_at'];
@@ -22,6 +22,7 @@ class Goal extends Model
             'protein_g' => 'float',
             'fat_g' => 'float',
             'sodium_mg' => 'integer',
+            'fiber_g' => 'integer',
             'water_ml' => 'integer',
         ];
     }

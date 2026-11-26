@@ -1,3 +1,4 @@
+import { Check } from 'lucide-react'
 import { motion } from 'framer-motion'
 import type { ReactNode } from 'react'
 
@@ -40,14 +41,17 @@ export function Ring({ value, max, size = 180, stroke = 14, color, children }: R
   )
 }
 
-export function Bar({ label, value, max, unit, color }: { label: string; value: number; max: number; unit: string; color: string }) {
+/** Barra de nutriente. `atLeast`: a meta é um mínimo (ex.: fibras), então passar dela é bom. */
+export function Bar({ label, value, max, unit, color, atLeast = false }: { label: string; value: number; max: number; unit: string; color: string; atLeast?: boolean }) {
   const pct = max > 0 ? Math.min(value / max, 1) : 0
-  const over = max > 0 && value > max
+  const reached = max > 0 && (atLeast ? value >= max : value > max)
+  const over = reached && !atLeast
   return (
     <div>
       <div className="mb-1.5 flex items-baseline justify-between text-sm">
         <span className="font-medium">{label}</span>
-        <span className={over ? 'font-medium text-danger' : 'text-muted'}>
+        <span className={over ? 'font-medium text-danger' : reached ? 'font-semibold text-ink' : 'text-muted'}>
+          {reached && atLeast && <Check className="mr-1 inline size-3.5 text-fiber" strokeWidth={3} aria-label="meta atingida" />}
           {fmt(value)} / {fmt(max)} {unit}
         </span>
       </div>

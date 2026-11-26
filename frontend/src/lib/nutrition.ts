@@ -4,7 +4,7 @@ import type { Entry, FoodLite, Nutrients, Portion } from './types'
 export function nutrientsFor(food: FoodLite, amount: number): Nutrients {
   const f = food.base_qty > 0 ? amount / food.base_qty : 0
   const r = (n: number) => Math.round(n * f * 10) / 10
-  return { kcal: r(food.kcal), carbs: r(food.carbs), protein: r(food.protein), fat: r(food.fat), sodium: r(food.sodium) }
+  return { kcal: r(food.kcal), carbs: r(food.carbs), protein: r(food.protein), fat: r(food.fat), sodium: r(food.sodium), fiber: r(food.fiber ?? 0) }
 }
 
 export const num = (s: string) => Number(s.replace(',', '.'))

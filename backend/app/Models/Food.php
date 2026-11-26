@@ -105,6 +105,7 @@ class Food extends Model
             'protein' => round($this->protein * $f, 1),
             'fat' => round($this->fat * $f, 1),
             'sodium' => round($this->sodium * $f, 1),
+            'fiber' => round(($this->fiber ?? 0) * $f, 1),
         ];
     }
 }

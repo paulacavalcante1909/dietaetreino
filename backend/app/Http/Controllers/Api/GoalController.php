@@ -26,6 +26,7 @@ class GoalController extends Controller
             'protein_g' => ['required', 'numeric', 'min:0', 'max:1000'],
             'fat_g' => ['required', 'numeric', 'min:0', 'max:1000'],
             'sodium_mg' => ['required', 'integer', 'min:0', 'max:20000'],
+            'fiber_g' => ['sometimes', 'integer', 'min:0', 'max:200'],
             'water_ml' => ['required', 'integer', 'min:0', 'max:10000'],
         ]);
 

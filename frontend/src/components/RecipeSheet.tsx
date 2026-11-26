@@ -59,7 +59,7 @@ export function RecipeSheet({ recipe, onClose, onConfirm, onEdit }: Props) {
   const per = useMemo(() => {
     const s = detail && detail.servings > 0 ? detail.servings : 1
     const t = sumItems(items)
-    return { kcal: t.kcal / s, carbs: t.carbs / s, protein: t.protein / s, fat: t.fat / s, sodium: t.sodium / s, amount: t.amount / s }
+    return { kcal: t.kcal / s, carbs: t.carbs / s, protein: t.protein / s, fat: t.fat / s, sodium: t.sodium / s, fiber: t.fiber / s, amount: t.amount / s }
   }, [items, detail])
 
   if (!recipe) return <Sheet open={false} onClose={onClose}>{null}</Sheet>
@@ -67,7 +67,7 @@ export function RecipeSheet({ recipe, onClose, onConfirm, onEdit }: Props) {
   const p = detail ? per : recipe.per_serving
   const asFood: FoodLite = {
     id: 0, user_id: 1, source: 'manual', name: recipe.name, brand: null,
-    base_qty: p.amount || 1, base_unit: 'g', kcal: p.kcal, carbs: p.carbs, protein: p.protein, fat: p.fat, sodium: p.sodium,
+    base_qty: p.amount || 1, base_unit: 'g', kcal: p.kcal, carbs: p.carbs, protein: p.protein, fat: p.fat, sodium: p.sodium, fiber: p.fiber,
   }
 
   const confirm = async () => {

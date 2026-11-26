@@ -40,7 +40,7 @@ export function EntrySheet({ entry, meals, onClose, onChanged }: Props) {
   const snapshotFood: FoodLite = {
     id: 0, user_id: null, source: 'manual', name: entry.name, brand: entry.brand,
     base_qty: entry.quantity, base_unit: entry.base_unit,
-    kcal: entry.kcal, carbs: entry.carbs, protein: entry.protein, fat: entry.fat, sodium: entry.sodium,
+    kcal: entry.kcal, carbs: entry.carbs, protein: entry.protein, fat: entry.fat, sodium: entry.sodium, fiber: entry.fiber,
   }
 
   const save = async () => {

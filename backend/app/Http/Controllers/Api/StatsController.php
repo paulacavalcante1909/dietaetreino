@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Checkin;
 use App\Models\DiaryEntry;
 use App\Models\WorkoutSession;
+use App\Services\EnergyEstimator;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -37,13 +38,13 @@ class StatsController extends Controller
     }
 
     /** Resumo de alimentação de uma semana (seg–dom) contra a meta de cada dia. */
-    public function week(Request $request): JsonResponse
+    public function week(Request $request, EnergyEstimator $energy): JsonResponse
     {
         $start = CarbonImmutable::parse($request->validate(['start' => ['nullable', 'date_format:Y-m-d']])['start'] ?? 'today')->startOfWeek();
         $user = $request->user();
 
         $rows = DiaryEntry::where('user_id', $user->id)->whereBetween('date', [$start->toDateString(), $start->endOfWeek()->toDateString()])
-            ->selectRaw('date, SUM(kcal) kcal, SUM(carbs) carbs, SUM(protein) protein, SUM(fat) fat, SUM(sodium) sodium')
+            ->selectRaw('date, SUM(kcal) kcal, SUM(carbs) carbs, SUM(protein) protein, SUM(fat) fat, SUM(sodium) sodium, SUM(fiber) fiber')
             ->groupBy('date')->get()->keyBy(fn ($r) => substr((string) $r->date, 0, 10));
         $water = $user->waterLogs()->whereBetween('date', [$start->toDateString(), $start->endOfWeek()->toDateString()])
             ->selectRaw('date, SUM(ml) ml')->groupBy('date')->pluck('ml', 'date')->mapWithKeys(fn ($v, $k) => [substr((string) $k, 0, 10) => (int) $v]);
@@ -63,13 +64,30 @@ class StatsController extends Controller
                 'protein' => round((float) ($r->protein ?? 0), 1),
                 'fat' => round((float) ($r->fat ?? 0), 1),
                 'sodium' => round((float) ($r->sodium ?? 0)),
+                'fiber' => round((float) ($r->fiber ?? 0), 1),
                 'water' => $water[$d] ?? 0,
                 'burned' => $burned[$d] ?? 0,
-                'goal' => $goal?->only('kcal', 'carbs_g', 'protein_g', 'fat_g', 'sodium_mg', 'water_ml'),
+                'goal' => $goal?->only('kcal', 'carbs_g', 'protein_g', 'fat_g', 'sodium_mg', 'fiber_g', 'water_ml'),
             ];
         }
 
-        return response()->json(['start' => $start->toDateString(), 'days' => $days]);
+        // Gasto estimado (GET) por dia registrado, para o déficit da semana
+        $energyInfo = null;
+        foreach ($days as &$day) {
+            $day['get'] = null;
+            if ($day['logged'] && $day['date'] <= now()->toDateString()) {
+                $e = $energy->forDate($user, $day['date']);
+                if ($e['available']) {
+                    $day['get'] = $e['get'];
+                    $energyInfo = $e;
+                } else {
+                    $energyInfo ??= $e;
+                }
+            }
+        }
+        unset($day);
+
+        return response()->json(['start' => $start->toDateString(), 'days' => $days, 'energy' => $energyInfo ?? $energy->forDate($user, now()->toDateString())]);
     }
 
     /** Treinos por semana (últimas N semanas): dias treinados, minutos e kcal. */

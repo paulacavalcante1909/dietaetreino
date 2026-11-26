@@ -2,6 +2,7 @@ import { AnimatePresence, motion, type PanInfo } from 'framer-motion'
 import { ChevronDown, ChevronLeft, ChevronRight, Droplet, Flame, Pencil, Plus, RotateCcw, Scale, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { DeficitCard } from '../components/DeficitCard'
 import { EntrySheet } from '../components/EntrySheet'
 import { Bar, Ring, fmt, fmtKcal } from '../components/Ring'
 import { Sheet } from '../components/Sheet'
@@ -133,13 +134,14 @@ export function HomePage() {
                   <div className="w-full">
                     <button onClick={toggleMacros} aria-expanded={macrosOpen} className="flex w-full items-center justify-between rounded-xl px-1 py-1 text-sm font-semibold text-muted">
                       {macrosOpen ? (
-                        'Macros e sódio'
+                        'Macros, sódio e fibras'
                       ) : (
                         <span className="flex gap-3 text-xs font-medium">
                           <span>C {fmt(t.carbs)}g</span>
                           <span>P {fmt(t.protein)}g</span>
                           <span>G {fmt(t.fat)}g</span>
                           <span>Na {fmtKcal(t.sodium)}mg</span>
+                          <span>Fib {fmt(t.fiber)}g</span>
                         </span>
                       )}
                       <motion.span animate={{ rotate: macrosOpen ? 180 : 0 }}>
@@ -154,6 +156,7 @@ export function HomePage() {
                             <Bar label="Proteínas" value={t.protein} max={goal.protein_g} unit="g" color="var(--color-pink)" />
                             <Bar label="Gorduras" value={t.fat} max={goal.fat_g} unit="g" color="var(--color-violet)" />
                             <Bar label="Sódio" value={t.sodium} max={goal.sodium_mg} unit="mg" color="var(--color-coral)" />
+                            <Bar label="Fibras" value={t.fiber} max={goal.fiber_g || 25} unit="g" color="var(--color-fiber)" atLeast />
                           </div>
                         </motion.div>
                       )}
@@ -161,6 +164,13 @@ export function HomePage() {
                   </div>
                 </Card>
               </motion.div>
+
+              {/* Déficit calórico (gasto estimado − consumido); não faz sentido em dias futuros */}
+              {day.energy && date <= isoDate() && (
+                <motion.div variants={item}>
+                  <DeficitCard energy={day.energy} consumed={t.kcal} isToday={date === isoDate()} />
+                </motion.div>
+              )}
 
               {/* Refeições logo após o resumo: é a ação mais usada */}
               <motion.div variants={item} className="space-y-3">

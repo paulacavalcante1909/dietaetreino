@@ -4,6 +4,9 @@ export interface User {
   email: string
   created_at: string
   add_burned_to_goal?: boolean
+  sex?: 'f' | 'm' | null
+  birth_date?: string | null
+  height_cm?: number | null
 }
 
 export interface Goal {
@@ -14,6 +17,7 @@ export interface Goal {
   protein_g: number
   fat_g: number
   sodium_mg: number
+  fiber_g: number
   water_ml: number
 }
 
@@ -29,6 +33,7 @@ export interface Nutrients {
   protein: number
   fat: number
   sodium: number
+  fiber: number
 }
 
 export interface Portion {
@@ -37,7 +42,8 @@ export interface Portion {
   qty: number
 }
 
-export interface FoodLite extends Nutrients {
+export interface FoodLite extends Omit<Nutrients, 'fiber'> {
+  fiber: number | null // nem todo alimento informa fibra
   id: number
   user_id: number | null
   source: 'taco' | 'off' | 'manual'
@@ -53,7 +59,6 @@ export interface FoodLite extends Nutrients {
 export interface FoodDetail extends FoodLite {
   ean: string | null
   category: string | null
-  fiber: number | null
   portions: Portion[]
   is_mine: boolean
   is_favorite: boolean
@@ -129,6 +134,7 @@ export interface DayData {
   goal: Goal | null
   totals: Nutrients & { water: number }
   burned: number // kcal estimadas gastas nos treinos do dia
+  energy: Energy
   add_burned_to_goal: boolean
   kcal_target: number | null // meta + treino (se a preferência estiver ligada)
   meals: DayMeal[]
@@ -218,3 +224,22 @@ export interface WeightSummary {
   change_total: number | null
   change_range: number | null
 }
+
+/** Gasto estimado do dia (TMB × fator de atividade) e déficit. Sem perfil completo: só `missing`. */
+export type Energy =
+  | { available: false; missing: ('sex' | 'birth_date' | 'height_cm' | 'weight')[] }
+  | {
+      available: true
+      missing: []
+      weight: number
+      height_cm: number
+      age: number
+      sex: 'f' | 'm'
+      tmb: number
+      factor: number
+      level: string
+      checkins_per_week: number
+      window_days: number
+      get: number
+      deficit?: number // GET − consumido (negativo = superávit)
+    }

@@ -13,6 +13,7 @@ const NUTRIENTS = [
   { key: 'protein', label: 'Proteínas', suffix: 'g' },
   { key: 'fat', label: 'Gorduras', suffix: 'g' },
   { key: 'sodium', label: 'Sódio', suffix: 'mg' },
+  { key: 'fiber', label: 'Fibras', suffix: 'g' },
 ] as const
 
 interface Form {
@@ -26,12 +27,13 @@ interface Form {
   protein: string
   fat: string
   sodium: string
+  fiber: string
   portions: { label: string; qty: string }[]
 }
 
 const empty = (name = '', ean = ''): Form => ({
   name, brand: '', ean, base_qty: '100', base_unit: 'g',
-  kcal: '', carbs: '', protein: '', fat: '', sodium: '', portions: [],
+  kcal: '', carbs: '', protein: '', fat: '', sodium: '', fiber: '', portions: [],
 })
 
 const s = (n: number | null | undefined) => (n == null ? '' : String(n).replace('.', ','))
@@ -52,7 +54,7 @@ export function FoodFormPage() {
     api<{ food: FoodDetail }>(`/foods/${id}`).then(({ food: f }) => {
       setForm({
         name: f.name, brand: f.brand ?? '', ean: f.ean ?? '', base_qty: s(f.base_qty), base_unit: f.base_unit,
-        kcal: s(f.kcal), carbs: s(f.carbs), protein: s(f.protein), fat: s(f.fat), sodium: s(f.sodium),
+        kcal: s(f.kcal), carbs: s(f.carbs), protein: s(f.protein), fat: s(f.fat), sodium: s(f.sodium), fiber: s(f.fiber),
         portions: f.portions.map((p) => ({ label: p.label, qty: s(p.qty) })),
       })
       setLoading(false)
@@ -73,6 +75,7 @@ export function FoodFormPage() {
       base_qty: num(form.base_qty),
       base_unit: form.base_unit,
       ...Object.fromEntries(NUTRIENTS.map((n) => [n.key, num(form[n.key] || '0')])),
+      fiber: form.fiber.trim() ? num(form.fiber) : null, // opcional: nem todo rótulo informa
       portions: form.portions.filter((p) => p.label.trim() && num(p.qty) > 0).map((p) => ({ label: p.label.trim(), qty: num(p.qty) })),
     }
     try {
@@ -140,7 +143,8 @@ export function FoodFormPage() {
               name={n.key}
               suffix={n.suffix}
               inputMode="decimal"
-              required
+              required={n.key !== 'fiber'}
+              placeholder={n.key === 'fiber' ? 'opcional' : undefined}
               value={form[n.key]}
               onChange={(e) => set(n.key, decimal(e.target.value))}
               error={error?.field(n.key)}
