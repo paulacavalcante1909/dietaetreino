@@ -268,7 +268,7 @@ interface WeekDay {
   water: number
   burned: number
   get: number | null // gasto estimado do dia (se o perfil estiver completo)
-  goal: { kcal: number; carbs_g: number; protein_g: number; fat_g: number; sodium_mg: number; fiber_g: number; water_ml: number } | null
+  goal: { kcal: number; kcal_mode?: Goal['kcal_mode']; carbs_g: number; protein_g: number; fat_g: number; sodium_mg: number; fiber_g: number; water_ml: number } | null
 }
 
 const WD = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
@@ -301,8 +301,11 @@ function WeekTab() {
   const goal = days?.find((d) => d.goal)?.goal ?? null
   // Só dias encerrados: hoje ainda está em andamento (ex.: de manhã sempre estaria "até a meta")
   const closed = logged.filter((d) => d.goal && d.date < isoDate())
-  const goalDays = closed.filter((d) => inGoalDay(d.kcal, d.goal!)).length
-  const outliers = closed.filter((d) => outlier(d.kcal, d.goal!)).length
+  // O jeito de contar é o escolhido agora (vale para todos os dias); o número de kcal é o da meta de cada dia
+  const currentGoal = days?.filter((d) => d.goal).at(-1)?.goal ?? null
+  const withMode = (g: Goal) => ({ ...g, kcal_mode: currentGoal?.kcal_mode ?? g.kcal_mode })
+  const goalDays = closed.filter((d) => inGoalDay(d.kcal, withMode(d.goal!))).length
+  const outliers = closed.filter((d) => outlier(d.kcal, withMode(d.goal!))).length
   const burned = days?.reduce((a, d) => a + d.burned, 0) ?? 0
   const max = Math.max(goal?.kcal ?? 0, ...(days ?? []).map((d) => d.kcal), 1)
   const waterDays = days?.filter((d) => d.water > 0) ?? []
@@ -333,7 +336,7 @@ function WeekTab() {
 
       {days && logged.length > 0 && (
         <>
-          {goal && closed.length > 0 && <GoalDaysCard inGoal={goalDays} logged={closed.length} outliers={outliers} goal={days!.filter((d) => d.goal).at(-1)!.goal!} />}
+          {goal && closed.length > 0 && <GoalDaysCard inGoal={goalDays} logged={closed.length} outliers={outliers} goal={currentGoal!} />}
 
           <div className="grid grid-cols-2 gap-2 text-center">
             <MiniStat icon={<Flame className="size-4 text-orchid" />} value={`${fmtKcal(avg('kcal'))} kcal`} label="comidas por dia, em média" />
