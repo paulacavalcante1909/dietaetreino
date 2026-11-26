@@ -20,10 +20,14 @@ class MealController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $data = $request->validate(['name' => ['required', 'string', 'max:60']]);
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:60'],
+            'time' => ['nullable', 'date_format:H:i'],
+        ]);
         $user = $request->user();
         $meal = $user->meals()->create([
             'name' => $data['name'],
+            'time' => $data['time'] ?? null,
             'position' => (int) $user->meals()->max('position') + 1,
         ]);
 
@@ -36,7 +40,8 @@ class MealController extends Controller
         $meal->update($request->validate([
             'name' => ['sometimes', 'string', 'max:60'],
             'active' => ['sometimes', 'boolean'],
-        ]));
+            'time' => ['sometimes', 'nullable', 'date_format:H:i'],
+        ], ['time.date_format' => 'Informe o horário como 07:30.']));
 
         return response()->json(['meal' => $meal]);
     }

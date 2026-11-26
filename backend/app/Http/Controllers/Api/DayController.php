@@ -35,6 +35,7 @@ class DayController extends Controller
                 return [
                     'id' => $m->id,
                     'name' => $m->name,
+                    'time' => $m->time,
                     'kcal' => round($items->sum('kcal'), 1),
                     'entries' => $items,
                     'yesterday_count' => (int) ($yesterday[$m->id] ?? 0),

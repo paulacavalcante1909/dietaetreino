@@ -55,6 +55,17 @@ class MealControllerTest extends TestCase
             ->assertJsonPath('entries.0.date', '2026-11-25');
     }
 
+    public function test_meals_come_with_default_times_that_can_be_changed(): void
+    {
+        $user = User::factory()->create();
+        $breakfast = $user->meals()->first();
+        $this->assertSame('07:00', $breakfast->time);
+
+        $this->actingAs($user)->putJson("/api/meals/{$breakfast->id}", ['time' => '06:30'])->assertOk()->assertJsonPath('meal.time', '06:30');
+        $this->actingAs($user)->putJson("/api/meals/{$breakfast->id}", ['time' => '6h'])->assertUnprocessable();
+        $this->actingAs($user)->postJson('/api/meals', ['name' => 'Pré-treino', 'time' => '17:00'])->assertCreated()->assertJsonPath('meal.time', '17:00');
+    }
+
     private function food(string $name): Food
     {
         return Food::forceCreate(['source' => 'taco', 'name' => $name, 'base_qty' => 100, 'base_unit' => 'g', 'kcal' => 150, 'carbs' => 1, 'protein' => 12, 'fat' => 10, 'sodium' => 100]);

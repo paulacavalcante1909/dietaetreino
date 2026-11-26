@@ -121,11 +121,13 @@ export interface Meal {
   name: string
   position: number
   active: boolean
+  time?: string | null // "07:00": escolhe a refeição do momento
 }
 
 export interface DayMeal {
   id: number
   name: string
+  time?: string | null
   kcal: number
   entries: Entry[]
   yesterday_count: number // itens nesta refeição ontem (botão "Repetir de ontem")

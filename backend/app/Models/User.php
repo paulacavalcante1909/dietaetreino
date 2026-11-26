@@ -107,7 +107,7 @@ class User extends Authenticatable
             return;
         }
         foreach (Meal::DEFAULTS as $i => $name) {
-            $this->meals()->create(['name' => $name, 'position' => $i]);
+            $this->meals()->create(['name' => $name, 'position' => $i, 'time' => Meal::TIMES[$name] ?? null]);
         }
     }
 }

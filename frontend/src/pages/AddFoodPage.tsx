@@ -13,7 +13,7 @@ import { useToast } from '../components/Toast'
 import { api, ApiError } from '../lib/api'
 import { isoDate } from '../lib/date'
 import { fmtKcal } from '../components/Ring'
-import { ChevronDown } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { mealForNow } from '../lib/meals'
 import type { Entry, FoodDetail, FoodLite, Meal, RecipeSummary } from '../lib/types'
 
@@ -48,6 +48,13 @@ export function AddFoodPage() {
   const [scanning, setScanning] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const query = useRef('')
+  // Fileira de refeições: centraliza a escolhida (só rola a fileira, não a página)
+  const mealChips = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const box = mealChips.current
+    const el = box?.querySelector<HTMLElement>('[aria-checked="true"]')
+    if (box && el) box.scrollTo({ left: el.offsetLeft - box.clientWidth / 2 + el.offsetWidth / 2, behavior: 'smooth' })
+  }, [mealId, meals.length])
   // Itens adicionados nesta visita: a tela continua aberta para adicionar o próximo
   const [added, setAdded] = useState<{ id: number; name: string; kcal: number }[]>([])
   // Montar o prato: alimentos marcados na lista, registrados juntos
@@ -242,32 +249,35 @@ export function AddFoodPage() {
 
   return (
     <div className={`safe-top mx-auto flex min-h-full max-w-lg flex-col px-5 pt-4 ${added.length || plateItems.length ? 'pb-32' : 'pb-8'}`}>
-      <header className="mb-4 flex items-center gap-3">
+      <header className="mb-3 flex items-center gap-3">
         <BackButton onClick={() => (added.length ? goHome() : navigate(-1))} />
-        <div className="min-w-0">
-          <h1 className="text-xl font-bold">Registrar refeição</h1>
-          {meals.length > 0 ? (
-            /* Refeição: parece um botão (borda + seta colada no nome) para ficar claro que dá para trocar */
-            <label className="relative mt-1 inline-flex max-w-full items-center gap-1 rounded-full border-2 border-primary/40 bg-orchid/10 py-1 pr-2.5 pl-3.5 text-sm font-bold text-link active:scale-95">
-              <span className="truncate">{meals.find((m) => m.id === mealId)?.name ?? 'Escolher refeição'}</span>
-              <ChevronDown className="size-4 shrink-0" strokeWidth={3} aria-hidden />
-              {/* O select nativo fica invisível por cima: abre a lista do celular */}
-              <select
-                aria-label="Refeição"
-                value={mealId}
-                onChange={(e) => setMealId(Number(e.target.value))}
-                className="absolute inset-0 cursor-pointer opacity-0"
-              >
-                {meals.filter((m) => m.active || m.id === mealId).map((m) => (
-                  <option key={m.id} value={m.id}>{m.name}</option>
-                ))}
-              </select>
-            </label>
-          ) : (
-            <p className="mt-1 h-8 w-32 animate-pulse rounded-full bg-soft" />
-          )}
-        </div>
+        <h1 className="text-xl font-bold">Registrar refeição</h1>
       </header>
+
+      {/* Em qual refeição: todas à vista, a atual destacada (a do horário já vem escolhida) */}
+      <div ref={mealChips} className="relative -mx-5 mb-4 overflow-x-auto px-5 [scrollbar-width:none]" role="radiogroup" aria-label="Refeição">
+        <div className="flex gap-2">
+          {meals.length === 0 && [0, 1, 2].map((i) => <span key={i} className="h-10 w-28 shrink-0 animate-pulse rounded-full bg-soft" />)}
+          {meals.filter((m) => m.active || m.id === mealId).map((m) => {
+            const active = m.id === mealId
+            return (
+              <button
+                key={m.id}
+                role="radio"
+                aria-checked={active}
+                onClick={() => setMealId(m.id)}
+                className={`flex h-10 shrink-0 items-center gap-1.5 rounded-full border-2 px-4 text-sm font-bold whitespace-nowrap transition-colors ${
+                  active ? 'border-primary bg-primary text-white' : 'border-line bg-surface text-ink active:bg-soft'
+                }`}
+              >
+                {active && <Check className="size-4" strokeWidth={3} />}
+                {m.name}
+                {m.time && <span className={`font-medium ${active ? 'text-white/80' : 'text-muted'}`}>{m.time}</span>}
+              </button>
+            )
+          })}
+        </div>
+      </div>
 
       <div>
         {!searching && mealId > 0 && (

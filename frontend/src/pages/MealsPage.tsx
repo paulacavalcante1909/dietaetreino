@@ -15,6 +15,7 @@ export function MealsPage() {
   const toast = useToast()
   const [meals, setMeals] = useState<Meal[]>([])
   const [newName, setNewName] = useState('')
+  const [newTime, setNewTime] = useState('')
   const [error, setError] = useState<ApiError | null>(null)
 
   useEffect(() => {
@@ -41,9 +42,10 @@ export function MealsPage() {
     e.preventDefault()
     setError(null)
     try {
-      const r = await api<{ meal: Meal }>('/meals', { method: 'POST', body: { name: newName.trim() } })
+      const r = await api<{ meal: Meal }>('/meals', { method: 'POST', body: { name: newName.trim(), time: newTime || null } })
       setMeals((list) => [...list, r.meal])
       setNewName('')
+      setNewTime('')
     } catch (err) {
       setError(err as ApiError)
     }
@@ -53,21 +55,34 @@ export function MealsPage() {
     <div className="safe-top mx-auto max-w-lg px-5 pt-4 pb-10">
       <header className="mb-2 flex items-center gap-3">
         <BackButton onClick={() => navigate(-1)} />
-        <h1 className="text-xl font-bold">Organizar refeições do dia</h1>
+        <h1 className="text-xl font-bold">Refeições do dia</h1>
       </header>
-      <p className="mb-4 text-sm text-muted">Arraste pela alça para reordenar. Toque no nome para renomear. Ocultar tira a refeição da tela inicial sem apagar nada.</p>
+      <p className="mb-4 text-sm text-muted">
+        O horário decide qual refeição já vem escolhida ao registrar. Toque no nome para renomear; segure e arraste para reordenar. Ocultar tira a refeição da tela inicial sem apagar nada.
+      </p>
 
       <Reorder.Group axis="y" values={meals} onReorder={setMeals} className="space-y-2">
         {meals.map((m) => (
           <HoldToDragItem key={m.id} value={m} onDragEnd={saveOrder}>
             <Card className={`flex items-center gap-3 !py-3 ${m.active ? '' : 'opacity-50'}`}>
               <GripVertical className="size-5 shrink-0 cursor-grab text-muted" aria-hidden />
-              <input
-                aria-label="Nome da refeição"
-                defaultValue={m.name}
-                onBlur={(e) => e.target.value.trim() && e.target.value !== m.name && patch(m, { name: e.target.value.trim() })}
-                className="min-w-0 flex-1 bg-transparent font-medium outline-none focus:text-link"
-              />
+              <div className="min-w-0 flex-1">
+                <input
+                  aria-label="Nome da refeição"
+                  defaultValue={m.name}
+                  onBlur={(e) => e.target.value.trim() && e.target.value !== m.name && patch(m, { name: e.target.value.trim() })}
+                  className="w-full bg-transparent font-semibold outline-none focus:text-link"
+                />
+                <label className="mt-0.5 flex items-center gap-1.5 text-sm text-muted">
+                  <input
+                    type="time"
+                    aria-label={`Horário de ${m.name}`}
+                    defaultValue={m.time ?? ''}
+                    onBlur={(e) => e.target.value !== (m.time ?? '') && patch(m, { time: e.target.value || null })}
+                    className="rounded-lg bg-soft px-2 py-1 font-semibold text-ink outline-none focus:ring-2 focus:ring-orchid/40"
+                  />
+                </label>
+              </div>
               <button
                 onClick={() => patch(m, { active: !m.active })}
                 aria-label={m.active ? `Ocultar ${m.name}` : `Mostrar ${m.name}`}
@@ -84,7 +99,10 @@ export function MealsPage() {
       </Reorder.Group>
 
       <form onSubmit={add} className="mt-6 space-y-3">
-        <Field label="Nova refeição" name="meal_name" placeholder="ex.: Pré-treino" value={newName} onChange={(e) => setNewName(e.target.value)} error={error?.field('name')} />
+        <div className="grid grid-cols-[1fr_8rem] gap-3">
+          <Field label="Nova refeição" name="meal_name" placeholder="ex.: Pré-treino" value={newName} onChange={(e) => setNewName(e.target.value)} error={error?.field('name')} />
+          <Field label="Horário" name="meal_time" type="time" value={newTime} onChange={(e) => setNewTime(e.target.value)} error={error?.field('time')} />
+        </div>
         <Button type="submit" variant="ghost" disabled={!newName.trim()}>
           Adicionar refeição
         </Button>
