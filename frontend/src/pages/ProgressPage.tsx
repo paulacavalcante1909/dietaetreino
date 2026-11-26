@@ -6,7 +6,7 @@ import { useToast } from '../components/Toast'
 import { WeeklyGoalSheet } from '../components/WeeklyGoalSheet'
 import { WeightChart } from '../components/WeightChart'
 import { Bar, Ring, fmt, fmtKcal } from '../components/Ring'
-import { Activity, CalendarCheck, ChevronLeft, ChevronRight, Droplet, Flame, Info, Pencil, Target, Timer, TrendingDown, TrendingUp } from 'lucide-react'
+import { Activity, CalendarCheck, ChevronDown, ChevronLeft, ChevronRight, Droplet, Flame, Info, Pencil, Target, Timer, TrendingDown, TrendingUp } from 'lucide-react'
 import { Alert, Button, Card, EmptyState, Field } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import { addDays, isoDate, parseIso } from '../lib/date'
@@ -90,7 +90,7 @@ function WeightTab() {
                 {RANGES.map(([k, label]) => (
                   <button key={k} role="tab" aria-selected={range === k} onClick={() => setRange(k)} className="relative flex-1 rounded-xl py-2 text-xs font-semibold">
                     {range === k && <motion.span layoutId="range-pill" className="absolute inset-0 rounded-xl bg-surface shadow-sm" transition={{ type: 'spring', stiffness: 500, damping: 38 }} />}
-                    <span className={`relative ${range === k ? 'text-primary' : 'text-muted'}`}>{label}</span>
+                    <span className={`relative ${range === k ? 'text-link' : 'text-muted'}`}>{label}</span>
                   </button>
                 ))}
               </div>
@@ -103,7 +103,7 @@ function WeightTab() {
 
             {/* Histórico (também serve de visão em tabela do gráfico) */}
             <div>
-              <h2 className="mb-2 px-1 font-semibold">Histórico</h2>
+              <h2 className="mb-2 px-1 text-xs font-bold tracking-wider text-muted uppercase">Histórico</h2>
               <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] bg-surface shadow-[0_2px_12px_-4px_rgba(31,23,36,0.08)]">
                 <AnimatePresence initial={false}>
                   {[...(weights ?? [])].reverse().map((w, i, arr) => {
@@ -241,7 +241,7 @@ export function ProgressPage() {
         {TABS.map(([k, label]) => (
           <button key={k} role="tab" aria-selected={tab === k} onClick={() => setParams({ aba: k }, { replace: true })} className="relative flex-1 rounded-xl py-2.5 text-sm font-bold">
             {tab === k && <motion.span layoutId="progress-tab" className="absolute inset-0 rounded-xl bg-surface shadow-sm" transition={{ type: 'spring', stiffness: 500, damping: 38 }} />}
-            <span className={`relative ${tab === k ? 'text-primary' : 'text-muted'}`}>{label}</span>
+            <span className={`relative ${tab === k ? 'text-link' : 'text-muted'}`}>{label}</span>
           </button>
         ))}
       </div>
@@ -318,11 +318,11 @@ function WeekTab() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <button aria-label="Semana anterior" onClick={() => setStart(addDays(start, -7))} className="flex size-9 items-center justify-center rounded-full bg-surface text-primary shadow-sm active:scale-90">
+        <button aria-label="Semana anterior" onClick={() => setStart(addDays(start, -7))} className="flex size-9 items-center justify-center rounded-full bg-surface text-link shadow-sm active:scale-90">
           <ChevronLeft className="size-5" />
         </button>
         <p className="font-bold">{title}</p>
-        <button aria-label="Próxima semana" disabled={thisWeek} onClick={() => setStart(addDays(start, 7))} className="flex size-9 items-center justify-center rounded-full bg-surface text-primary shadow-sm active:scale-90 disabled:opacity-30">
+        <button aria-label="Próxima semana" disabled={thisWeek} onClick={() => setStart(addDays(start, 7))} className="flex size-9 items-center justify-center rounded-full bg-surface text-link shadow-sm active:scale-90 disabled:opacity-30">
           <ChevronRight className="size-5" />
         </button>
       </div>
@@ -350,7 +350,7 @@ function WeekTab() {
             <p className="rounded-2xl bg-soft p-3 text-sm text-muted">O balanço da semana usa só os dias que já terminaram. O de hoje você acompanha na tela inicial.</p>
           ) : (
             energy && !energy.available && (
-              <Link to="/ajustes?abrir=dados" className="flex items-center gap-2 rounded-2xl bg-soft p-3 text-sm font-semibold text-primary">
+              <Link to="/ajustes?abrir=dados" className="flex items-center gap-2 rounded-2xl bg-soft p-3 text-sm font-semibold text-link">
                 <Activity className="size-4" /> Complete seus dados para ver se comeu mais ou menos do que gastou <ChevronRight className="ml-auto size-4 shrink-0" />
               </Link>
             )
@@ -383,15 +383,14 @@ function WeekTab() {
             </div>
             <div className="mt-1 flex gap-2">
               {days.map((d, i) => (
-                <span key={d.date} className={`flex-1 text-center text-xs font-semibold ${d.date === isoDate() ? 'text-primary' : 'text-muted'}`}>{WD[i]}</span>
+                <span key={d.date} className={`flex-1 text-center text-xs font-semibold ${d.date === isoDate() ? 'text-link' : 'text-muted'}`}>{WD[i]}</span>
               ))}
             </div>
           </Card>
 
           {/* Médias dos macros nos dias registrados */}
           {goal && (
-            <Card className="space-y-3">
-              <p className="text-sm font-bold">Média por dia registrado</p>
+            <AveragesCard>
               <Bar label="Carboidratos" value={Math.round(avg('carbs'))} max={goal.carbs_g} unit="g" color="var(--color-lavender)" />
               <Bar label="Proteínas" value={Math.round(avg('protein'))} max={goal.protein_g} unit="g" color="var(--color-pink)" />
               <Bar label="Gorduras" value={Math.round(avg('fat'))} max={goal.fat_g} unit="g" color="var(--color-violet)" />
@@ -400,11 +399,33 @@ function WeekTab() {
               <div className="flex items-center gap-2 pt-1 text-sm text-muted">
                 <Droplet className="size-4 text-water" /> Água: {fmt(Math.round(waterAvg))} ml/dia em média (meta {fmt(goal.water_ml)} ml)
               </div>
-            </Card>
+            </AveragesCard>
           )}
         </>
       )}
     </div>
+  )
+}
+
+/** Médias de macros da semana: fechado por padrão (menos informação de uma vez). */
+function AveragesCard({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <Card className="!p-0">
+      <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex w-full items-center justify-between px-5 py-4 text-left">
+        <span className="text-sm font-bold">Média de macros e água por dia</span>
+        <motion.span animate={{ rotate: open ? 180 : 0 }} className="text-muted">
+          <ChevronDown className="size-5" />
+        </motion.span>
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+            <div className="space-y-3 px-5 pb-5">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </Card>
   )
 }
 
@@ -436,7 +457,7 @@ function WorkoutsTab() {
       <Card>
         <EmptyState title="Seus treinos aparecem aqui" text="Use “Treinar” na aba Treinos para registrar e acompanhar sua frequência.">
           <Link to="/treinos?treinar=1" className="flex h-11 items-center justify-center rounded-2xl bg-primary font-bold text-white">Treinar</Link>
-          <button onClick={() => setGoalOpen(true)} className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-soft px-3 py-1 text-xs font-bold text-primary">
+          <button onClick={() => setGoalOpen(true)} className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-soft px-3 py-1 text-xs font-bold text-link">
             Meta: {data.weekly_goal} {data.weekly_goal === 1 ? 'treino' : 'treinos'} por semana <Pencil className="size-3" />
           </button>
         </EmptyState>
@@ -446,24 +467,34 @@ function WorkoutsTab() {
 
   return (
     <div className="space-y-4">
-      <Card className="flex items-center gap-4">
+      <Card className="relative flex items-center gap-4">
+        <button
+          onClick={() => setGoalOpen(true)}
+          aria-label={`Editar meta da semana (${data.weekly_goal} ${data.weekly_goal === 1 ? 'treino' : 'treinos'})`}
+          className="absolute top-3 right-3 flex size-9 items-center justify-center rounded-full bg-soft text-link active:scale-90"
+        >
+          <Pencil className="size-4" />
+        </button>
         <Ring value={Math.min(current?.days ?? 0, data.weekly_goal)} max={data.weekly_goal} size={96} stroke={10} color="var(--color-orchid)">
           <span className="text-xl font-extrabold">{current?.days ?? 0}/{data.weekly_goal}</span>
           <span className="text-xs text-muted">treinos</span>
         </Ring>
-        <div className="min-w-0">
-          <p className="font-bold">{(current?.days ?? 0) >= data.weekly_goal ? 'Meta da semana batida! 🎉' : `Faltam ${data.weekly_goal - (current?.days ?? 0)} treino(s) nesta semana`}</p>
-          {hit > 0 && <p className="text-sm text-muted">Meta batida em {hit} das últimas {data.weeks.length} semanas.</p>}
-          <button onClick={() => setGoalOpen(true)} className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-soft px-3 py-1 text-xs font-bold text-primary">
-            Meta: {data.weekly_goal} {data.weekly_goal === 1 ? 'treino' : 'treinos'} por semana <Pencil className="size-3" />
-          </button>
+        <div className="min-w-0 pr-8">
+          <p className="font-bold">
+            {(current?.days ?? 0) >= data.weekly_goal
+              ? 'Meta da semana batida! 🎉'
+              : `${data.weekly_goal - (current?.days ?? 0) === 1 ? 'Falta 1 treino' : `Faltam ${data.weekly_goal - (current?.days ?? 0)} treinos`} nesta semana`}
+          </p>
+          <p className="text-sm text-muted">
+            Meta: {data.weekly_goal} {data.weekly_goal === 1 ? 'treino' : 'treinos'} por semana{hit > 0 ? ` · batida em ${hit} das últimas ${data.weeks.length}` : ''}
+          </p>
         </div>
       </Card>
       <WeeklyGoalSheet open={goalOpen} onClose={() => setGoalOpen(false)} value={data.weekly_goal} onSaved={(n) => setData((d) => (d ? { ...d, weekly_goal: n } : d))} />
 
       <div className="grid grid-cols-3 gap-2 text-center">
-        <MiniStat icon={<CalendarCheck className="size-4 text-primary" />} value={String(total.days)} label="dias em 8 semanas" />
-        <MiniStat icon={<Timer className="size-4 text-primary" />} value={total.minutes < 60 ? `${Math.round(total.minutes)} min` : `${(total.minutes / 60).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} h`} label="de treino" />
+        <MiniStat icon={<CalendarCheck className="size-4 text-link" />} value={String(total.days)} label="dias treinados em 8 semanas" />
+        <MiniStat icon={<Timer className="size-4 text-link" />} value={total.minutes < 60 ? `${Math.round(total.minutes)} min` : `${(total.minutes / 60).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} h`} label="de treino" />
         <MiniStat icon={<Flame className="size-4 text-coral" />} value={`~${fmtKcal(total.kcal)}`} label="kcal gastas" />
       </div>
 
@@ -488,14 +519,14 @@ function WorkoutsTab() {
         </div>
         <div className="mt-1 flex gap-2">
           {data.weeks.map((w, i) => (
-            <span key={w.week_start} className={`flex-1 text-center text-xs font-semibold ${i === data.weeks.length - 1 ? 'text-primary' : 'text-muted'}`}>
-              {i === data.weeks.length - 1 ? 'esta' : shortDate(w.week_start)}
+            <span key={w.week_start} className={`flex-1 text-center text-xs font-semibold ${i === data.weeks.length - 1 ? 'text-link' : 'text-muted'}`}>
+              {i === data.weeks.length - 1 ? 'esta' : parseIso(w.week_start).toLocaleDateString('pt-BR', { day: 'numeric', month: 'numeric' })}
             </span>
           ))}
         </div>
       </Card>
 
-      <Link to="/historico-treinos" className="block text-center text-sm font-bold text-primary">Ver histórico de treinos</Link>
+      <Link to="/historico-treinos" className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-soft text-sm font-bold text-link active:scale-[0.98]">Ver histórico de treinos</Link>
     </div>
   )
 }
@@ -532,7 +563,7 @@ function GoalDaysCard({ inGoal, logged, outliers, goal }: { inGoal: number; logg
   return (
     <Card className="space-y-3">
       <div className="flex items-center gap-3">
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-soft text-primary">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-soft text-link">
           <Target className="size-5" />
         </span>
         <div className="min-w-0 flex-1">

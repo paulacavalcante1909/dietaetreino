@@ -56,7 +56,7 @@ export function WorkoutsPage() {
   const create = async () => {
     setCreating(true)
     const r = await api<{ workout: Workout }>('/workouts', { method: 'POST', body: {} })
-    navigate(`/treinos/${r.workout.id}?editar=1`)
+    navigate(`/treinos/${r.workout.id}?editar=1&novo=1`)
   }
 
   const saveOrder = () => workouts && api('/workouts/order', { method: 'PUT', body: { ids: workouts.map((w) => w.id) } }).catch(() => {})
@@ -83,7 +83,7 @@ export function WorkoutsPage() {
 
       {pending > 0 && (
         <p className="flex items-center gap-2 rounded-2xl bg-soft px-4 py-3 text-sm">
-          <CloudUpload className="size-4 shrink-0 text-primary" />
+          <CloudUpload className="size-4 shrink-0 text-link" />
           {pending === 1 ? '1 envio pendente' : `${pending} envios pendentes`}: vai sozinho quando a internet voltar.
         </p>
       )}
@@ -117,39 +117,36 @@ export function WorkoutsPage() {
             {todayCheckin?.photo_url && <img src={todayCheckin.photo_url} alt="Foto do treino de hoje" className="size-14 shrink-0 rounded-2xl border-2 border-white/70 object-cover" />}
           </div>
           {stats && (
-            <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-              {([
-                [Flame, stats.streak, stats.streak === 1 ? 'dia seguido' : 'dias seguidos'],
-                [Calendar, stats.month_count, 'no mês'],
-                [Trophy, stats.total_count, 'no total'],
-              ] as const).map(([Icon, v, l]) => (
-                <div key={l} className="rounded-xl bg-white/15 px-1 py-2">
-                  <p className="flex items-center justify-center gap-1 text-lg leading-none font-extrabold"><Icon className="size-4" />{v}</p>
-                  <p className="mt-1 text-xs text-white/85">{l}</p>
-                </div>
-              ))}
-            </div>
+            <p className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-semibold text-white/90">
+              <span className="flex items-center gap-1.5"><Flame className="size-4" /> {stats.streak} {stats.streak === 1 ? 'dia seguido' : 'dias seguidos'}</span>
+              <span className="flex items-center gap-1.5"><Calendar className="size-4" /> {stats.month_count} no mês</span>
+              <span className="flex items-center gap-1.5"><Trophy className="size-4" /> {stats.total_count} no total</span>
+            </p>
           )}
         </div>
         <div className="flex gap-2 p-3">
           <button onClick={openTrain} className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-primary font-bold text-white active:scale-[0.98]">
             <Zap className="size-5" /> Treinar
           </button>
-          <Link to="/historico-treinos" className="flex h-12 items-center justify-center rounded-xl bg-soft px-4 font-bold text-primary">
+          <Link to="/historico-treinos" className="flex h-12 items-center justify-center rounded-xl bg-soft px-4 font-bold text-link">
             Feitos
           </Link>
         </div>
       </Card>
 
       <div className="flex items-center justify-between px-1 pt-2">
-        <h2 className="font-bold">Minha ficha</h2>
+        <h2 className="text-xs font-bold tracking-wider text-muted uppercase">Minha ficha</h2>
         {workouts && workouts.length > 1 && <span className="text-xs text-muted">segure e arraste para reordenar</span>}
       </div>
 
       {!workouts && <div className="h-32 animate-pulse rounded-2xl bg-soft" />}
       {workouts?.length === 0 && (
         <Card>
-          <EmptyState title="Monte sua ficha" text="Crie o Treino A, B, C… com exercícios da biblioteca. Ou treine sem ficha com um exercício avulso." />
+          <EmptyState title="Monte sua ficha" text="Crie o Treino A, B, C… com exercícios da biblioteca. Ou treine sem ficha com um exercício avulso.">
+            <Button onClick={create} loading={creating}>
+              <Plus className="size-5" /> Criar meu primeiro treino
+            </Button>
+          </EmptyState>
         </Card>
       )}
 
@@ -168,7 +165,7 @@ export function WorkoutsPage() {
                       {w.items.length} {w.items.length === 1 ? 'exercício' : 'exercícios'}
                     </p>
                     {w.last_done_on === isoDate() && (
-                      <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-orchid/15 px-2 py-0.5 text-xs font-bold text-primary">
+                      <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-orchid/15 px-2 py-0.5 text-xs font-bold text-link">
                         <CheckCircle2 className="size-3.5" /> Feito hoje
                       </span>
                     )}
@@ -183,7 +180,7 @@ export function WorkoutsPage() {
                 </motion.button>
                 {w.items.length > 0 && (
                   <div className="px-3 pb-3">
-                    <Link to={`/treinos/${w.id}/iniciar`} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-soft font-bold text-primary active:scale-[0.98]">
+                    <Link to={`/treinos/${w.id}/iniciar`} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-soft font-bold text-link active:scale-[0.98]">
                       <Play className="size-4 fill-current" /> {running?.workoutId === w.id ? 'Continuar treino' : 'Iniciar treino'}
                     </Link>
                   </div>
@@ -194,9 +191,11 @@ export function WorkoutsPage() {
         </Reorder.Group>
       )}
 
-      <Button variant="ghost" onClick={create} loading={creating}>
-        <Plus className="size-5" /> Novo treino
-      </Button>
+      {workouts && workouts.length > 0 && (
+        <Button variant="ghost" onClick={create} loading={creating}>
+          <Plus className="size-5" /> Novo treino
+        </Button>
+      )}
 
       {/* Meta da semana */}
       <WeeklyGoalSheet open={goalOpen} onClose={() => setGoalOpen(false)} value={stats?.weekly_goal ?? 3} onSaved={(n) => setStats((s) => (s ? { ...s, weekly_goal: n } : s))} />

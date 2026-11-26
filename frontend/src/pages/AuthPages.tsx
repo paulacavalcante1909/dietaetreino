@@ -45,13 +45,13 @@ export function LoginPage() {
   }
 
   return (
-    <AuthShell title="Bem-vinda de volta" subtitle="Entre para continuar seu dia">
+    <AuthShell title="Que bom te ver de novo" subtitle="Entre para continuar seu dia">
       <form onSubmit={submit} className="space-y-4">
         {error && !error.field('email') && !error.field('password') && <Alert>{error.message}</Alert>}
         <Field label="E-mail" name="email" type="email" autoComplete="email" inputMode="email" required value={email} onChange={(e) => setEmail(e.target.value)} error={error?.field('email')} />
         <PasswordField label="Senha" name="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} error={error?.field('password')} />
         <div className="-mt-1 text-right">
-          <Link to="/esqueci-senha" className="text-sm font-semibold text-primary">
+          <Link to="/esqueci-senha" className="text-sm font-semibold text-link">
             Esqueci minha senha
           </Link>
         </div>
@@ -61,7 +61,7 @@ export function LoginPage() {
       </form>
       <p className="mt-8 text-center text-muted">
         Ainda não tem conta?{' '}
-        <Link to="/cadastro" className="font-semibold text-primary">
+        <Link to="/cadastro" className="font-semibold text-link">
           Criar conta
         </Link>
       </p>
@@ -113,7 +113,7 @@ export function RegisterPage() {
           <input type="checkbox" className="mt-0.5 size-5 shrink-0 accent-primary" checked={form.terms} onChange={(e) => setForm({ ...form, terms: e.target.checked })} />
           <span>
             Li e aceito os{' '}
-            <Link to="/termos" className="font-semibold text-primary">
+            <Link to="/termos" className="font-semibold text-link">
               Termos de Uso e a Política de Privacidade
             </Link>
             .
@@ -126,7 +126,7 @@ export function RegisterPage() {
       </form>
       <p className="mt-8 text-center text-muted">
         Já tem conta?{' '}
-        <Link to="/entrar" className="font-semibold text-primary">
+        <Link to="/entrar" className="font-semibold text-link">
           Entrar
         </Link>
       </p>
@@ -161,7 +161,7 @@ export function ForgotPasswordPage() {
         <div className="space-y-5 text-center">
           <p className="rounded-2xl bg-soft p-4 text-sm">{sent}</p>
           <p className="text-sm text-muted">Confira também a caixa de spam. O link vale por 60 minutos.</p>
-          <Link to="/entrar" className="font-semibold text-primary">Voltar para o login</Link>
+          <Link to="/entrar" className="font-semibold text-link">Voltar para o login</Link>
         </div>
       ) : (
         <form onSubmit={submit} className="space-y-4">
@@ -169,7 +169,7 @@ export function ForgotPasswordPage() {
           <Field label="E-mail da conta" name="email" type="email" autoComplete="email" inputMode="email" required value={email} onChange={(e) => setEmail(e.target.value)} error={error?.field('email')} />
           <Button type="submit" loading={loading}>Enviar link</Button>
           <p className="pt-2 text-center text-sm">
-            <Link to="/entrar" className="font-semibold text-primary">Voltar para o login</Link>
+            <Link to="/entrar" className="font-semibold text-link">Voltar para o login</Link>
           </p>
         </form>
       )}
@@ -206,7 +206,7 @@ export function ResetPasswordPage() {
   if (!token || !email) {
     return (
       <AuthShell title="Link incompleto" subtitle="Abra o link exatamente como chegou no e-mail">
-        <p className="text-center"><Link to="/esqueci-senha" className="font-semibold text-primary">Pedir um novo link</Link></p>
+        <p className="text-center"><Link to="/esqueci-senha" className="font-semibold text-link">Pedir um novo link</Link></p>
       </AuthShell>
     )
   }
@@ -221,7 +221,7 @@ export function ResetPasswordPage() {
           <PasswordField label="Nova senha" name="password" autoComplete="new-password" placeholder="Mínimo de 8 caracteres" minLength={8} required value={password} onChange={(e) => setPassword(e.target.value)} />
           <Button type="submit" loading={loading}>Salvar nova senha</Button>
           {error?.field('token') && (
-            <p className="text-center text-sm"><Link to="/esqueci-senha" className="font-semibold text-primary">Pedir um novo link</Link></p>
+            <p className="text-center text-sm"><Link to="/esqueci-senha" className="font-semibold text-link">Pedir um novo link</Link></p>
           )}
         </form>
       )}

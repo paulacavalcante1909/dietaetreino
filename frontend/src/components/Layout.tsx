@@ -46,7 +46,7 @@ export function Layout() {
 
   return (
     <div className="mx-auto flex h-full max-w-lg flex-col">
-      <main ref={mainRef} className="relative flex-1 overflow-y-auto overflow-x-hidden pb-28">
+      <main ref={mainRef} className="relative flex-1 overflow-y-auto overflow-x-hidden pb-36">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={location.pathname}
@@ -70,8 +70,8 @@ export function Layout() {
                     {isActive && (
                       <motion.span layoutId="tab-pill" className="absolute top-1.5 h-8 w-14 rounded-full bg-orchid/15" transition={{ type: 'spring', stiffness: 500, damping: 35 }} />
                     )}
-                    <tab.icon className={`relative size-6 transition-colors ${isActive ? 'text-primary' : 'text-muted'}`} strokeWidth={isActive ? 2.4 : 2} />
-                    <span className={isActive ? 'text-primary' : 'text-muted'}>{tab.label}</span>
+                    <tab.icon className={`relative size-6 transition-colors ${isActive ? 'text-link' : 'text-muted'}`} strokeWidth={isActive ? 2.4 : 2} />
+                    <span className={isActive ? 'text-link' : 'text-muted'}>{tab.label}</span>
                   </>
                 )}
               </NavLink>
@@ -137,8 +137,8 @@ function QuickActions({ open, onClose }: { open: boolean; onClose: () => void })
       <div className="space-y-5">
         {/* As três ações principais, iguais aos atalhos da tela inicial */}
         <div className="grid grid-cols-3 gap-2">
-          <QuickTile icon={Dumbbell} label="Treinar" hint="Ficha ou avulso" onClick={() => { onClose(); openTrain() }} />
-          <QuickTile icon={Utensils} label="Alimento" hint={suggested?.name ?? 'Adicionar'} onClick={() => go(suggested ? `/adicionar?refeicao=${suggested.id}` : '/adicionar')} />
+          <QuickTile icon={Dumbbell} label="Treinar" hint="Agora ou já feito" onClick={() => { onClose(); openTrain() }} />
+          <QuickTile icon={Utensils} label="Refeição" hint={suggested?.name ?? 'Registrar'} onClick={() => go(suggested ? `/adicionar?refeicao=${suggested.id}` : '/adicionar')} />
           <QuickTile icon={Droplet} label="Água" hint="+250 ml" tone="water" disabled={busy} onClick={() => water(250)} />
         </div>
 
@@ -169,7 +169,7 @@ function QuickActions({ open, onClose }: { open: boolean; onClose: () => void })
         </div>
 
         <button onClick={() => go('/progresso?aba=peso&registrar=1')} className="flex w-full items-center gap-3 rounded-2xl bg-soft px-4 py-3 text-left active:scale-[0.98]">
-          <Scale className="size-5 text-primary" />
+          <Scale className="size-5 text-link" />
           <span className="flex-1 font-semibold">Registrar peso</span>
         </button>
       </div>
@@ -194,7 +194,7 @@ export function QuickTile({ icon: Icon, label, hint, onClick, tone = 'primary', 
       disabled={disabled}
       className="flex min-w-0 flex-col items-center gap-1.5 rounded-2xl bg-surface px-2 py-3 text-center shadow-[0_2px_12px_-4px_rgba(31,23,36,0.08)] disabled:opacity-60"
     >
-      <span className={`relative flex size-11 items-center justify-center rounded-full ${tone === 'water' ? 'bg-water/15 text-water-ink' : 'bg-orchid/15 text-primary'}`}>
+      <span className={`relative flex size-11 items-center justify-center rounded-full ${tone === 'water' ? 'bg-water/15 text-water-ink' : 'bg-orchid/15 text-link'}`}>
         <Icon className="size-6" />
         {done && <span className="absolute -right-0.5 -bottom-0.5 flex size-5 items-center justify-center rounded-full bg-primary text-white ring-2 ring-surface"><Check className="size-3" strokeWidth={3.5} /></span>}
       </span>

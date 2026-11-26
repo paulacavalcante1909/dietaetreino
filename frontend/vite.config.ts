@@ -13,7 +13,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: false, // registrado em src/lib/pwa.ts (verifica atualização ao abrir o app)
-      includeAssets: ['favicon.png', 'favicon-32.png', 'logo.png', 'mascote.png', 'apple-touch-icon.png'],
+      includeAssets: ['favicon.svg', 'favicon.png', 'favicon-32.png', 'logo.png', 'mascote.png', 'apple-touch-icon.png'],
       manifest: {
         name: 'Dieta & Treino',
         short_name: 'Dieta & Treino',

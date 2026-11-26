@@ -123,7 +123,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: b
     if (!this.state.error) return this.props.children
     return (
       <div className="flex min-h-full flex-col items-center justify-center gap-4 p-8 text-center">
-        <CloudOff className="size-12 text-primary" aria-hidden />
+        <CloudOff className="size-12 text-link" aria-hidden />
         <p className="text-lg font-semibold">Ops, algo deu errado.</p>
         <button onClick={() => location.reload()} className="rounded-2xl bg-primary px-6 py-3 font-semibold text-white">
           Recarregar

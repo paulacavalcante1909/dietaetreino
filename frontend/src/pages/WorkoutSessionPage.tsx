@@ -110,7 +110,7 @@ function RunItemsEditor({ items, setItems, openPicker = false, onPickerClosedEmp
               <ExerciseImage image={it.exercise.image} name={it.exercise.name} size={48} animate={false} />
               <button onClick={() => setEditing({ item: it, index: idx })} className="min-w-0 flex-1 text-left">
                 <p className={`truncate text-sm font-medium ${it.done ? 'text-muted' : ''}`}>{it.exercise.name}</p>
-                <p className="text-xs font-semibold text-primary">
+                <p className="text-xs font-semibold text-link">
                   {prescription(it)}
                   {it.setsDone > 0 && !isTimed(it) && <span className="ml-1.5 font-normal text-muted">· {it.setsDone} feitas</span>}
                 </p>
@@ -124,7 +124,7 @@ function RunItemsEditor({ items, setItems, openPicker = false, onPickerClosedEmp
       </Reorder.Group>
       {items.length > 1 && <p className="mt-2 text-center text-xs text-muted">Segure um exercício e arraste para mudar a ordem.</p>}
 
-      <button onClick={() => setPicking(true)} className="mt-3 w-full rounded-2xl border-2 border-dashed border-line py-4 text-sm font-semibold text-primary">
+      <button onClick={() => setPicking(true)} className="mt-3 w-full rounded-2xl border-2 border-dashed border-line py-4 text-sm font-semibold text-link">
         + {items.length ? 'Incluir exercício' : 'Escolher exercício'}
       </button>
 
@@ -398,8 +398,8 @@ function ActiveView({ run, setRun }: { run: RunState; setRun: SetRun }) {
                 <p className={`truncate font-semibold ${it.done ? 'text-muted' : ''}`}>{it.exercise.name}</p>
                 <p className="text-sm text-muted">
                   {prescription(it)}
-                  {it.setsDone > 0 && !it.done && !isTimed(it) && <span className="ml-2 font-semibold text-primary">{it.setsDone}/{it.sets} séries</span>}
-                  {run.timerKey === it.key && !it.done && <span className="ml-2 font-semibold text-primary">⏱ {clock(run.timerEndsAt ? run.timerEndsAt - now + 999 : (run.timerLeftMs ?? 0))}{run.timerLeftMs ? ' (pausado)' : ''}</span>}
+                  {it.setsDone > 0 && !it.done && !isTimed(it) && <span className="ml-2 font-semibold text-link">{it.setsDone}/{it.sets} séries</span>}
+                  {run.timerKey === it.key && !it.done && <span className="ml-2 font-semibold text-link">⏱ {clock(run.timerEndsAt ? run.timerEndsAt - now + 999 : (run.timerLeftMs ?? 0))}{run.timerLeftMs ? ' (pausado)' : ''}</span>}
                 </p>
               </div>
               {!it.done && (
@@ -607,14 +607,14 @@ function ExerciseRunner(props: {
         <AnimatePresence mode="wait">
           {resting ? (
             <motion.div key="rest" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex flex-1 flex-col items-center justify-center gap-5 text-center">
-              <p className="text-sm font-semibold tracking-wide text-muted uppercase">Descanso</p>
+              <p className="text-sm font-semibold tracking-wider text-muted uppercase">Descanso</p>
               <Ring value={remaining} max={restSeconds * 1000} size={220} stroke={14} color="var(--color-lavender)">
                 <span className="font-mono text-5xl font-bold tabular-nums" role="timer" aria-live="off">{clock(remaining + 999)}</span>
                 <span className="text-sm text-muted">próxima: série {nextSet} de {item.sets}</span>
               </Ring>
               <div className="flex gap-3">
-                <button onClick={() => props.onAdjustRest(-15)} className="rounded-2xl bg-soft px-5 py-3 font-semibold text-primary active:scale-95">−15 s</button>
-                <button onClick={() => props.onAdjustRest(15)} className="rounded-2xl bg-soft px-5 py-3 font-semibold text-primary active:scale-95">+15 s</button>
+                <button onClick={() => props.onAdjustRest(-15)} className="rounded-2xl bg-soft px-5 py-3 font-semibold text-link active:scale-95">−15 s</button>
+                <button onClick={() => props.onAdjustRest(15)} className="rounded-2xl bg-soft px-5 py-3 font-semibold text-link active:scale-95">+15 s</button>
               </div>
               <Button onClick={props.onSkipRest} className="max-w-xs">Pular descanso</Button>
               <div>
@@ -626,11 +626,11 @@ function ExerciseRunner(props: {
             <motion.div key="set" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex flex-1 flex-col items-center gap-5 text-center">
               <ExerciseImage image={item.exercise.image} name={item.exercise.name} size={240} />
               <div>
-                <p className="text-sm font-semibold tracking-wide text-muted uppercase">Série {nextSet} de {item.sets}</p>
+                <p className="text-sm font-semibold tracking-wider text-muted uppercase">Série {nextSet} de {item.sets}</p>
                 {holdSeconds > 0 ? (
-                  <p className="mt-1 font-mono text-5xl font-bold text-primary tabular-nums" role="timer" aria-live="off">{clock(holdLeft + (holdEndsAt ? 999 : 0))}</p>
+                  <p className="mt-1 font-mono text-5xl font-bold text-link tabular-nums" role="timer" aria-live="off">{clock(holdLeft + (holdEndsAt ? 999 : 0))}</p>
                 ) : (
-                  <p className="mt-1 text-5xl font-bold text-primary">{item.reps}</p>
+                  <p className="mt-1 text-5xl font-bold text-link">{item.reps}</p>
                 )}
                 <p className="text-sm text-muted">{/^\d/.test(item.reps) && !/s$/.test(item.reps) ? 'repetições' : ''}</p>
                 {item.notes && <p className="mt-2 rounded-2xl bg-soft px-3 py-2 text-sm">{item.notes}</p>}
@@ -639,7 +639,7 @@ function ExerciseRunner(props: {
               {/* Carga desta série (não vale para séries por tempo, como a prancha) */}
               <div className={`w-full rounded-2xl bg-soft/70 p-3 ${holdSeconds > 0 ? 'hidden' : ''}`}>
                 <div className="flex items-center justify-center gap-3">
-                  <button onClick={() => bump(-2.5)} aria-label="Menos 2,5 kg" className="flex size-12 items-center justify-center rounded-xl bg-surface font-bold text-primary active:scale-90">−2,5</button>
+                  <button onClick={() => bump(-2.5)} aria-label="Menos 2,5 kg" className="flex size-12 items-center justify-center rounded-xl bg-surface font-bold text-link active:scale-90">−2,5</button>
                   <div className="flex items-baseline gap-1">
                     <input
                       aria-label="Carga em kg"
@@ -652,7 +652,7 @@ function ExerciseRunner(props: {
                     />
                     <span className="font-semibold text-muted">kg</span>
                   </div>
-                  <button onClick={() => bump(2.5)} aria-label="Mais 2,5 kg" className="flex size-12 items-center justify-center rounded-xl bg-surface font-bold text-primary active:scale-90">+2,5</button>
+                  <button onClick={() => bump(2.5)} aria-label="Mais 2,5 kg" className="flex size-12 items-center justify-center rounded-xl bg-surface font-bold text-link active:scale-90">+2,5</button>
                 </div>
                 <p className="mt-1 text-center text-xs text-muted">
                   {item.lastLoads?.length ? `Última vez: ${item.lastLoads.map((v) => v.toLocaleString('pt-BR')).join(' · ')} kg` : 'Opcional: anote a carga para ver sua evolução'}
@@ -774,8 +774,8 @@ function FinishedView({ run, setRun }: { run: RunState; setRun: SetRun }) {
       </motion.div>
 
       <div className="mt-6 grid grid-cols-3 gap-2 text-center">
-        <SummaryStat icon={<Timer className="size-5 text-primary" />} value={durationLabel(seconds)} label="de treino" />
-        <SummaryStat icon={<Dumbbell className="size-5 text-primary" />} value={`${done.length}/${run.items.length}`} label="exercícios" />
+        <SummaryStat icon={<Timer className="size-5 text-link" />} value={durationLabel(seconds)} label="de treino" />
+        <SummaryStat icon={<Dumbbell className="size-5 text-link" />} value={`${done.length}/${run.items.length}`} label="exercícios" />
         <SummaryStat icon={<Flame className="size-5 text-coral" />} value={run.kcalBurned != null ? `~${run.kcalBurned}` : offline ? '⏳' : '…'} label="kcal gastas" />
       </div>
       <p className="mt-2 text-center text-xs text-muted">
@@ -797,7 +797,7 @@ function FinishedView({ run, setRun }: { run: RunState; setRun: SetRun }) {
 
       {offline && (
         <p className="mt-4 flex items-center gap-2 rounded-2xl bg-soft p-3 text-sm">
-          <CloudUpload className="size-4 shrink-0 text-primary" /> Sem internet: treino guardado no celular. Ele é enviado sozinho quando a conexão voltar.
+          <CloudUpload className="size-4 shrink-0 text-link" /> Sem internet: treino guardado no celular. Ele é enviado sozinho quando a conexão voltar.
         </p>
       )}
       {error && (

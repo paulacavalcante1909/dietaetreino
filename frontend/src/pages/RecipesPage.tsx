@@ -41,7 +41,7 @@ export function RecipesPage() {
                   </p>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className="font-semibold text-primary">{fmtKcal(r.per_serving.kcal)} kcal</p>
+                  <p className="font-semibold text-link">{fmtKcal(r.per_serving.kcal)} kcal</p>
                   <p className="text-xs text-muted">por porção</p>
                 </div>
               </Card>

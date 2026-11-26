@@ -93,7 +93,7 @@ export function RecipeSheet({ recipe, onClose, onConfirm, onEdit }: Props) {
       <Sheet open onClose={onClose} title={recipe.name}>
         <p className="-mt-1 mb-4 text-sm text-muted">
           Refeição pronta · {detail ? items.length : recipe.items_count} {(detail ? items.length : recipe.items_count) === 1 ? 'ingrediente' : 'ingredientes'}
-          {changed && <span className="ml-1 font-semibold text-primary">· ajustada</span>}
+          {changed && <span className="ml-1 font-semibold text-link">· ajustada</span>}
         </p>
         <div className="space-y-4">
           {error && <Alert>{error.field('items') ?? error.message}</Alert>}
@@ -112,7 +112,7 @@ export function RecipeSheet({ recipe, onClose, onConfirm, onEdit }: Props) {
                 <span className="block text-sm font-semibold">Ajustar ingredientes</span>
                 <span className="block text-xs text-muted">Muda só este registro, não a refeição pronta salva</span>
               </span>
-              <motion.span animate={{ rotate: adjusting ? 90 : 0 }} className="text-xl text-primary">›</motion.span>
+              <motion.span animate={{ rotate: adjusting ? 90 : 0 }} className="text-xl text-link">›</motion.span>
             </button>
             <AnimatePresence initial={false}>
               {adjusting && (
@@ -120,7 +120,7 @@ export function RecipeSheet({ recipe, onClose, onConfirm, onEdit }: Props) {
                   <div className="space-y-2 pt-3">
                     <IngredientList items={items} onEdit={setEditIndex} />
                     <div className="flex gap-2">
-                      <button onClick={() => setPicking(true)} className="flex-1 rounded-xl border-2 border-dashed border-line py-3 text-sm font-semibold text-primary">
+                      <button onClick={() => setPicking(true)} className="flex-1 rounded-xl border-2 border-dashed border-line py-3 text-sm font-semibold text-link">
                         + Ingrediente
                       </button>
                       {changed && (
@@ -138,7 +138,7 @@ export function RecipeSheet({ recipe, onClose, onConfirm, onEdit }: Props) {
           <Button onClick={confirm} loading={saving} disabled={!(num(value.quantity) > 0) || items.length === 0}>
             {changed ? 'Adicionar com ajustes' : 'Adicionar'}
           </Button>
-          <button onClick={() => onEdit(recipe.id)} className="w-full py-2 text-sm font-medium text-primary">
+          <button onClick={() => onEdit(recipe.id)} className="w-full py-2 text-sm font-medium text-link">
             Editar a refeição pronta salva
           </button>
         </div>

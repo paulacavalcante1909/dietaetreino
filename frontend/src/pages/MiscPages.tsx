@@ -52,7 +52,7 @@ export function TermsPage() {
         <h2 className="pt-2 font-semibold text-ink">6. Seus direitos (LGPD, art. 18)</h2>
         <p>
           Você pode, a qualquer momento: acessar e corrigir seus dados (em Ajustes), revogar o consentimento e <strong>excluir a conta e todas as
-          informações</strong> (Ajustes → Excluir conta), além de pedir informações sobre o tratamento dos seus dados{CONTACT_EMAIL ? <> pelo e-mail <a href={`mailto:${CONTACT_EMAIL}`} className="font-semibold break-all text-primary">{CONTACT_EMAIL}</a></> : null}.
+          informações</strong> (Ajustes → Excluir conta), além de pedir informações sobre o tratamento dos seus dados{CONTACT_EMAIL ? <> pelo e-mail <a href={`mailto:${CONTACT_EMAIL}`} className="font-semibold break-all text-link">{CONTACT_EMAIL}</a></> : null}.
         </p>
 
         <h2 className="pt-2 font-semibold text-ink">7. Segurança</h2>
@@ -71,11 +71,11 @@ export function TermsPage() {
         <ul className="list-disc space-y-2 pl-5">
           <li>
             Produtos de marca e códigos de barras:{' '}
-            <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener noreferrer" className="font-medium text-primary underline">
+            <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener noreferrer" className="font-medium text-link underline">
               Open Food Facts
             </a>
             , base colaborativa disponibilizada sob a{' '}
-            <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener noreferrer" className="text-primary underline">
+            <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener noreferrer" className="text-link underline">
               Open Database License (ODbL)
             </a>
             . As informações podem conter erros; confira sempre o rótulo do produto.
@@ -86,7 +86,7 @@ export function TermsPage() {
           </li>
           <li>
             Exercícios e imagens:{' '}
-            <a href="https://github.com/yuhonas/free-exercise-db" target="_blank" rel="noopener noreferrer" className="text-primary underline">
+            <a href="https://github.com/yuhonas/free-exercise-db" target="_blank" rel="noopener noreferrer" className="text-link underline">
               Free Exercise DB
             </a>{' '}
             (domínio público), com nomes traduzidos.

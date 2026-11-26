@@ -8,6 +8,7 @@ import { fmtKcal } from '../components/Ring'
 import { Alert, BackButton, Button, Field, Logo } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import { useAuth } from '../lib/auth'
+import { useTheme } from '../lib/theme'
 import type { Objective } from '../lib/goalSuggestion'
 import { KCAL_MODES, type KcalMode } from '../lib/goalDays'
 import type { Energy, Goal, User } from '../lib/types'
@@ -44,6 +45,10 @@ export function GoalsPage({ onboarding = false }: { onboarding?: boolean }) {
   const [objective, setObjective] = useState<Objective | null>(null)
   const [suggested, setSuggested] = useState(false)
   const [kcalMode, setKcalMode] = useState<KcalMode>(goal?.kcal_mode ?? 'range')
+  const { theme } = useTheme()
+  // Primeiro acesso: depois de escolher o objetivo, mostra só o resumo (os números ficam em "Ajustar")
+  const [showNumbers, setShowNumbers] = useState(!onboarding)
+  const numbersVisible = showNumbers || (onboarding && energy !== null && !energy.available)
 
   useEffect(() => {
     if (onboarding && step === 'goals' && !energy) api<{ energy: Energy }>('/me/energy').then((r) => setEnergy(r.energy)).catch(() => {})
@@ -86,7 +91,7 @@ export function GoalsPage({ onboarding = false }: { onboarding?: boolean }) {
       <div className="safe-top px-5 pt-6 pb-8">
         <div className="mb-6 flex flex-col items-center text-center">
           <Logo size={56} />
-          <h1 className="mt-4 text-2xl font-bold">Olá, {user?.name.split(' ')[0]}! 💜</h1>
+          <h1 className="mt-4 text-2xl font-bold">Olá, {user?.name.split(' ')[0]}! {theme.heart}</h1>
           <p className="mt-1 text-muted">Conte um pouco sobre você para calcularmos quanto seu corpo gasta e sugerirmos suas metas.</p>
         </div>
         <AboutYouForm
@@ -106,7 +111,7 @@ export function GoalsPage({ onboarding = false }: { onboarding?: boolean }) {
       {onboarding ? (
         <div className="mb-6 flex flex-col items-center text-center">
           <Logo size={56} />
-          <h1 className="mt-4 text-2xl font-bold">Olá, {user?.name.split(' ')[0]}! 💜</h1>
+          <h1 className="mt-4 text-2xl font-bold">Olá, {user?.name.split(' ')[0]}! {theme.heart}</h1>
           <p className="mt-1 text-muted">Defina suas metas diárias. Você pode mudar quando quiser.</p>
         </div>
       ) : null}
@@ -132,7 +137,7 @@ export function GoalsPage({ onboarding = false }: { onboarding?: boolean }) {
               <Sparkles className="size-5" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block font-bold text-primary">Sugerir minhas metas</span>
+              <span className="block font-bold text-link">Sugerir minhas metas</span>
               <span className="block text-xs text-muted">Calculadas pelo seu corpo, treinos e objetivo</span>
             </span>
           </button>
@@ -145,6 +150,32 @@ export function GoalsPage({ onboarding = false }: { onboarding?: boolean }) {
         {suggested && !onboarding && (
           <p className="rounded-2xl bg-fiber/10 px-4 py-3 text-sm text-ink">Sugestão aplicada. Confira os números e toque em <strong>Salvar metas</strong>.</p>
         )}
+        {onboarding && !numbersVisible && (
+          objective ? (
+            <div className="rounded-[var(--radius-card)] bg-surface p-5 shadow-[0_2px_12px_-4px_rgba(31,23,36,0.08)]">
+              <p className="text-sm text-muted">Suas metas por dia</p>
+              <p className="mt-1 text-3xl font-extrabold">{fmtKcal(num(form.kcal))} <span className="text-base font-semibold text-muted">kcal</span></p>
+              <div className="mt-3 grid grid-cols-3 gap-2 text-center text-sm">
+                {([['Proteínas', `${form.protein_g} g`], ['Carboidratos', `${form.carbs_g} g`], ['Água', `${(num(form.water_ml) / 1000).toLocaleString('pt-BR')} L`]] as const).map(([l, v]) => (
+                  <div key={l} className="rounded-2xl bg-soft px-1 py-2.5">
+                    <p className="font-bold">{v}</p>
+                    <p className="text-xs text-muted">{l}</p>
+                  </div>
+                ))}
+              </div>
+              <button type="button" onClick={() => setShowNumbers(true)} className="mt-4 flex h-11 w-full items-center justify-center rounded-2xl bg-soft text-sm font-bold text-link active:scale-[0.98]">
+                Ajustar números
+              </button>
+            </div>
+          ) : (
+            <button type="button" onClick={() => setShowNumbers(true)} className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-soft text-sm font-bold text-link active:scale-[0.98]">
+              Prefiro digitar meus números
+            </button>
+          )
+        )}
+
+        {numbersVisible && (
+        <>
         <div className="grid grid-cols-2 gap-3">
           {fields.map((f) => (
             <Field
@@ -203,9 +234,12 @@ export function GoalsPage({ onboarding = false }: { onboarding?: boolean }) {
           )}
         </AnimatePresence>
 
+        </>
+        )}
+
         {!onboarding && <BurnedToggle />}
 
-        <Button type="submit" loading={loading}>
+        <Button type="submit" loading={loading} disabled={onboarding && !numbersVisible && !objective}>
           {saved ? 'Metas salvas ✓' : onboarding ? 'Começar' : 'Salvar metas'}
         </Button>
       </form>

@@ -2,7 +2,7 @@ import { ask } from '../components/Dialog'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ChevronRight } from 'lucide-react'
+import { BookOpen, ChevronRight, Dumbbell, Info, KeyRound, ListOrdered, LogOut, RefreshCw, ShieldCheck, Target, Trash2, UserRound, type LucideIcon } from 'lucide-react'
 import { AvatarEditor } from '../components/Avatar'
 import { Alert, Button, Card, Field, PasswordField } from '../components/ui'
 import { api, ApiError } from '../lib/api'
@@ -13,29 +13,75 @@ import { WeeklyGoalSheet } from '../components/WeeklyGoalSheet'
 import { APP_VERSION, checkForUpdate, hardRefresh } from '../lib/pwa'
 import { THEMES, useTheme } from '../lib/theme'
 
-function Section({ title, children, open, onToggle }: { title: string; children: ReactNode; open: boolean; onToggle: () => void }) {
+/** Grupo de opções num card só (linhas separadas por um fio). */
+function Group({ title, children }: { title?: string; children: ReactNode }) {
   return (
-    <Card className="!p-0">
-      <button onClick={onToggle} className="flex w-full items-center justify-between px-5 py-4 text-left font-medium">
-        {title}
-        <motion.span animate={{ rotate: open ? 90 : 0 }} className="text-muted">
-          <ChevronRight className="size-5" />
-        </motion.span>
+    <section>
+      {title && <h2 className="mb-2 px-1 text-xs font-bold tracking-wider text-muted uppercase">{title}</h2>}
+      <Card className="divide-y divide-line overflow-hidden !p-0">{children}</Card>
+    </section>
+  )
+}
+
+type RowProps = { icon: LucideIcon; title: string; hint?: string; danger?: boolean }
+
+function RowBody({ icon: Icon, title, hint, danger, trailing }: RowProps & { trailing?: ReactNode }) {
+  return (
+    <>
+      <span className={`flex size-9 shrink-0 items-center justify-center rounded-xl ${danger ? 'bg-coral/15 text-danger' : 'bg-soft text-link'}`}>
+        <Icon className="size-5" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className={`block font-semibold ${danger ? 'text-danger' : ''}`}>{title}</span>
+        {hint && <span className="block truncate text-xs text-muted">{hint}</span>}
+      </span>
+      {trailing ?? <ChevronRight className="size-5 shrink-0 text-muted" />}
+    </>
+  )
+}
+
+const rowClass = 'flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors active:bg-soft'
+
+/** Linha que leva a outra tela */
+function LinkRow({ to, ...p }: RowProps & { to: string }) {
+  return (
+    <Link to={to} className={rowClass}>
+      <RowBody {...p} />
+    </Link>
+  )
+}
+
+/** Linha que abre algo (folha, ação) */
+function ButtonRow({ onClick, ...p }: RowProps & { onClick: () => void }) {
+  return (
+    <button onClick={onClick} className={rowClass}>
+      <RowBody {...p} />
+    </button>
+  )
+}
+
+/** Linha que expande um formulário logo abaixo */
+function ExpandRow({ open, onToggle, children, ...p }: RowProps & { open: boolean; onToggle: () => void; children: ReactNode }) {
+  return (
+    <div>
+      <button onClick={onToggle} aria-expanded={open} className={rowClass}>
+        <RowBody
+          {...p}
+          trailing={
+            <motion.span animate={{ rotate: open ? 90 : 0 }} className="shrink-0 text-muted">
+              <ChevronRight className="size-5" />
+            </motion.span>
+          }
+        />
       </button>
       <AnimatePresence initial={false}>
         {open && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className="overflow-hidden"
-          >
-            <div className="px-5 pb-5">{children}</div>
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} className="overflow-hidden">
+            <div className="px-4 pt-1 pb-5">{children}</div>
           </motion.div>
         )}
       </AnimatePresence>
-    </Card>
+    </div>
   )
 }
 
@@ -95,64 +141,36 @@ export function SettingsPage() {
   })
 
   return (
-    <div className="safe-top space-y-3 px-5 pt-6 pb-6">
-      <h1 className="mb-2 text-2xl font-bold">Ajustes</h1>
+    <div className="safe-top space-y-6 px-5 pt-6 pb-6">
+      <h1 className="text-2xl font-bold">Ajustes</h1>
 
       <Card className="!p-4">
         <AvatarEditor />
       </Card>
 
-      <SectionTitle>Aparência</SectionTitle>
-      <ThemePicker />
-
-      <SectionTitle>Nutrição</SectionTitle>
-
-      <Link to="/metas" className="block">
-        <Card className="flex items-center justify-between !py-4 transition-transform active:scale-[0.98]">
-          <span>
-            <span className="block font-medium">Metas diárias</span>
-            <span className="block text-xs text-muted">Calorias, macros, água e treino na meta</span>
-          </span>
-          <ChevronRight className="size-5 text-muted" />
-        </Card>
-      </Link>
-
-      <Link to="/receitas" className="block">
-        <Card className="flex items-center justify-between !py-4 transition-transform active:scale-[0.98]">
-          <span>
-            <span className="block font-medium">Refeições prontas</span>
-            <span className="block text-xs text-muted">Combinações e receitas para adicionar com 1 toque</span>
-          </span>
-          <ChevronRight className="size-5 text-muted" />
-        </Card>
-      </Link>
-
-      <Link to="/refeicoes" className="block">
-        <Card className="flex items-center justify-between !py-4 transition-transform active:scale-[0.98]">
-          <span>
-            <span className="block font-medium">Organizar refeições do dia</span>
-            <span className="block text-xs text-muted">Renomear, reordenar, ocultar ou criar</span>
-          </span>
-          <ChevronRight className="size-5 text-muted" />
-        </Card>
-      </Link>
-
-      <SectionTitle>Treinos</SectionTitle>
-      <button onClick={() => setGoalOpen(true)} className="block w-full text-left">
-        <Card className="flex items-center justify-between !py-4 transition-transform active:scale-[0.98]">
-          <span>
-            <span className="block font-medium">Meta de treinos por semana</span>
-            <span className="block text-xs text-muted">
-              {user?.weekly_workout_goal ?? 3} {(user?.weekly_workout_goal ?? 3) === 1 ? 'dia' : 'dias'} por semana · aparece em Treinos e Progresso
-            </span>
-          </span>
-          <ChevronRight className="size-5 text-muted" />
-        </Card>
-      </button>
+      <Group title="Metas">
+        <LinkRow to="/metas" icon={Target} title="Metas diárias" hint="Calorias, macros, água e como o dia conta" />
+        <ButtonRow
+          onClick={() => setGoalOpen(true)}
+          icon={Dumbbell}
+          title="Treinos por semana"
+          hint={`${user?.weekly_workout_goal ?? 3} ${(user?.weekly_workout_goal ?? 3) === 1 ? 'treino' : 'treinos'} por semana`}
+        />
+      </Group>
       <WeeklyGoalSheet open={goalOpen} onClose={() => setGoalOpen(false)} value={user?.weekly_workout_goal ?? 3} />
 
-      <SectionTitle>Conta</SectionTitle>
-      <Section title="Meus dados" open={open === 'profile'} onToggle={() => toggle('profile')}>
+      <Group title="Refeições">
+        <LinkRow to="/receitas" icon={BookOpen} title="Refeições prontas" hint="Combinações para registrar com 1 toque" />
+        <LinkRow to="/refeicoes" icon={ListOrdered} title="Refeições do dia" hint="Renomear, reordenar, ocultar ou criar" />
+      </Group>
+
+      <section>
+        <h2 className="mb-2 px-1 text-xs font-bold tracking-wider text-muted uppercase">Aparência</h2>
+        <ThemePicker />
+      </section>
+
+      <Group title="Conta">
+        <ExpandRow icon={UserRound} title="Meus dados" hint="Nome, e-mail, altura e nascimento" open={open === 'profile'} onToggle={() => toggle('profile')}>
         <form onSubmit={profileForm.submit} className="space-y-3">
           <Field label="Nome" name="name" required value={profile.name} onChange={(e) => setProfile({ ...profile, name: e.target.value })} error={profileForm.error?.field('name')} />
           <Field label="E-mail" name="email" type="email" required value={profile.email} onChange={(e) => setProfile({ ...profile, email: e.target.value })} error={profileForm.error?.field('email')} />
@@ -186,9 +204,8 @@ export function SettingsPage() {
             {profileForm.done ? 'Salvo ✓' : 'Salvar'}
           </Button>
         </form>
-      </Section>
-
-      <Section title="Alterar senha" open={open === 'password'} onToggle={() => toggle('password')}>
+        </ExpandRow>
+        <ExpandRow icon={KeyRound} title="Alterar senha" open={open === 'password'} onToggle={() => toggle('password')}>
         <form onSubmit={pwdForm.submit} className="space-y-3">
           <PasswordField label="Senha atual" name="current_password" autoComplete="current-password" required value={pwd.current_password} onChange={(e) => setPwd({ ...pwd, current_password: e.target.value })} error={pwdForm.error?.field('current_password')} />
           <PasswordField label="Nova senha" name="new_password" autoComplete="new-password" minLength={8} required value={pwd.password} onChange={(e) => setPwd({ ...pwd, password: e.target.value })} error={pwdForm.error?.field('password')} />
@@ -196,25 +213,14 @@ export function SettingsPage() {
             {pwdForm.done ? 'Senha alterada ✓' : 'Alterar senha'}
           </Button>
         </form>
-      </Section>
+        </ExpandRow>
+        <ButtonRow onClick={logout} icon={LogOut} title="Sair da conta" />
+      </Group>
 
-      <Button variant="ghost" onClick={logout}>
-        Sair da conta
-      </Button>
-
-      <SectionTitle>Sobre</SectionTitle>
-      <AppVersionCard />
-      <Link to="/termos" className="block">
-        <Card className="flex items-center justify-between !py-4 transition-transform active:scale-[0.98]">
-          <span>
-            <span className="block font-medium">Termos e privacidade</span>
-            <span className="block text-xs text-muted">LGPD, seus dados e fontes</span>
-          </span>
-          <ChevronRight className="size-5 text-muted" />
-        </Card>
-      </Link>
-
-      <Section title="Excluir conta" open={open === 'delete'} onToggle={() => toggle('delete')}>
+      <Group title="Sobre o app">
+        <AppVersionRow />
+        <LinkRow to="/termos" icon={ShieldCheck} title="Termos e privacidade" hint="LGPD, seus dados e fontes" />
+        <ExpandRow icon={Trash2} title="Excluir conta" danger open={open === 'delete'} onToggle={() => toggle('delete')}>
         <form onSubmit={delForm.submit} className="space-y-3">
           <p className="text-sm text-muted">Isso apaga sua conta e todos os seus dados para sempre. Não dá para desfazer.</p>
           {delForm.error && !delForm.error.field('password') && <Alert>{delForm.error.message}</Alert>}
@@ -223,13 +229,14 @@ export function SettingsPage() {
             Excluir minha conta
           </Button>
         </form>
-      </Section>
+        </ExpandRow>
+      </Group>
     </div>
   )
 }
 
 /** Versão instalada + atualizar manualmente (o app também atualiza sozinho ao abrir). */
-function AppVersionCard() {
+function AppVersionRow() {
   const toast = useToast()
   const [busy, setBusy] = useState<'check' | 'reset' | null>(null)
 
@@ -252,20 +259,21 @@ function AppVersionCard() {
   }
 
   return (
-    <Card className="!py-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="font-medium">Versão do app</p>
-          <p className="text-xs text-muted">{APP_VERSION} · atualiza sozinho ao abrir</p>
-        </div>
-        <button onClick={check} disabled={!!busy} className="shrink-0 rounded-full bg-soft px-4 py-2 text-sm font-semibold text-primary disabled:opacity-50">
-          {busy === 'check' ? 'Buscando…' : 'Buscar atualização'}
-        </button>
+    <>
+      <div className={rowClass}>
+        <RowBody
+          icon={Info}
+          title="Versão do app"
+          hint={`${APP_VERSION} · atualiza sozinho ao abrir`}
+          trailing={
+            <button onClick={check} disabled={!!busy} className="shrink-0 rounded-full bg-soft px-3.5 py-2 text-sm font-semibold text-link disabled:opacity-50">
+              {busy === 'check' ? 'Buscando…' : 'Atualizar'}
+            </button>
+          }
+        />
       </div>
-      <button onClick={reset} disabled={!!busy} className="mt-3 text-xs font-medium text-muted underline underline-offset-2">
-        Problemas? Limpar cache e recarregar
-      </button>
-    </Card>
+      <ButtonRow onClick={reset} icon={RefreshCw} title="Limpar cache e recarregar" hint="Se algo parecer travado ou desatualizado" />
+    </>
   )
 }
 
@@ -300,11 +308,7 @@ function ThemePicker() {
           )
         })}
       </div>
-      <p className="mt-2 text-xs text-muted">Muda cores, mascote e o ícone da aba. O ícone do app instalado continua o mesmo.</p>
+      <p className="mt-2 text-xs text-muted">Muda as cores e o mascote do app.</p>
     </Card>
   )
-}
-
-function SectionTitle({ children }: { children: ReactNode }) {
-  return <h2 className="px-1 pt-4 text-xs font-bold tracking-wider text-muted uppercase">{children}</h2>
 }

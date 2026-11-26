@@ -13,7 +13,7 @@ const ToastContext = createContext<(t: Omit<ToastData, 'id'>) => void>(() => {})
 
 export const useToast = () => useContext(ToastContext)
 
-/** Aviso flutuante acima da barra inferior, com ação opcional (ex.: Desfazer). */
+/** Aviso flutuante embaixo, acima das barras, com ações opcionais (ex.: Desfazer). */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<ToastData | null>(null)
   const timer = useRef<number>(0)
@@ -27,14 +27,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={show}>
       {children}
-      <div className="safe-top pointer-events-none fixed inset-x-0 top-3 z-[60] flex justify-center px-5">
+      {/* Embaixo, acima das barras de botões: não cobre título nem o botão voltar */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[60] flex justify-center px-5 pb-[calc(env(safe-area-inset-bottom)+6.5rem)]">
         <AnimatePresence>
           {toast && (
             <motion.div
               key={toast.id}
-              initial={{ opacity: 0, y: -20, scale: 0.96 }}
+              initial={{ opacity: 0, y: 20, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -10 }}
+              exit={{ opacity: 0, y: 10 }}
               className="pointer-events-auto flex max-w-sm items-center gap-3 rounded-2xl bg-scrim px-4 py-3 text-sm text-white shadow-xl"
               role="status"
             >

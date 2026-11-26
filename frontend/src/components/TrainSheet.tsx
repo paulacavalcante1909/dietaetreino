@@ -168,7 +168,7 @@ export function TrainSheet({ open, onClose }: { open: boolean; onClose: () => vo
                 <BigTile badge={<Dumbbell className="size-5" />} title="Exercício avulso" hint="Escolha na hora: corrida, prancha…" action={<Play className="size-3.5 fill-current" />} onClick={() => go('/treinos/avulso/iniciar')} />
                 {ready.length === 0 && (
                   <button onClick={() => go('/treinos')} className="flex min-h-28 flex-col items-start gap-2 rounded-2xl border-2 border-dashed border-line p-3 text-left active:scale-[0.97]">
-                    <span className="flex size-10 items-center justify-center rounded-xl bg-soft text-primary"><Plus className="size-5" /></span>
+                    <span className="flex size-10 items-center justify-center rounded-xl bg-soft text-link"><Plus className="size-5" /></span>
                     <span className="block leading-tight font-bold">Montar minha ficha</span>
                     <span className="block text-xs text-muted">Treino A, B, C…</span>
                   </button>
@@ -183,7 +183,7 @@ export function TrainSheet({ open, onClose }: { open: boolean; onClose: () => vo
             {/* Recentes: 1 toque registra igual à última vez (com Desfazer e Ajustar no aviso) */}
             {recent && recent.length > 0 && (
               <section>
-                <p className="mb-2 text-xs font-bold tracking-wide text-muted uppercase">Recentes</p>
+                <p className="mb-2 text-xs font-bold tracking-wider text-muted uppercase">Recentes</p>
                 <div className="space-y-2">
                   {recent.map((r) => {
                     const a = activities.find((x) => x.key === r.key)
@@ -205,7 +205,7 @@ export function TrainSheet({ open, onClose }: { open: boolean; onClose: () => vo
             )}
 
             <section>
-              <p className="mb-2 text-xs font-bold tracking-wide text-muted uppercase">{recent?.length ? 'Outros' : 'O que você fez?'}</p>
+              <p className="mb-2 text-xs font-bold tracking-wider text-muted uppercase">{recent?.length ? 'Outros' : 'O que você fez?'}</p>
               <div className="space-y-2">
                 {activities.map((a) => (
                   <ActivityRow
@@ -219,7 +219,7 @@ export function TrainSheet({ open, onClose }: { open: boolean; onClose: () => vo
                   />
                 ))}
                 <button onClick={() => go('/registrar-treino?avulso=1')} className="flex w-full items-center gap-3 rounded-2xl border-2 border-dashed border-line p-3 text-left active:scale-[0.98]">
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-xl text-primary"><Plus className="size-6" /></span>
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-xl text-link"><Plus className="size-6" /></span>
                   <span className="min-w-0 flex-1">
                     <span className="block font-bold">Outro exercício</span>
                     <span className="block text-xs text-muted">Procurar na lista completa</span>
@@ -232,7 +232,7 @@ export function TrainSheet({ open, onClose }: { open: boolean; onClose: () => vo
 
         {tab === 'done' && form && <QuickLog activity={form} last={recent?.find((r) => r.key === form.key) ?? null} onBack={() => setForm(null)} onDone={registered} />}
 
-        <button onClick={() => go('/historico-treinos')} className="flex w-full items-center justify-center gap-2 py-1 text-sm font-semibold text-muted">
+        <button onClick={() => go('/historico-treinos')} className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-soft text-sm font-bold text-link active:scale-[0.98]">
           <History className="size-4" /> Ver treinos feitos
         </button>
       </div>
@@ -346,7 +346,7 @@ function QuickLog({ activity, last, onBack, onDone }: { activity: Activity; last
   return (
     <section className="space-y-4">
       <div className="flex items-center gap-3">
-        <button onClick={onBack} aria-label="Voltar" className="flex size-10 shrink-0 items-center justify-center rounded-full bg-soft text-primary active:scale-90">
+        <button onClick={onBack} aria-label="Voltar" className="flex size-10 shrink-0 items-center justify-center rounded-full bg-soft text-link active:scale-90">
           <ChevronLeft className="size-5" strokeWidth={2.5} />
         </button>
         <ActivityBadge activity={activity} />

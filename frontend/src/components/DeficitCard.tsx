@@ -30,7 +30,7 @@ export function DeficitCard({ energy, consumed, isToday, goalKcal, burned = 0 }:
     const onlyWeight = energy.missing.length === 1 && energy.missing[0] === 'weight'
     return (
       <Card className="relative flex items-start gap-3 !py-4">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-soft text-primary">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-soft text-link">
           <Activity className="size-5" />
         </span>
         <div className="min-w-0 flex-1 pr-6">
@@ -38,7 +38,7 @@ export function DeficitCard({ energy, consumed, isToday, goalKcal, burned = 0 }:
           <p className="text-sm text-muted">Preencha {list(energy.missing.map((m) => MISSING_LABEL[m]))} para ver se está comendo mais ou menos do que gasta.</p>
           <Link
             to={onlyWeight ? '/progresso?aba=peso&registrar=1' : '/ajustes?abrir=dados'}
-            className="mt-2 inline-flex items-center gap-1 text-sm font-bold text-primary"
+            className="mt-2 inline-flex items-center gap-1 text-sm font-bold text-link"
           >
             {onlyWeight ? 'Registrar peso' : 'Completar meus dados'} <ChevronRight className="size-4" />
           </Link>
@@ -135,7 +135,7 @@ export function DeficitCard({ energy, consumed, isToday, goalKcal, burned = 0 }:
             </p>
           )}
           <p className="text-xs">Fórmula de Mifflin-St Jeor. É uma estimativa e não substitui a orientação de um nutricionista.</p>
-          <Link to="/ajustes?abrir=dados" className="block text-center font-bold text-primary">
+          <Link to="/ajustes?abrir=dados" className="block text-center font-bold text-link">
             Editar meus dados
           </Link>
         </div>

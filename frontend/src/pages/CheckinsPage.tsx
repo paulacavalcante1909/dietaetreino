@@ -112,7 +112,7 @@ export function CheckinsPage() {
             [Trophy, stats.total_count, stats.total_count === 1 ? 'treino no total' : 'treinos no total'],
           ] as const).map(([Icon, v, l]) => (
             <Card key={String(l)} className="!p-3">
-              <p className="flex items-center justify-center gap-1 text-xl font-extrabold text-primary">
+              <p className="flex items-center justify-center gap-1 text-xl font-extrabold text-link">
                 <Icon className="size-5" /> {v}
               </p>
               <p className="text-xs text-muted">{l}</p>
@@ -123,9 +123,9 @@ export function CheckinsPage() {
 
       <Card className="!p-4">
         <div className="mb-3 flex items-center justify-between">
-          <button aria-label="Mês anterior" onClick={() => go(-1)} className="flex size-9 items-center justify-center rounded-full bg-soft text-primary"><ChevronLeft className="size-5" /></button>
+          <button aria-label="Mês anterior" onClick={() => go(-1)} className="flex size-9 items-center justify-center rounded-full bg-soft text-link"><ChevronLeft className="size-5" /></button>
           <p className="font-semibold first-letter:uppercase">{title}</p>
-          <button aria-label="Próximo mês" onClick={() => go(1)} disabled={month >= today.slice(0, 7)} className="flex size-9 items-center justify-center rounded-full bg-soft text-primary disabled:opacity-30"><ChevronRight className="size-5" /></button>
+          <button aria-label="Próximo mês" onClick={() => go(1)} disabled={month >= today.slice(0, 7)} className="flex size-9 items-center justify-center rounded-full bg-soft text-link disabled:opacity-30"><ChevronRight className="size-5" /></button>
         </div>
         <div className="mb-1 grid grid-cols-7 text-center text-xs font-medium text-muted">
           {WEEKDAYS.map((d, i) => <span key={i}>{d}</span>)}

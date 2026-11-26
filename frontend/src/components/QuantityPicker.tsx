@@ -71,7 +71,7 @@ export function QuantityPicker({ food, portions, value, onChange, hideGrams }: P
       </div>
 
       <motion.div layout className="grid grid-cols-6 gap-1 rounded-2xl bg-soft p-3 text-center">
-        <Nut label="kcal" value={Math.round(n.kcal)} color="text-primary" strong />
+        <Nut label="kcal" value={Math.round(n.kcal)} color="text-link" strong />
         <Nut label="carb" value={n.carbs} unit="g" color="text-lavender" />
         <Nut label="prot" value={n.protein} unit="g" color="text-pink" />
         <Nut label="gord" value={n.fat} unit="g" color="text-violet" />
@@ -101,7 +101,7 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
 
 function StepButton({ onClick, label, children }: { onClick: () => void; label: string; children: React.ReactNode }) {
   return (
-    <button type="button" aria-label={label} onClick={onClick} className="flex size-14 items-center justify-center rounded-2xl bg-soft text-2xl font-semibold text-primary transition-transform active:scale-90">
+    <button type="button" aria-label={label} onClick={onClick} className="flex size-14 items-center justify-center rounded-2xl bg-soft text-2xl font-semibold text-link transition-transform active:scale-90">
       {children}
     </button>
   )

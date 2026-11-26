@@ -3,7 +3,7 @@ import { BackButton } from '../components/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { LazyBarcodeScanner as BarcodeScanner } from '../components/LazyBarcodeScanner'
-import { FoodSearch, type PlateControls } from '../components/FoodSearch'
+import { FoodSearch, PLATE_HINT_KEY, type PlateControls } from '../components/FoodSearch'
 import { MealSuggestions } from '../components/MealSuggestions'
 import { askText } from '../components/Dialog'
 import { newPlateItem, plateItemFrom, plateKcal, plateStep, type PlateItem } from '../lib/plate'
@@ -16,6 +16,19 @@ import { fmtKcal } from '../components/Ring'
 import { ChevronDown } from 'lucide-react'
 import { mealForNow } from '../lib/meals'
 import type { Entry, FoodDetail, FoodLite, Meal, RecipeSummary } from '../lib/types'
+
+/**
+ * "Salvar como pronta" só aparece quando o mesmo prato (mesmos alimentos) já foi registrado antes.
+ * Guarda no aparelho os pratos registrados (até 30).
+ */
+const PLATES_KEY = 'dt_plates_seen'
+function repeatedPlate(items: PlateItem[]) {
+  const sig = items.map((i) => i.food.id).sort((a, b) => a - b).join(',')
+  const seen: string[] = JSON.parse(localStorage.getItem(PLATES_KEY) ?? '[]')
+  const repeated = seen.includes(sig)
+  if (!repeated) localStorage.setItem(PLATES_KEY, JSON.stringify([sig, ...seen].slice(0, 30)))
+  return repeated
+}
 
 const QUICK_ADD_MAX_KCAL = 600
 const QUICK_ADD_MAX_AMOUNT = 400 // g ou ml sem porção caseira
@@ -173,6 +186,7 @@ export function AddFoodPage() {
         registerAdded(r.entry)
       }
       setPlate({})
+      localStorage.setItem(PLATE_HINT_KEY, '1')
       navigator.vibrate?.(30)
       toast({
         text: `${entries.length === 1 ? '1 item registrado' : `${entries.length} itens registrados`} ✓`,
@@ -184,7 +198,7 @@ export function AddFoodPage() {
               removeAdded(entries.map((e) => e.id))
             },
           },
-          ...(items.length >= 2 ? [{ label: 'Salvar como pronta', run: () => savePlate(items) }] : []),
+          ...(items.length >= 2 && repeatedPlate(items) ? [{ label: 'Salvar como pronta', run: () => savePlate(items) }] : []),
         ],
       })
     } catch (e) {
@@ -234,7 +248,7 @@ export function AddFoodPage() {
           <h1 className="text-xl font-bold">Registrar refeição</h1>
           {meals.length > 0 ? (
             /* Refeição: parece um botão (borda + seta colada no nome) para ficar claro que dá para trocar */
-            <label className="relative mt-1 inline-flex max-w-full items-center gap-1 rounded-full border-2 border-primary/40 bg-orchid/10 py-1 pr-2.5 pl-3.5 text-sm font-bold text-primary active:scale-95">
+            <label className="relative mt-1 inline-flex max-w-full items-center gap-1 rounded-full border-2 border-primary/40 bg-orchid/10 py-1 pr-2.5 pl-3.5 text-sm font-bold text-link active:scale-95">
               <span className="truncate">{meals.find((m) => m.id === mealId)?.name ?? 'Escolher refeição'}</span>
               <ChevronDown className="size-4 shrink-0" strokeWidth={3} aria-hidden />
               {/* O select nativo fica invisível por cima: abre a lista do celular */}
@@ -255,7 +269,7 @@ export function AddFoodPage() {
         </div>
       </header>
 
-      <div className="flex-1">
+      <div>
         {!searching && mealId > 0 && (
           <MealSuggestions
             mealId={mealId}
@@ -282,11 +296,11 @@ export function AddFoodPage() {
       <div className="mt-6 grid grid-cols-2 gap-3">
         <button
           onClick={() => navigate(createUrl(query.current ? { nome: query.current } : {}))}
-          className="rounded-2xl border-2 border-dashed border-line py-4 text-center text-sm font-semibold text-primary"
+          className="rounded-2xl border-2 border-dashed border-line py-4 text-center text-sm font-semibold text-link"
         >
           + Cadastrar alimento
         </button>
-        <Link to="/receitas/nova" className="rounded-2xl border-2 border-dashed border-line py-4 text-center text-sm font-semibold text-primary">
+        <Link to="/receitas/nova" className="rounded-2xl border-2 border-dashed border-line py-4 text-center text-sm font-semibold text-link">
           + Refeição pronta
         </Link>
       </div>
@@ -319,13 +333,13 @@ export function AddFoodPage() {
             <div className="mx-auto flex max-w-lg items-center gap-3 px-5 py-3">
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold">
-                  {plateItems.length} {plateItems.length === 1 ? 'item' : 'itens'} no prato · {fmtKcal(plateKcalTotal)} kcal
+                  {plateItems.length} {plateItems.length === 1 ? 'item' : 'itens'} · {fmtKcal(plateKcalTotal)} kcal
                 </p>
-                <p className="truncate text-xs text-muted">
-                  {plateItems.map((i) => (i.food.display_name || i.food.name).split(',')[0]).join(', ')} ·{' '}
-                  <button onClick={() => setPlate({})} className="font-semibold text-primary underline-offset-2 hover:underline">limpar</button>
-                </p>
+                <p className="truncate text-xs text-muted">{plateItems.map((i) => (i.food.display_name || i.food.name).split(',')[0]).join(', ')}</p>
               </div>
+              <button onClick={() => setPlate({})} className="h-11 shrink-0 rounded-xl bg-soft px-3.5 text-sm font-semibold text-link active:scale-95">
+                Limpar
+              </button>
               <button onClick={registerPlate} disabled={registering} className="h-11 shrink-0 rounded-xl bg-primary px-5 font-semibold text-white active:scale-95 disabled:opacity-60">
                 {registering ? 'Registrando…' : 'Registrar'}
               </button>
@@ -344,13 +358,13 @@ export function AddFoodPage() {
             <div className="mx-auto flex max-w-lg items-center gap-3 px-5 py-3">
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold">
-                  ✓ {added.length} {added.length === 1 ? 'item adicionado' : 'itens adicionados'} · {fmtKcal(totalKcal)} kcal
+                  ✓ {added.length} {added.length === 1 ? 'item' : 'itens'} · {fmtKcal(totalKcal)} kcal
                 </p>
-                <p className="truncate text-xs text-muted">
-                  {added.map((a) => a.name.split(',')[0]).join(', ')} ·{' '}
-                  <button onClick={undoLast} className="font-semibold text-primary underline-offset-2 hover:underline">desfazer último</button>
-                </p>
+                <p className="truncate text-xs text-muted">{added.map((a) => a.name.split(',')[0]).join(', ')}</p>
               </div>
+              <button onClick={undoLast} aria-label="Desfazer o último item adicionado" className="h-11 shrink-0 rounded-xl bg-soft px-3.5 text-sm font-semibold text-link active:scale-95">
+                Desfazer
+              </button>
               <button onClick={goHome} className="h-11 shrink-0 rounded-xl bg-primary px-5 font-semibold text-white active:scale-95">
                 Concluir
               </button>

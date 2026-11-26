@@ -68,6 +68,12 @@ export function WorkoutPage() {
 
   const cancel = () => {
     if (!workout) return
+    // Treino recém-criado e ainda vazio: desistir não deixa um "Treino A" vazio na ficha
+    if (params.get('novo') && workout.items.length === 0 && items.length === 0) {
+      api(`/workouts/${id}`, { method: 'DELETE' }).catch(() => {})
+      navigate('/treinos', { replace: true })
+      return
+    }
     setName(workout.name)
     setItems(withKeys(workout.items))
     setEditing(false)
@@ -98,7 +104,7 @@ export function WorkoutPage() {
           <h1 className="min-w-0 flex-1 truncate text-xl font-bold">{workout.name}</h1>
         )}
         {!editing && (
-          <button onClick={() => setEditing(true)} className="rounded-full bg-soft px-4 py-2 text-sm font-semibold text-primary">
+          <button onClick={() => setEditing(true)} className="rounded-full bg-soft px-4 py-2 text-sm font-semibold text-link">
             Editar
           </button>
         )}
@@ -119,7 +125,7 @@ export function WorkoutPage() {
                 <ExerciseImage image={it.exercise.image} name={it.exercise.name} size={48} animate={false} />
                 <button onClick={() => setEditIndex(idx)} className="min-w-0 flex-1 text-left">
                   <p className="truncate text-sm font-medium">{it.exercise.name}</p>
-                  <p className="text-xs font-semibold text-primary">{prescription(it)}</p>
+                  <p className="text-xs font-semibold text-link">{prescription(it)}</p>
                 </button>
                 <button aria-label={`Tirar ${it.exercise.name} do treino`} onClick={() => setItems((l) => l.filter((_, j) => j !== idx))} className="-mr-1 flex size-10 items-center justify-center rounded-full text-muted active:bg-soft">
                   <X className="size-5" />
@@ -137,7 +143,7 @@ export function WorkoutPage() {
                 <div className="min-w-0 flex-1">
                   <p className="text-xs text-muted">{idx + 1}º exercício</p>
                   <p className="font-semibold leading-snug">{it.exercise.name}</p>
-                  <p className="mt-1 inline-block rounded-full bg-orchid/15 px-2.5 py-0.5 text-sm font-bold text-primary">
+                  <p className="mt-1 inline-block rounded-full bg-orchid/15 px-2.5 py-0.5 text-sm font-bold text-link">
                     {prescription(it)}
                   </p>
                   {it.notes && <p className="mt-1 text-xs text-muted">{it.notes}</p>}
@@ -150,13 +156,13 @@ export function WorkoutPage() {
 
       {editing && (
         <div className="mt-4 space-y-3">
-          <button onClick={() => setPicking(true)} className="w-full rounded-2xl border-2 border-dashed border-line py-4 text-sm font-semibold text-primary">
+          <button onClick={() => setPicking(true)} className="w-full rounded-2xl border-2 border-dashed border-line py-4 text-sm font-semibold text-link">
             + Adicionar exercício
           </button>
           {/* Ações secundárias longe do botão principal; excluir pede confirmação */}
           <div className="mt-10 flex justify-center gap-6 border-t border-line pt-5 text-sm font-semibold">
             {items.length > 0 && (
-              <button onClick={duplicate} className="flex items-center gap-1.5 px-2 py-2 text-primary">
+              <button onClick={duplicate} className="flex items-center gap-1.5 px-2 py-2 text-link">
                 <Copy className="size-4" /> Duplicar treino
               </button>
             )}
@@ -179,7 +185,7 @@ export function WorkoutPage() {
                   <Play className="size-4 fill-current" /> Iniciar treino
                 </Link>
               )}
-              <Link to={`/registrar-treino?treino=${workout.id}`} className={`flex h-12 items-center justify-center rounded-2xl bg-soft px-4 font-semibold text-primary active:scale-[0.98] ${items.length > 0 ? '' : 'flex-1'}`}>
+              <Link to={`/registrar-treino?treino=${workout.id}`} className={`flex h-12 items-center justify-center rounded-2xl bg-soft px-4 font-semibold text-link active:scale-[0.98] ${items.length > 0 ? '' : 'flex-1'}`}>
                 Já fiz
               </Link>
             </div>
@@ -225,7 +231,7 @@ export function WorkoutPage() {
             ) : (
               <ExerciseImage image={null} name={viewing.exercise.name} size={96} />
             )}
-            <p className="text-center text-2xl font-bold text-primary">
+            <p className="text-center text-2xl font-bold text-link">
               {isTimed(viewing) ? `${minutesOf(viewing.reps)} minutos` : `${viewing.sets} séries × ${viewing.reps}`}
             </p>
             {viewing.notes && <p className="rounded-2xl bg-soft p-3 text-sm">{viewing.notes}</p>}
@@ -255,7 +261,7 @@ function LoadHistory({ name }: { name: string }) {
     <div className="rounded-2xl bg-soft/60 p-3">
       <div className="mb-2 flex items-center justify-between text-sm">
         <span className="font-bold">Evolução de carga</span>
-        <span className="flex items-center gap-1 font-semibold text-primary">
+        <span className="flex items-center gap-1 font-semibold text-link">
           <Trophy className="size-4" /> {best.toLocaleString('pt-BR')} kg
         </span>
       </div>

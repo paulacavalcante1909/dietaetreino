@@ -97,7 +97,7 @@ export function FoodSheet({ target, confirmLabel, onClose, onConfirm, onNotFound
             {confirmLabel}
           </Button>
           {food.is_mine && (
-            <button onClick={() => navigate(`/alimentos/${food.id}/editar`)} className="w-full py-2 text-sm font-medium text-primary">
+            <button onClick={() => navigate(`/alimentos/${food.id}/editar`)} className="w-full py-2 text-sm font-medium text-link">
               Editar este alimento
             </button>
           )}

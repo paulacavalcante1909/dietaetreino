@@ -16,7 +16,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 export function Button({ variant = 'primary', loading, children, className = '', disabled, ...rest }: ButtonProps) {
   const styles = {
     primary: 'bg-primary text-white hover:bg-primary-hover shadow-[0_6px_20px_-8px_rgba(155,63,168,0.7)]',
-    ghost: 'bg-soft text-primary hover:bg-line',
+    ghost: 'bg-soft text-link hover:bg-line',
     danger: 'bg-coral/10 text-danger hover:bg-coral/20',
   }[variant]
 
@@ -56,7 +56,7 @@ export function PasswordField(props: Omit<FieldProps, 'type' | 'trailing'>) {
           onClick={() => setVisible((v) => !v)}
           aria-label={visible ? 'Ocultar senha' : 'Mostrar senha'}
           aria-pressed={visible}
-          className="-mr-2 flex size-10 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:text-primary"
+          className="-mr-2 flex size-10 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:text-link"
         >
           <svg className="size-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden>
             <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
@@ -122,7 +122,7 @@ export function Spinner() {
 export function BackButton({ onClick, label = 'Voltar', icon = 'back' }: { onClick: () => void; label?: string; icon?: 'back' | 'close' | 'down' }) {
   const Icon = icon === 'close' ? X : icon === 'down' ? ChevronDown : ChevronLeft
   return (
-    <button onClick={onClick} aria-label={label} className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface text-primary shadow-sm transition-transform active:scale-90">
+    <button onClick={onClick} aria-label={label} className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface text-link shadow-sm transition-transform active:scale-90">
       <Icon className="size-5" strokeWidth={2.5} />
     </button>
   )

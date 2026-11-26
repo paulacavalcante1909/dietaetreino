@@ -17,7 +17,7 @@ export function ExerciseImage({ image, name, size = 64, animate = true }: { imag
 
   if (!image) {
     return (
-      <div className="flex shrink-0 items-center justify-center rounded-2xl bg-soft text-primary" style={{ width: size, height: size }} aria-hidden>
+      <div className="flex shrink-0 items-center justify-center rounded-2xl bg-soft text-link" style={{ width: size, height: size }} aria-hidden>
         <Dumbbell style={{ width: size * 0.45, height: size * 0.45 }} />
       </div>
     )

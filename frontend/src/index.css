@@ -12,6 +12,7 @@
   /* Complementos para contraste */
   --color-primary: #9b3fa8;
   --color-primary-hover: #86348f;
+  --color-link: #9b3fa8; /* texto/ícone na cor do tema (nos temas escuros, mais claro que o fundo dos botões) */
   --color-water: #6b8bd6;
   --color-water-ink: #3f5aa0;
   --color-bg: #fbf7fc;
@@ -83,6 +84,7 @@ input[type='number'] {
   --color-fiber: #7b8f3e; /* fibras */
   --color-primary: #96582f;
   --color-primary-hover: #7f4a27;
+  --color-link: #96582f;
   --color-water: #6f9bc8;
   --color-water-ink: #3d6390;
   --color-bg: #fdf6ee;
@@ -106,6 +108,7 @@ input[type='number'] {
   --color-fiber: #6fc28f; /* fibras */
   --color-primary: #d6343a;
   --color-primary-hover: #e5484d;
+  --color-link: #ff6b70;
   --color-water: #6ea8fe;
   --color-water-ink: #b9d4ff;
   --color-bg: #141518;
@@ -128,6 +131,7 @@ input[type='number'] {
   --color-fiber: #4f9a6b; /* fibras */
   --color-primary: #2563a8;
   --color-primary-hover: #1e4f87;
+  --color-link: #2563a8;
   --color-water: #38a3c9;
   --color-water-ink: #1f6680;
   --color-bg: #f3f5f8;
@@ -151,6 +155,7 @@ input[type='number'] {
   --color-fiber: #6fc28f; /* fibras */
   --color-primary: #d4510e;
   --color-primary-hover: #e8641c;
+  --color-link: #ff8a3d;
   --color-water: #5aa9f0;
   --color-water-ink: #b9dcff;
   --color-bg: #141518;

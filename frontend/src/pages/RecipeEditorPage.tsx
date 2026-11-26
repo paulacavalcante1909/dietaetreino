@@ -88,9 +88,9 @@ export function RecipeEditorPage() {
         </div>
 
         <Card className="!p-4">
-          <p className="mb-2 text-xs font-semibold tracking-wide text-muted uppercase">Por porção</p>
+          <p className="mb-2 text-xs font-semibold tracking-wider text-muted uppercase">Por porção</p>
           <div className="grid grid-cols-6 text-center">
-            <Mini label="kcal" value={Math.round(per.kcal)} className="text-primary" />
+            <Mini label="kcal" value={Math.round(per.kcal)} className="text-link" />
             <Mini label="carb" value={per.carbs} className="text-lavender" />
             <Mini label="prot" value={per.protein} className="text-pink" />
             <Mini label="gord" value={per.fat} className="text-violet" />
@@ -103,7 +103,7 @@ export function RecipeEditorPage() {
         <div>
           <p className="mb-2 px-1 font-semibold">Ingredientes</p>
           <IngredientList items={items} onEdit={setEditIndex} />
-          <button onClick={() => setPicking(true)} className="mt-3 w-full rounded-2xl border-2 border-dashed border-line py-4 text-sm font-semibold text-primary">
+          <button onClick={() => setPicking(true)} className="mt-3 w-full rounded-2xl border-2 border-dashed border-line py-4 text-sm font-semibold text-link">
             + Adicionar ingrediente
           </button>
         </div>

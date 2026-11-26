@@ -66,12 +66,12 @@ export function MealsPage() {
                 aria-label="Nome da refeição"
                 defaultValue={m.name}
                 onBlur={(e) => e.target.value.trim() && e.target.value !== m.name && patch(m, { name: e.target.value.trim() })}
-                className="min-w-0 flex-1 bg-transparent font-medium outline-none focus:text-primary"
+                className="min-w-0 flex-1 bg-transparent font-medium outline-none focus:text-link"
               />
               <button
                 onClick={() => patch(m, { active: !m.active })}
                 aria-label={m.active ? `Ocultar ${m.name}` : `Mostrar ${m.name}`}
-                className="flex h-10 shrink-0 items-center gap-1 rounded-full bg-soft px-3 text-xs font-semibold text-primary"
+                className="flex h-10 shrink-0 items-center gap-1 rounded-full bg-soft px-3 text-xs font-semibold text-link"
               >
                 {m.active ? <EyeOff className="size-4" /> : <Eye className="size-4" />} {m.active ? 'Ocultar' : 'Mostrar'}
               </button>

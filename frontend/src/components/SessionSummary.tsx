@@ -15,7 +15,7 @@ export function exerciseLine(e: SessionExercise) {
 /** Ícone de feito (✓) ou pulado (⏭) no lugar de riscar o nome */
 export function ExerciseStatus({ done }: { done: boolean }) {
   return done ? (
-    <CheckCircle2 className="size-4.5 shrink-0 text-primary" aria-label="Feito" />
+    <CheckCircle2 className="size-4.5 shrink-0 text-link" aria-label="Feito" />
   ) : (
     <SkipForward className="size-4.5 shrink-0 text-muted" aria-label="Pulado" />
   )
@@ -44,9 +44,9 @@ export function SessionSummary({ session, compact = false }: { session: WorkoutS
   return (
     <div className="rounded-2xl bg-soft/70 p-3">
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm font-semibold">
-        <span className="flex items-center gap-1"><Timer className="size-4 text-primary" /> {durationLabel(session.duration_seconds)}</span>
-        <span className="flex items-center gap-1"><Dumbbell className="size-4 text-primary" /> {done.length}/{session.exercises.length} {session.exercises.length === 1 ? 'exercício' : 'exercícios'}</span>
-        {sets > 0 && <span className="flex items-center gap-1"><Repeat className="size-4 text-primary" /> {sets} {sets === 1 ? 'série' : 'séries'}</span>}
+        <span className="flex items-center gap-1"><Timer className="size-4 text-link" /> {durationLabel(session.duration_seconds)}</span>
+        <span className="flex items-center gap-1"><Dumbbell className="size-4 text-link" /> {done.length}/{session.exercises.length} {session.exercises.length === 1 ? 'exercício' : 'exercícios'}</span>
+        {sets > 0 && <span className="flex items-center gap-1"><Repeat className="size-4 text-link" /> {sets} {sets === 1 ? 'série' : 'séries'}</span>}
         {session.kcal_burned != null && (
           <span className="flex items-center gap-1" title="Estimativa média (MET × peso × tempo)"><Flame className="size-4 text-coral" /> ~{session.kcal_burned} kcal</span>
         )}

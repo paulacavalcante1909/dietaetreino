@@ -167,7 +167,7 @@ export function FoodFormPage() {
             ))}
           </AnimatePresence>
           {form.portions.length < 10 && (
-            <button type="button" onClick={() => set('portions', [...form.portions, { label: '', qty: '' }])} className="text-sm font-semibold text-primary">
+            <button type="button" onClick={() => set('portions', [...form.portions, { label: '', qty: '' }])} className="text-sm font-semibold text-link">
               + Adicionar porção
             </button>
           )}

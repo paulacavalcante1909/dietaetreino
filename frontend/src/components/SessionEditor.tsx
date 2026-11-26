@@ -96,13 +96,13 @@ export function SessionEditor({ session, open, onClose, onSaved }: { session: Wo
                   </button>
                   <button onClick={() => setEditing({ row: r, index: i })} className="min-w-0 flex-1 text-left">
                     <p className={`truncate text-sm font-medium ${r.done ? '' : 'text-muted'}`}>{r.name}</p>
-                    <p className="text-xs font-semibold text-primary">{prescription(r)}</p>
+                    <p className="text-xs font-semibold text-link">{prescription(r)}</p>
                   </button>
                   {!isTimed(r) && r.done && (
                     <span className="flex shrink-0 items-center gap-1" aria-label="Séries feitas">
-                      <button aria-label="Menos uma série feita" onClick={() => update(i, { sets_done: Math.max(0, r.sets_done - 1), done: r.sets_done - 1 > 0 })} className="flex size-8 items-center justify-center rounded-lg bg-soft font-bold text-primary">−</button>
+                      <button aria-label="Menos uma série feita" onClick={() => update(i, { sets_done: Math.max(0, r.sets_done - 1), done: r.sets_done - 1 > 0 })} className="flex size-8 items-center justify-center rounded-lg bg-soft font-bold text-link">−</button>
                       <span className="w-9 text-center text-sm font-bold">{r.sets_done}/{r.sets}</span>
-                      <button aria-label="Mais uma série feita" onClick={() => update(i, { sets_done: Math.min(r.sets, r.sets_done + 1), done: true })} className="flex size-8 items-center justify-center rounded-lg bg-soft font-bold text-primary">+</button>
+                      <button aria-label="Mais uma série feita" onClick={() => update(i, { sets_done: Math.min(r.sets, r.sets_done + 1), done: true })} className="flex size-8 items-center justify-center rounded-lg bg-soft font-bold text-link">+</button>
                     </span>
                   )}
                   <button aria-label={`Tirar ${r.name}`} onClick={() => setRows((l) => l.filter((_, j) => j !== i))} disabled={rows.length === 1} className="flex size-10 shrink-0 items-center justify-center rounded-full text-muted active:bg-soft disabled:opacity-30">
@@ -111,7 +111,7 @@ export function SessionEditor({ session, open, onClose, onSaved }: { session: Wo
                 </li>
               ))}
             </ul>
-            <button onClick={() => setPicking(true)} className="mt-3 w-full rounded-2xl border-2 border-dashed border-line py-4 text-sm font-semibold text-primary">
+            <button onClick={() => setPicking(true)} className="mt-3 w-full rounded-2xl border-2 border-dashed border-line py-4 text-sm font-semibold text-link">
               + Incluir exercício
             </button>
             <p className="mt-3 text-center text-xs text-muted">As calorias gastas são recalculadas ao salvar.</p>

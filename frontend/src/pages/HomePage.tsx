@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Avatar } from '../components/Avatar'
 import { DeficitCard } from '../components/DeficitCard'
+import { FirstSteps } from '../components/FirstSteps'
 import { EntrySheet } from '../components/EntrySheet'
 import { openTrain, QuickTile } from '../components/Layout'
 import { Bar, Ring, fmt, fmtKcal } from '../components/Ring'
@@ -33,7 +34,7 @@ export function HomePage() {
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState<Entry | null>(null)
   const [direction, setDirection] = useState(0)
-  const [macrosOpen, setMacrosOpen] = useState(() => localStorage.getItem(MACROS_KEY) !== '0')
+  const [macrosOpen, setMacrosOpen] = useState(() => localStorage.getItem(MACROS_KEY) === '1')
   const [weekRefresh, setWeekRefresh] = useState(0)
 
   const load = useCallback(() => {
@@ -114,6 +115,13 @@ export function HomePage() {
             transition={{ duration: 0.22 }}
           >
             <motion.div variants={container} initial="hidden" animate="show" className="space-y-4">
+              {/* Primeiros dias: guia de 3 passos */}
+              {date === isoDate() && (
+                <motion.div variants={item} className="empty:hidden">
+                  <FirstSteps day={day} />
+                </motion.div>
+              )}
+
               {/* Atalhos: treinar, refeição do momento e água */}
               {date <= isoDate() && (
                 <motion.div variants={item}>
@@ -182,12 +190,12 @@ export function HomePage() {
               {/* Refeições logo após o resumo: é a ação mais usada */}
               <motion.div variants={item} className="space-y-3">
                 <div className="flex items-center justify-between px-1 pt-1">
-                  <h2 className="font-bold">Refeições do dia</h2>
+                  <h2 className="text-xs font-bold tracking-wider text-muted uppercase">Refeições do dia</h2>
                   <Link
                     to="/refeicoes"
                     aria-label="Organizar refeições do dia (renomear, reordenar, ocultar)"
                     title="Organizar refeições"
-                    className="flex size-9 items-center justify-center rounded-full text-primary transition-colors hover:bg-soft active:scale-90"
+                    className="flex size-9 items-center justify-center rounded-full text-link transition-colors hover:bg-soft active:scale-90"
                   >
                     <Pencil className="size-5" />
                   </Link>
@@ -222,7 +230,7 @@ function QuickCards({ day, date }: { day: DayData; date: string }) {
 
   return (
     <div className="grid grid-cols-2 gap-2">
-      <QuickTile icon={Dumbbell} label="Treinar" hint={trained ? `${day.trainings.length === 1 ? 'Feito' : `${day.trainings.length} feitos`} ✓` : isToday ? 'Ficha ou avulso' : 'Registrar'} done={trained} onClick={openTrain} />
+      <QuickTile icon={Dumbbell} label="Treinar" hint={trained ? `${day.trainings.length === 1 ? 'Feito' : `${day.trainings.length} feitos`} ✓` : isToday ? 'Agora ou já feito' : 'Registrar'} done={trained} onClick={openTrain} />
       <QuickTile
         icon={Utensils}
         label="Registrar refeição"
@@ -253,7 +261,7 @@ function WeekStrip({ date, onPick, refreshKey }: { date: string; onPick: (d: str
 
   return (
     <div className="mb-4 flex items-center gap-1">
-      <button aria-label="Semana anterior" onClick={() => onPick(addDays(date, -7))} className="flex size-8 shrink-0 items-center justify-center rounded-full text-primary active:scale-90">
+      <button aria-label="Semana anterior" onClick={() => onPick(addDays(date, -7))} className="flex size-8 shrink-0 items-center justify-center rounded-full text-link active:scale-90">
         <ChevronLeft className="size-5" />
       </button>
       <div className="grid flex-1 grid-cols-7 gap-1">
@@ -266,7 +274,7 @@ function WeekStrip({ date, onPick, refreshKey }: { date: string; onPick: (d: str
               onClick={() => onPick(d)}
               aria-label={parseIso(d).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
               aria-current={active ? 'date' : undefined}
-              className={`relative flex flex-col items-center rounded-2xl py-1.5 transition-colors ${active ? 'bg-primary text-white shadow-md' : d === today ? 'bg-soft text-primary' : 'text-ink'}`}
+              className={`relative flex flex-col items-center rounded-2xl py-1.5 transition-colors ${active ? 'bg-primary text-white shadow-md' : d === today ? 'bg-soft text-link' : 'text-ink'}`}
             >
               <span className={`text-xs font-semibold ${active ? 'text-white/80' : 'text-muted'}`}>{WD[i]}</span>
               <span className="text-base font-bold">{parseIso(d).getDate()}</span>
@@ -278,7 +286,7 @@ function WeekStrip({ date, onPick, refreshKey }: { date: string; onPick: (d: str
           )
         })}
       </div>
-      <button aria-label="Próxima semana" onClick={() => onPick(addDays(date, 7))} className="flex size-8 shrink-0 items-center justify-center rounded-full text-primary active:scale-90">
+      <button aria-label="Próxima semana" onClick={() => onPick(addDays(date, 7))} className="flex size-8 shrink-0 items-center justify-center rounded-full text-link active:scale-90">
         <ChevronRight className="size-5" />
       </button>
     </div>
@@ -315,7 +323,7 @@ function WeightMini() {
   return (
     <Card className="flex items-center justify-between gap-3 !py-4">
       <Link to="/progresso?aba=peso" className="flex min-w-0 items-center gap-3">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-soft text-primary">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-soft text-link">
           <Scale className="size-5" />
         </span>
         <span className="min-w-0">
@@ -331,7 +339,7 @@ function WeightMini() {
           </span>
         </span>
       </Link>
-      <Link to="/progresso?aba=peso&registrar=1" className="shrink-0 rounded-full bg-soft px-4 py-2 text-sm font-semibold text-primary active:scale-95">
+      <Link to="/progresso?aba=peso&registrar=1" className="shrink-0 rounded-full bg-soft px-4 py-2 text-sm font-semibold text-link active:scale-95">
         Registrar
       </Link>
     </Card>
@@ -401,7 +409,7 @@ function WaterCard({ date, total, goal, logs, onChange }: { date: string; total:
             +{v}
           </button>
         ))}
-        <button onClick={() => setCustom(true)} className="h-11 rounded-xl bg-soft text-sm font-bold text-primary active:scale-95">
+        <button onClick={() => setCustom(true)} className="h-11 rounded-xl bg-soft text-sm font-bold text-link active:scale-95">
           Outro
         </button>
       </div>
@@ -477,14 +485,14 @@ function MealCard({ meal, date, onEdit, onChange }: { meal: DayMeal; date: strin
         )}
         <div className="flex shrink-0 items-center gap-2">
           {empty && meal.yesterday_count > 0 && (
-            <button onClick={copyYesterday} disabled={copying} className="flex items-center gap-1 rounded-full bg-soft px-3 py-2 text-xs font-bold text-primary active:scale-95 disabled:opacity-50">
+            <button onClick={copyYesterday} disabled={copying} className="flex items-center gap-1 rounded-full bg-soft px-3 py-2 text-xs font-bold text-link active:scale-95 disabled:opacity-50">
               <RotateCcw className="size-3.5" /> Repetir de ontem
             </button>
           )}
           <button
             onClick={add}
             aria-label={`Adicionar em ${meal.name}`}
-            className={`flex items-center justify-center rounded-full transition-transform active:scale-90 ${empty ? 'size-9 bg-soft text-primary' : 'size-10 bg-primary text-white shadow-md'}`}
+            className={`flex items-center justify-center rounded-full transition-transform active:scale-90 ${empty ? 'size-9 bg-soft text-link' : 'size-10 bg-primary text-white shadow-md'}`}
           >
             <Plus className="size-5" strokeWidth={2.75} />
           </button>

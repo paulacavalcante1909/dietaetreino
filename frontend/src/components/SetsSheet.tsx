@@ -75,9 +75,9 @@ export function SetsSheet({ item, isNew, withNotes = false, withDistance = false
     <div>
       <p className="mb-2 text-sm font-medium text-muted">Séries</p>
       <div className="flex items-center justify-center gap-4">
-        <button aria-label="Menos séries" onClick={() => setSets((s) => Math.max(1, s - 1))} className="flex size-14 items-center justify-center rounded-2xl bg-soft text-2xl font-semibold text-primary active:scale-90">−</button>
+        <button aria-label="Menos séries" onClick={() => setSets((s) => Math.max(1, s - 1))} className="flex size-14 items-center justify-center rounded-2xl bg-soft text-2xl font-semibold text-link active:scale-90">−</button>
         <span className="w-16 text-center text-4xl font-bold">{sets}</span>
-        <button aria-label="Mais séries" onClick={() => setSets((s) => Math.min(10, s + 1))} className="flex size-14 items-center justify-center rounded-2xl bg-soft text-2xl font-semibold text-primary active:scale-90">+</button>
+        <button aria-label="Mais séries" onClick={() => setSets((s) => Math.min(10, s + 1))} className="flex size-14 items-center justify-center rounded-2xl bg-soft text-2xl font-semibold text-link active:scale-90">+</button>
       </div>
     </div>
   )
@@ -92,7 +92,7 @@ export function SetsSheet({ item, isNew, withNotes = false, withDistance = false
             {([['reps', 'Repetições'], ['seconds', 'Segundos'], ['cardio', 'Cardio']] as const).map(([k, l]) => (
               <button key={k} role="tab" aria-selected={mode === k} onClick={() => setMode(k)} className="relative flex-1 rounded-xl py-2.5 text-sm font-semibold">
                 {mode === k && <motion.span layoutId="sets-mode" className="absolute inset-0 rounded-xl bg-surface shadow-sm" transition={{ type: 'spring', stiffness: 500, damping: 38 }} />}
-                <span className={`relative ${mode === k ? 'text-primary' : 'text-muted'}`}>{l}</span>
+                <span className={`relative ${mode === k ? 'text-link' : 'text-muted'}`}>{l}</span>
               </button>
             ))}
           </div>
@@ -119,9 +119,9 @@ export function SetsSheet({ item, isNew, withNotes = false, withDistance = false
                 <div>
                   <p className="mb-2 text-sm font-medium text-muted">Tempo por série</p>
                   <div className="flex items-center justify-center gap-4">
-                    <button aria-label="Menos 5 segundos" onClick={() => setSeconds((s) => Math.max(5, s - 5))} className="flex size-14 items-center justify-center rounded-2xl bg-soft text-lg font-semibold text-primary active:scale-90">−5</button>
+                    <button aria-label="Menos 5 segundos" onClick={() => setSeconds((s) => Math.max(5, s - 5))} className="flex size-14 items-center justify-center rounded-2xl bg-soft text-lg font-semibold text-link active:scale-90">−5</button>
                     <span className="w-24 text-center text-4xl font-bold">{seconds}<span className="text-lg font-semibold text-muted"> s</span></span>
-                    <button aria-label="Mais 5 segundos" onClick={() => setSeconds((s) => Math.min(600, s + 5))} className="flex size-14 items-center justify-center rounded-2xl bg-soft text-lg font-semibold text-primary active:scale-90">+5</button>
+                    <button aria-label="Mais 5 segundos" onClick={() => setSeconds((s) => Math.min(600, s + 5))} className="flex size-14 items-center justify-center rounded-2xl bg-soft text-lg font-semibold text-link active:scale-90">+5</button>
                   </div>
                   <div className="mt-3 flex flex-wrap justify-center gap-2">
                     {SECONDS_SUGGESTIONS.map((s) => (
@@ -136,7 +136,7 @@ export function SetsSheet({ item, isNew, withNotes = false, withDistance = false
             {mode === 'cardio' && (
               <motion.div key="cardio" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-4">
                 <div className="flex items-center justify-center gap-4">
-                  <button aria-label="Menos 5 minutos" onClick={() => setMinutes(String(Math.max(1, min - 5)))} className="flex size-14 items-center justify-center rounded-2xl bg-soft text-lg font-semibold text-primary active:scale-90">−5</button>
+                  <button aria-label="Menos 5 minutos" onClick={() => setMinutes(String(Math.max(1, min - 5)))} className="flex size-14 items-center justify-center rounded-2xl bg-soft text-lg font-semibold text-link active:scale-90">−5</button>
                   <div className="flex items-baseline gap-1">
                     <input
                       aria-label="Minutos"
@@ -148,7 +148,7 @@ export function SetsSheet({ item, isNew, withNotes = false, withDistance = false
                     />
                     <span className="text-lg font-semibold text-muted">min</span>
                   </div>
-                  <button aria-label="Mais 5 minutos" onClick={() => setMinutes(String(Math.min(300, min + 5)))} className="flex size-14 items-center justify-center rounded-2xl bg-soft text-lg font-semibold text-primary active:scale-90">+5</button>
+                  <button aria-label="Mais 5 minutos" onClick={() => setMinutes(String(Math.min(300, min + 5)))} className="flex size-14 items-center justify-center rounded-2xl bg-soft text-lg font-semibold text-link active:scale-90">+5</button>
                 </div>
                 <div className="flex flex-wrap justify-center gap-2">
                   {MINUTES_SUGGESTIONS.map((m) => (

@@ -132,7 +132,7 @@ export function TrainingPage() {
           <h1 className="truncate text-xl font-bold">{session.workout_name}</h1>
           <p className="text-sm text-muted first-letter:uppercase">{date}</p>
         </div>
-        <button onClick={() => setEditing(true)} className="flex shrink-0 items-center gap-1.5 rounded-full bg-soft px-4 py-2 text-sm font-semibold text-primary">
+        <button onClick={() => setEditing(true)} className="flex shrink-0 items-center gap-1.5 rounded-full bg-soft px-4 py-2 text-sm font-semibold text-link">
           <Pencil className="size-4" /> Editar
         </button>
       </header>
@@ -165,10 +165,10 @@ export function TrainingPage() {
 
       {/* Números */}
       <div className={`mt-5 grid gap-2 text-center ${st.km > 0 ? 'grid-cols-4' : 'grid-cols-3'}`}>
-        <Stat icon={<Timer className="size-5 text-primary" />} value={st.duration} label="tempo" />
-        {st.km > 0 && <Stat icon={<Route className="size-5 text-primary" />} value={fmtKm(st.km)} label="km" />}
+        <Stat icon={<Timer className="size-5 text-link" />} value={st.duration} label="tempo" />
+        {st.km > 0 && <Stat icon={<Route className="size-5 text-link" />} value={fmtKm(st.km)} label="km" />}
         <Stat icon={<Flame className="size-5 text-coral" />} value={st.kcal > 0 ? `~${st.kcal}` : '—'} label="kcal gastas" />
-        <Stat icon={<Dumbbell className="size-5 text-primary" />} value={`${st.done}/${session.exercises.length}`} label="exercícios" />
+        <Stat icon={<Dumbbell className="size-5 text-link" />} value={`${st.done}/${session.exercises.length}`} label="exercícios" />
       </div>
       {session.weight_estimated && <p className="mt-2 text-center text-xs text-muted">Registre seu peso em Progresso para uma estimativa de calorias melhor.</p>}
 

@@ -76,7 +76,7 @@ export function ExercisePicker({ open, onClose, onPick }: Props) {
               className="mb-3 h-12 w-full rounded-2xl border border-line bg-surface px-4 outline-none focus:border-orchid focus:ring-4 focus:ring-orchid/15"
             />
 
-            <p className="mb-2 text-xs font-semibold tracking-wide text-muted uppercase">Categorias</p>
+            <p className="mb-2 text-xs font-semibold tracking-wider text-muted uppercase">Categorias</p>
             <div className="-mx-5 mb-4 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none]" role="tablist" aria-label="Categorias de exercício">
               {[['', 'Todos'], ['favoritos', 'Favoritos'], ...Object.entries(groups)].map(([key, label]) => (
                 <button
@@ -112,7 +112,7 @@ export function ExercisePicker({ open, onClose, onPick }: Props) {
                         {e.user_id ? ' · meu' : ''}
                       </p>
                     </div>
-                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-soft text-xl text-primary">+</span>
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-soft text-xl text-link">+</span>
                   </button>
                   <button
                     onClick={() => toggleFavorite(e)}
@@ -126,7 +126,7 @@ export function ExercisePicker({ open, onClose, onPick }: Props) {
               ))}
             </ul>
 
-            <button onClick={() => setCreating(true)} className="mt-6 w-full rounded-2xl border-2 border-dashed border-line py-4 text-sm font-semibold text-primary">
+            <button onClick={() => setCreating(true)} className="mt-6 w-full rounded-2xl border-2 border-dashed border-line py-4 text-sm font-semibold text-link">
               + Criar exercício personalizado
             </button>
           </div>

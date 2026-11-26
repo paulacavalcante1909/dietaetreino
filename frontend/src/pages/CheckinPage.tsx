@@ -229,7 +229,7 @@ export function CheckinPage() {
               {([['ficha', 'Treino da ficha'], ['avulso', 'Exercício avulso']] as const).map(([k, l]) => (
                 <button key={k} role="tab" aria-selected={mode === k} onClick={() => setMode(k)} className="relative flex-1 rounded-xl py-2.5 text-sm font-semibold">
                   {mode === k && <motion.span layoutId="checkin-mode" className="absolute inset-0 rounded-xl bg-surface shadow-sm" transition={{ type: 'spring', stiffness: 500, damping: 38 }} />}
-                  <span className={`relative ${mode === k ? 'text-primary' : 'text-muted'}`}>{l}</span>
+                  <span className={`relative ${mode === k ? 'text-link' : 'text-muted'}`}>{l}</span>
                 </button>
               ))}
             </div>
@@ -242,20 +242,20 @@ export function CheckinPage() {
                     <ExerciseImage image={i.exercise.image} name={i.exercise.name} size={48} animate={false} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{i.exercise.name}</p>
-                      <p className="text-xs font-semibold text-primary">{prescription(i)}</p>
+                      <p className="text-xs font-semibold text-link">{prescription(i)}</p>
                     </div>
                     <button aria-label={`Remover ${i.exercise.name}`} onClick={() => setLoose((l) => l.filter((x) => x.key !== i.key))} className="flex size-10 items-center justify-center rounded-full text-muted active:bg-soft">
                       <X className="size-5" />
                     </button>
                   </div>
                 ))}
-                <button onClick={() => setPicking(true)} className="w-full rounded-2xl border-2 border-dashed border-line py-4 text-sm font-semibold text-primary">
+                <button onClick={() => setPicking(true)} className="w-full rounded-2xl border-2 border-dashed border-line py-4 text-sm font-semibold text-link">
                   + {loose.length ? 'Outro exercício' : 'Escolher exercício'}
                 </button>
               </div>
             ) : workouts!.length === 0 ? (
               <p className="rounded-2xl bg-soft/70 p-4 text-sm text-muted">
-                Você ainda não tem treinos na ficha. Use <strong>Exercício avulso</strong> ou <Link to="/treinos" className="font-semibold text-primary">crie sua ficha</Link>.
+                Você ainda não tem treinos na ficha. Use <strong>Exercício avulso</strong> ou <Link to="/treinos" className="font-semibold text-link">crie sua ficha</Link>.
               </p>
             ) : (
               <>
@@ -268,13 +268,13 @@ export function CheckinPage() {
                       aria-pressed={workoutId === w.id}
                       className={`flex items-center gap-2 rounded-2xl py-2 pr-4 pl-2 text-sm font-semibold transition-all ${workoutId === w.id ? 'bg-primary text-white shadow-md' : 'bg-surface text-ink shadow-sm'}`}
                     >
-                      <span className={`flex size-8 items-center justify-center rounded-xl text-sm ${workoutId === w.id ? 'bg-white/20' : 'bg-soft text-primary'}`}>{letter(w.name)}</span>
+                      <span className={`flex size-8 items-center justify-center rounded-xl text-sm ${workoutId === w.id ? 'bg-white/20' : 'bg-soft text-link'}`}>{letter(w.name)}</span>
                       {w.name}
                     </button>
                   ))}
                 </div>
                 {workout && workout.items.length === 0 && (
-                  <p className="mt-2 text-sm text-muted">Este treino ainda não tem exercícios. <Link to={`/treinos/${workout.id}?editar=1`} className="font-semibold text-primary">Adicionar exercícios</Link></p>
+                  <p className="mt-2 text-sm text-muted">Este treino ainda não tem exercícios. <Link to={`/treinos/${workout.id}?editar=1`} className="font-semibold text-link">Adicionar exercícios</Link></p>
                 )}
                 {workout && workout.items.length > 0 && <p className="mt-2 text-xs text-muted">{workout.items.map((i) => i.exercise.name).join(' · ')}</p>}
               </>
@@ -336,12 +336,12 @@ export function CheckinPage() {
                   <div className="flex justify-center py-3"><Spinner /></div>
                 ) : (
                   <div className="flex items-center gap-3">
-                    <Camera className="size-9 shrink-0 text-primary" strokeWidth={1.5} />
+                    <Camera className="size-9 shrink-0 text-link" strokeWidth={1.5} />
                     <div className="grid min-w-0 flex-1 grid-cols-2 gap-2">
                       <button type="button" onClick={() => camera.current?.click()} className="h-11 rounded-xl bg-primary text-sm font-bold text-white active:scale-[0.98]">
                         Câmera
                       </button>
-                      <button type="button" onClick={() => gallery.current?.click()} className="h-11 rounded-xl bg-surface text-sm font-bold text-primary shadow-sm active:scale-[0.98]">
+                      <button type="button" onClick={() => gallery.current?.click()} className="h-11 rounded-xl bg-surface text-sm font-bold text-link shadow-sm active:scale-[0.98]">
                         Galeria
                       </button>
                     </div>

@@ -67,7 +67,7 @@ export function AvatarEditor() {
         <p className="truncate text-lg font-bold">{user?.name}</p>
         <p className="truncate text-sm text-muted">{user?.email}</p>
         <div className="mt-1 flex gap-3 text-sm font-semibold">
-          <button onClick={() => input.current?.click()} disabled={busy} className="text-primary">{busy ? 'Enviando…' : user?.avatar_url ? 'Trocar foto' : 'Adicionar foto'}</button>
+          <button onClick={() => input.current?.click()} disabled={busy} className="text-link">{busy ? 'Enviando…' : user?.avatar_url ? 'Trocar foto' : 'Adicionar foto'}</button>
           {user?.avatar_url && <button onClick={remove} className="text-muted">Remover</button>}
         </div>
       </div>

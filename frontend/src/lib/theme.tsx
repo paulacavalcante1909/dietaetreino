@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 
 /**
- * Temas visuais. Cada tema troca cores (CSS em index.css), mascote, logo, favicon
+ * Temas visuais. Cada tema troca cores (CSS em index.css), mascote, logo
  * e a cor da barra do celular. O ícone do app INSTALADO não muda (o sistema guarda
  * o ícone no momento da instalação).
  */
@@ -84,12 +84,10 @@ function setLink(rel: string, href: string, sizes?: string) {
   el.href = href
 }
 
-/** Aplica no documento: atributo data-theme, favicon, ícone do iPhone e cor da barra. */
+/** Aplica no documento: atributo data-theme, ícone do iPhone e cor da barra (o favicon é fixo). */
 export function applyTheme(id: ThemeId) {
   const t = THEMES.find((x) => x.id === id) ?? THEMES[0]
   document.documentElement.dataset.theme = t.id
-  setLink('icon', `${t.assets}/favicon-32.png`, '32x32')
-  setLink('icon', `${t.assets}/favicon.png`, '64x64')
   setLink('apple-touch-icon', `${t.assets}/apple-touch-icon.png`)
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', t.themeColor)
 }

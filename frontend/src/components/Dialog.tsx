@@ -84,7 +84,7 @@ export function DialogHost() {
             transition={{ type: 'spring', stiffness: 420, damping: 30 }}
             className="relative w-full max-w-sm rounded-[var(--radius-card)] bg-surface p-6 text-center shadow-2xl"
           >
-            <span className={`mx-auto flex size-14 items-center justify-center rounded-full ${pending.danger ? 'bg-coral/15 text-danger' : 'bg-orchid/15 text-primary'}`}>
+            <span className={`mx-auto flex size-14 items-center justify-center rounded-full ${pending.danger ? 'bg-coral/15 text-danger' : 'bg-orchid/15 text-link'}`}>
               <Icon className="size-7" />
             </span>
             <h2 id="dialog-title" className="mt-4 text-lg font-bold">{pending.title}</h2>

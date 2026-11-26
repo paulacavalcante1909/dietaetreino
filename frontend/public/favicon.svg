@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#141518"/>
+  <g fill="none" stroke="#ff8a3d" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round">
+    <!-- orelhas -->
+    <path d="M24.5 27 C20 20 18.5 10.5 21.5 8.5 C25 6.5 29 15 29.5 25"/>
+    <path d="M39.5 27 C44 20 45.5 10.5 42.5 8.5 C39 6.5 35 15 34.5 25"/>
+    <!-- cabeça -->
+    <path d="M32 25 C42 25 48 31.5 48 39.5 C48 48 41 54 32 54 C23 54 16 48 16 39.5 C16 31.5 22 25 32 25 Z"/>
+    <!-- focinho -->
+    <path d="M29.5 44.5 L32 46.5 L34.5 44.5"/>
+  </g>
+  <g fill="#ff8a3d">
+    <circle cx="25.5" cy="38.5" r="2.2"/>
+    <circle cx="38.5" cy="38.5" r="2.2"/>
+  </g>
+</svg>
