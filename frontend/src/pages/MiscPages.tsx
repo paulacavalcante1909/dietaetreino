@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom'
 import { BackButton } from '../components/ui'
 
-/** E-mail de contato do responsável pelos dados (LGPD). Preencha antes de divulgar. */
-const CONTACT_EMAIL = ''
+/** E-mail de contato do responsável pelos dados (LGPD). */
+const CONTACT_EMAIL = 'contato@dietaetreino.agenciapaulacavalcante.com.br'
 
 /**
  * Texto-base de Termos e Privacidade.
@@ -52,7 +52,7 @@ export function TermsPage() {
         <h2 className="pt-2 font-semibold text-ink">6. Seus direitos (LGPD, art. 18)</h2>
         <p>
           Você pode, a qualquer momento: acessar e corrigir seus dados (em Ajustes), revogar o consentimento e <strong>excluir a conta e todas as
-          informações</strong> (Ajustes → Excluir conta), além de pedir informações sobre o tratamento dos seus dados{CONTACT_EMAIL ? <> pelo e-mail <strong>{CONTACT_EMAIL}</strong></> : null}.
+          informações</strong> (Ajustes → Excluir conta), além de pedir informações sobre o tratamento dos seus dados{CONTACT_EMAIL ? <> pelo e-mail <a href={`mailto:${CONTACT_EMAIL}`} className="font-semibold break-all text-primary">{CONTACT_EMAIL}</a></> : null}.
         </p>
 
         <h2 className="pt-2 font-semibold text-ink">7. Segurança</h2>
