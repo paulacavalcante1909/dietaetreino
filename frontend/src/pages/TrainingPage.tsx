@@ -2,6 +2,7 @@ import { ask } from '../components/Dialog'
 import { Camera, Download, Dumbbell, Flame, Pencil, Route, Share2, Timer, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useTheme } from '../lib/theme'
 import { notifyChanged } from '../components/Layout'
 import { SessionEditor } from '../components/SessionEditor'
 import { ExerciseRow, exerciseLine } from '../components/SessionSummary'
@@ -52,10 +53,11 @@ export function TrainingPage() {
 
   // A imagem de compartilhar é a própria prévia: o que você vê é o que vai
   const photoUrl = session?.checkin?.photo_url ?? null
+  const { theme } = useTheme()
   useEffect(() => {
     if (!session) return
     let url = ''
-    renderShareCard(session, photoUrl, 'Dieta & Treino').then((blob) => {
+    renderShareCard(session, photoUrl, 'Dieta & Treino', `${theme.assets}/mascote.png`).then((blob) => {
       url = URL.createObjectURL(blob)
       setCard((old) => {
         if (old) URL.revokeObjectURL(old.url)
@@ -65,7 +67,7 @@ export function TrainingPage() {
     return () => {
       if (url) URL.revokeObjectURL(url)
     }
-  }, [session, photoUrl])
+  }, [session, photoUrl, theme.assets])
 
   const sendCheckin = async (fields: Record<string, string>, photo?: Blob) => {
     const form = new FormData()
@@ -141,20 +143,22 @@ export function TrainingPage() {
       <div className="relative overflow-hidden rounded-[var(--radius-card)] bg-soft shadow-lg">
         {card ? <img src={card.url} alt={`Resumo do treino ${session.workout_name}`} className="aspect-[4/5] w-full object-cover" /> : <div className="aspect-[4/5] w-full animate-pulse" />}
         {uploading && <div className="absolute inset-0 flex items-center justify-center bg-scrim/40"><Spinner /></div>}
-        <div className="absolute top-3 right-3 flex gap-2">
-          <button onClick={() => input.current?.click()} className="flex items-center gap-1.5 rounded-full bg-scrim/60 px-3.5 py-2 text-sm font-semibold text-white backdrop-blur active:scale-95">
-            <Camera className="size-4" /> {photoUrl ? 'Trocar foto' : 'Adicionar foto'}
-          </button>
-          {photoUrl && (
-            <button onClick={removePhoto} aria-label="Remover foto" className="flex size-9 items-center justify-center rounded-full bg-scrim/60 text-white backdrop-blur active:scale-95">
-              <Trash2 className="size-4" />
-            </button>
-          )}
-        </div>
       </div>
       <input ref={input} type="file" accept="image/*" hidden onChange={(e) => onPhoto(e.target.files?.[0])} />
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      {/* Foto: fica fora da imagem para não cobrir o mascote */}
+      <div className="mt-3 flex gap-2">
+        <Button variant="ghost" onClick={() => input.current?.click()} loading={uploading}>
+          <Camera className="size-5" /> {photoUrl ? 'Trocar foto' : 'Adicionar foto'}
+        </Button>
+        {photoUrl && (
+          <button onClick={removePhoto} aria-label="Remover foto" className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-soft text-muted active:scale-95">
+            <Trash2 className="size-5" />
+          </button>
+        )}
+      </div>
+
+      <div className="mt-2 grid grid-cols-2 gap-2">
         <Button onClick={share} loading={sharing} disabled={!card}>
           <Share2 className="size-5" /> Compartilhar
         </Button>

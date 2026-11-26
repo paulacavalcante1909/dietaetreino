@@ -20,14 +20,14 @@ export function sessionStats(s: WorkoutSessionData) {
   const km = s.exercises.reduce((a, e) => a + (e.done ? (e.distance_km ?? 0) : 0), 0)
   const done = s.exercises.filter((e) => e.done).length
   const sets = s.exercises.filter((e) => !isTimed(e)).reduce((a, e) => a + e.sets_done, 0)
-  return { km, done, sets, duration: durationLabel(s.duration_seconds), kcal: s.kcal_burned ?? 0 }
+  return { km, done, sets, duration: durationLabel(s.duration_seconds, true), kcal: s.kcal_burned ?? 0 }
 }
 
 /**
  * Imagem para compartilhar (estilo Strava): a foto do treino (ou um fundo nas cores do tema)
- * com nome, data, tempo, calorias, km e exercícios. 1080 × 1350 (4:5).
+ * com nome, data, tempo, calorias, km e exercícios, e o mascote do tema no canto. 1080 × 1350 (4:5).
  */
-export async function renderShareCard(session: WorkoutSessionData, photoUrl: string | null, appName: string): Promise<Blob> {
+export async function renderShareCard(session: WorkoutSessionData, photoUrl: string | null, appName: string, mascotUrl?: string): Promise<Blob> {
   await document.fonts?.ready
   const canvas = document.createElement('canvas')
   canvas.width = W
@@ -95,6 +95,28 @@ export async function renderShareCard(session: WorkoutSessionData, photoUrl: str
   c.globalAlpha = 0.9
   c.fillText(appName, pad, pad + 20)
   c.globalAlpha = 1
+
+  // Mascote do tema: pequeno e redondo no canto superior direito, com borda branca
+  const mascot = mascotUrl ? await loadImage(mascotUrl).catch(() => null) : null
+  if (mascot) {
+    const r = 64
+    const cx = W - pad - r
+    const cy = pad + r - 18
+    c.save()
+    c.shadowColor = 'rgba(0,0,0,0.35)'
+    c.shadowBlur = 18
+    c.beginPath()
+    c.arc(cx, cy, r + 6, 0, Math.PI * 2)
+    c.fillStyle = '#fff'
+    c.fill()
+    c.restore()
+    c.save()
+    c.beginPath()
+    c.arc(cx, cy, r, 0, Math.PI * 2)
+    c.clip()
+    c.drawImage(mascot, cx - r, cy - r, r * 2, r * 2)
+    c.restore()
+  }
 
   return new Promise((resolve) => canvas.toBlob((b) => resolve(b!), 'image/jpeg', 0.9))
 }

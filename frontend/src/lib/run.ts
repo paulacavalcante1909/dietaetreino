@@ -175,9 +175,13 @@ export function clock(ms: number) {
   return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`
 }
 
-export function durationLabel(seconds: number) {
+/** "45 min", "1 h" (hora redonda), "1 h 25 min"; compacto (imagem do treino): "1h25" */
+export function durationLabel(seconds: number, compact = false) {
   if (seconds < 60) return `${Math.max(0, Math.round(seconds))} s`
   const m = Math.round(seconds / 60)
   if (m < 60) return `${m} min`
-  return `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min`
+  const h = Math.floor(m / 60)
+  const rest = m % 60
+  if (rest === 0) return `${h} h`
+  return compact ? `${h}h${String(rest).padStart(2, '0')}` : `${h} h ${rest} min`
 }
