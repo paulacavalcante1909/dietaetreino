@@ -225,7 +225,7 @@ function QuickCards({ day, date }: { day: DayData; date: string }) {
       <QuickTile icon={Dumbbell} label="Treinar" hint={trained ? `${day.trainings.length === 1 ? 'Feito' : `${day.trainings.length} feitos`} ✓` : isToday ? 'Ficha ou avulso' : 'Registrar'} done={trained} onClick={openTrain} />
       <QuickTile
         icon={Utensils}
-        label="Alimento"
+        label="Registrar refeição"
         hint={meal ? (meal.kcal > 0 ? `${meal.name} · ${fmtKcal(meal.kcal)} kcal` : meal.name) : 'Adicionar'}
         onClick={() => navigate(`/adicionar?${new URLSearchParams({ ...(meal ? { refeicao: String(meal.id) } : {}), ...(isToday ? {} : { data: date }) })}`)}
       />

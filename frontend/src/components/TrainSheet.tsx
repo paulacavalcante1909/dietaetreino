@@ -112,7 +112,7 @@ export function TrainSheet({ open, onClose }: { open: boolean; onClose: () => vo
   const activities: Activity[] = []
   for (const o of OUTDOOR) {
     const ex = cardio.find((e) => e.name === o.name)
-    if (ex) activities.push({ key: `x:${ex.name}`, kind: 'exercise', label: o.label, exercise: ex, emoji: o.emoji })
+    if (ex) activities.push({ key: `x:${ex.name}`, kind: 'exercise', label: o.label, exercise: ex, emoji: o.emoji, favorite: ex.favorite })
   }
   for (const ex of favorites) if (!activities.some((a) => a.key === `x:${ex.name}`)) activities.push({ key: `x:${ex.name}`, kind: 'exercise', label: ex.name, exercise: ex, favorite: true })
   for (const w of workouts ?? []) if (w.items.length) activities.push({ key: `w:${w.id}`, kind: 'workout', label: w.name, workout: w })
@@ -140,7 +140,7 @@ export function TrainSheet({ open, onClose }: { open: boolean; onClose: () => vo
 
         {/* Duas abas com o mesmo peso */}
         <div className="grid grid-cols-2 gap-1 rounded-2xl bg-soft p-1" role="tablist" aria-label="O que você quer fazer">
-          {([['now', 'Treinar agora', Play], ['done', 'Já treinei', Check]] as const).map(([k, l, Icon]) => (
+          {([['now', 'Treinar agora', Play], ['done', 'Registrar treino', Plus]] as const).map(([k, l, Icon]) => (
             <button key={k} role="tab" aria-selected={tab === k} onClick={() => switchTab(k)} className="relative flex h-12 items-center justify-center gap-2 rounded-xl font-bold">
               {tab === k && <motion.span layoutId="train-tab" className="absolute inset-0 rounded-xl bg-primary shadow-md" transition={{ type: 'spring', stiffness: 500, damping: 38 }} />}
               <Icon className={`relative size-4 ${tab === k ? 'text-white' : 'text-muted'} ${k === 'now' && tab === k ? 'fill-current' : ''}`} strokeWidth={k === 'done' ? 3 : 2} />
@@ -180,40 +180,50 @@ export function TrainSheet({ open, onClose }: { open: boolean; onClose: () => vo
 
         {tab === 'done' && !form && (
           <>
-            {/* Repetir: 1 toque registra igual à última vez */}
+            {/* Recentes: 1 toque registra igual à última vez (com Desfazer e Ajustar no aviso) */}
             {recent && recent.length > 0 && (
               <section>
-                <p className="mb-2 text-xs font-bold tracking-wide text-muted uppercase">Repetir</p>
+                <p className="mb-2 text-xs font-bold tracking-wide text-muted uppercase">Recentes</p>
                 <div className="space-y-2">
-                  {recent.map((r) => (
-                    <button key={r.key} onClick={() => repeat(r)} disabled={!!busy} className="flex w-full items-center gap-3 rounded-2xl bg-soft p-3 text-left active:scale-[0.98] disabled:opacity-60">
-                      <ActivityBadge activity={activities.find((a) => a.key === r.key)} fallback={r.workout_name} />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-bold">{r.workout_name}</span>
-                        <span className="block text-xs text-muted">{recentLine(r)} · registrar hoje</span>
-                      </span>
-                      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-white">
-                        {busy === r.key ? <span className="size-4 animate-spin rounded-full border-2 border-white/40 border-t-white" /> : <Check className="size-5" strokeWidth={3} />}
-                      </span>
-                    </button>
-                  ))}
+                  {recent.map((r) => {
+                    const a = activities.find((x) => x.key === r.key)
+                    return (
+                      <ActivityRow
+                        key={r.key}
+                        badge={<ActivityBadge activity={a} fallback={r.workout_name} />}
+                        title={r.workout_name}
+                        hint={`${recentLine(r)} · toque para registrar hoje`}
+                        favorite={a?.kind === 'exercise' && !!a.favorite}
+                        loading={busy === r.key}
+                        disabled={!!busy}
+                        onClick={() => repeat(r)}
+                      />
+                    )
+                  })}
                 </div>
               </section>
             )}
 
             <section>
-              <p className="mb-2 text-xs font-bold tracking-wide text-muted uppercase">{recent?.length ? 'Ou registre' : 'O que você fez?'}</p>
-              <div className="grid grid-cols-3 gap-2">
+              <p className="mb-2 text-xs font-bold tracking-wide text-muted uppercase">{recent?.length ? 'Outros' : 'O que você fez?'}</p>
+              <div className="space-y-2">
                 {activities.map((a) => (
-                  <button key={a.key} onClick={() => setForm(a)} className="relative flex min-h-24 flex-col items-center justify-center gap-1.5 rounded-2xl bg-soft p-2 text-center active:scale-[0.96]">
-                    {a.kind === 'exercise' && a.favorite && <Star className="absolute top-1.5 right-1.5 size-3.5 fill-amber-400 text-amber-400" aria-label="Favorito" />}
-                    <ActivityBadge activity={a} />
-                    <span className="line-clamp-2 text-sm leading-tight font-bold">{a.label}</span>
-                  </button>
+                  <ActivityRow
+                    key={a.key}
+                    badge={<ActivityBadge activity={a} />}
+                    title={a.label}
+                    hint={a.kind === 'workout' ? `Treino da ficha · ${a.workout.items.length} ${a.workout.items.length === 1 ? 'exercício' : 'exercícios'}` : a.exercise.muscle_group === 'cardio' ? 'Cardio · tempo e distância' : prescription(defaultPrescription(a.exercise))}
+                    favorite={a.kind === 'exercise' && !!a.favorite}
+                    chevron
+                    onClick={() => setForm(a)}
+                  />
                 ))}
-                <button onClick={() => go('/registrar-treino?avulso=1')} className="flex min-h-24 flex-col items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-line p-2 text-center active:scale-[0.96]">
-                  <span className="flex size-10 items-center justify-center rounded-xl text-primary"><Plus className="size-6" /></span>
-                  <span className="text-sm leading-tight font-bold">Outro</span>
+                <button onClick={() => go('/registrar-treino?avulso=1')} className="flex w-full items-center gap-3 rounded-2xl border-2 border-dashed border-line p-3 text-left active:scale-[0.98]">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-xl text-primary"><Plus className="size-6" /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-bold">Outro exercício</span>
+                    <span className="block text-xs text-muted">Procurar na lista completa</span>
+                  </span>
                 </button>
               </div>
             </section>
@@ -227,6 +237,32 @@ export function TrainSheet({ open, onClose }: { open: boolean; onClose: () => vo
         </button>
       </div>
     </Sheet>
+  )
+}
+
+function ActivityRow({ badge, title, hint, favorite, chevron, loading, disabled, onClick }: {
+  badge: ReactNode
+  title: string
+  hint: string
+  favorite?: boolean
+  chevron?: boolean
+  loading?: boolean
+  disabled?: boolean
+  onClick: () => void
+}) {
+  return (
+    <button onClick={onClick} disabled={disabled} className="flex w-full items-center gap-3 rounded-2xl bg-soft p-3 text-left active:scale-[0.98] disabled:opacity-60">
+      {badge}
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-1.5">
+          <span className="truncate font-bold">{title}</span>
+          {favorite && <Star className="size-3.5 shrink-0 fill-amber-400 text-amber-400" aria-label="Favorito" />}
+        </span>
+        <span className="block truncate text-xs text-muted">{hint}</span>
+      </span>
+      {loading && <span className="size-5 shrink-0 animate-spin rounded-full border-2 border-line border-t-primary" aria-label="Registrando" />}
+      {chevron && !loading && <ChevronRight className="size-5 shrink-0 text-muted" />}
+    </button>
   )
 }
 

@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { AlertTriangle, HelpCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Button } from './ui'
+import { Button, Field } from './ui'
 
 export interface ConfirmOptions {
   title: string
@@ -10,9 +10,11 @@ export interface ConfirmOptions {
   cancelLabel?: string
   /** Ação destrutiva (excluir, descartar): botão vermelho e ícone de alerta */
   danger?: boolean
+  /** Pede um texto (ex.: nome) */
+  input?: { label: string; value?: string; placeholder?: string; maxLength?: number }
 }
 
-type Pending = ConfirmOptions & { resolve: (ok: boolean) => void }
+type Pending = ConfirmOptions & { resolve: (r: { ok: boolean; value: string }) => void }
 
 let show: ((p: Pending) => void) | null = null
 
@@ -22,24 +24,37 @@ let show: ((p: Pending) => void) | null = null
  */
 export function ask(options: ConfirmOptions): Promise<boolean> {
   return new Promise((resolve) => {
-    if (show) show({ ...options, resolve })
+    if (show) show({ ...options, resolve: (r) => resolve(r.ok) })
     else resolve(window.confirm([options.title, options.text].filter(Boolean).join('\n\n')))
+  })
+}
+
+/** Pede um texto no visual do app. Retorna null se cancelar. */
+export function askText(options: ConfirmOptions & { input: NonNullable<ConfirmOptions['input']> }): Promise<string | null> {
+  return new Promise((resolve) => {
+    if (show) show({ ...options, resolve: (r) => resolve(r.ok ? r.value.trim() : null) })
+    else resolve(window.prompt(options.title, options.input.value ?? ''))
   })
 }
 
 /** Monta uma vez, perto da raiz do app. */
 export function DialogHost() {
   const [pending, setPending] = useState<Pending | null>(null)
+  const [value, setValue] = useState('')
 
   useEffect(() => {
-    show = setPending
+    show = (p) => {
+      setValue(p.input?.value ?? '')
+      setPending(p)
+    }
     return () => {
       show = null
     }
   }, [])
 
   const close = (ok: boolean) => {
-    pending?.resolve(ok)
+    if (ok && pending?.input && !value.trim()) return
+    pending?.resolve({ ok, value })
     setPending(null)
   }
 
@@ -74,8 +89,19 @@ export function DialogHost() {
             </span>
             <h2 id="dialog-title" className="mt-4 text-lg font-bold">{pending.title}</h2>
             {pending.text && <p id="dialog-text" className="mt-1.5 text-sm text-muted">{pending.text}</p>}
+            {pending.input && (
+              <form
+                className="mt-4 text-left"
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  close(true)
+                }}
+              >
+                <Field label={pending.input.label} name="dialog_input" autoFocus maxLength={pending.input.maxLength ?? 120} placeholder={pending.input.placeholder} value={value} onChange={(e) => setValue(e.target.value)} />
+              </form>
+            )}
             <div className="mt-6 space-y-2">
-              <Button autoFocus variant={pending.danger ? 'danger' : undefined} onClick={() => close(true)}>
+              <Button autoFocus={!pending.input} disabled={!!pending.input && !value.trim()} variant={pending.danger ? 'danger' : undefined} onClick={() => close(true)}>
                 {pending.confirmLabel ?? 'Confirmar'}
               </Button>
               <button onClick={() => close(false)} className="h-11 w-full rounded-2xl font-semibold text-muted active:bg-soft">

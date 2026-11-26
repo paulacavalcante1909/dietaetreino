@@ -1,10 +1,12 @@
-import { Plus } from 'lucide-react'
+import { Check, Plus, Star } from 'lucide-react'
+import { plateKcal, plateQtyLabel, type PlateItem } from '../lib/plate'
+import { useToast } from './Toast'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
-import { fmtKcal } from './Ring'
+import { fmt, fmtKcal } from './Ring'
 import { Alert } from './ui'
 import { api, ApiError } from '../lib/api'
-import { baseLabel } from '../lib/nutrition'
+import { baseLabel, fmtQty } from '../lib/nutrition'
 import type { FoodLite, OffProduct, RecipeSummary } from '../lib/types'
 import type { FoodTarget } from './FoodSheet'
 
@@ -20,25 +22,56 @@ interface Props {
   refreshKey?: number
   /** Adicionar de novo com a última porção (aba Recentes). */
   onQuickAdd?: (f: FoodLite) => void
+  /** Registrar de novo uma refeição pronta com as porções da última vez (aba Recentes). */
+  onQuickAddRecipe?: (r: RecipeSummary) => void
+  /** Montar o prato: tocar no alimento marca ✓ (em vez de abrir a ficha) */
+  plate?: PlateControls
+}
+
+export interface PlateControls {
+  items: Record<number, PlateItem>
+  toggle: (f: FoodLite) => void
+  bump: (foodId: number, dir: 1 | -1) => void
+  details: (f: FoodLite) => void
 }
 
 /** Busca de alimentos: base local + produtos de marca (Open Food Facts) + abas rápidas. */
-export function FoodSearch({ withRecipes, onPickFood, onPickRecipe, onScan, onQueryChange, refreshKey = 0, onQuickAdd }: Props) {
+export function FoodSearch({ withRecipes, onPickFood, onPickRecipe, onScan, onQueryChange, refreshKey = 0, onQuickAdd, onQuickAddRecipe, plate }: Props) {
   const tabs: { key: Tab; label: string }[] = [
     { key: 'buscar', label: 'Buscar' },
     { key: 'recentes', label: 'Recentes' },
-    { key: 'favoritos', label: 'Favoritos' },
     ...(withRecipes ? [{ key: 'receitas' as Tab, label: 'Prontas' }] : []),
+    { key: 'favoritos', label: 'Favoritos' },
     { key: 'meus', label: 'Meus' },
   ]
   const [tab, setTab] = useState<Tab>('recentes')
   const [query, setQuery] = useState('')
   const [lists, setLists] = useState<Partial<Record<Tab, FoodLite[]>>>({})
   const [recipes, setRecipes] = useState<RecipeSummary[] | null>(null)
+  const [recentRecipes, setRecentRecipes] = useState<RecipeSummary[]>([])
   const [off, setOff] = useState<OffProduct[] | null>(null)
   const [offLoading, setOffLoading] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const toast = useToast()
+
+  // Favoritar direto na lista (otimista), em todas as abas abertas; desfazer pelo aviso
+  const toggleFavorite = async (f: FoodLite) => {
+    const on = !f.favorite
+    const apply = (v: boolean) =>
+      setLists((all) => Object.fromEntries(Object.entries(all).map(([k, list]) => [k, list?.map((x) => (x.id === f.id ? { ...x, favorite: v } : x))])))
+    apply(on)
+    try {
+      await api(`/foods/${f.id}/favorite`, { method: on ? 'POST' : 'DELETE' })
+      if (on) setLists((all) => ({ ...all, favoritos: undefined })) // recarrega Favoritos ao abrir
+      toast({
+        text: on ? '★ Adicionado aos favoritos' : 'Tirado dos favoritos',
+        action: { label: 'Desfazer', run: () => toggleFavorite({ ...f, favorite: on }) },
+      })
+    } catch {
+      apply(!on)
+    }
+  }
 
   // Abas de lista: carregam ao abrir
   useEffect(() => {
@@ -48,9 +81,10 @@ export function FoodSearch({ withRecipes, onPickFood, onPickRecipe, onScan, onQu
     const req =
       tab === 'receitas'
         ? api<{ recipes: RecipeSummary[] }>('/recipes').then((r) => setRecipes(r.recipes))
-        : api<{ foods: FoodLite[] }>({ recentes: '/foods/recent', favoritos: '/foods/favorites', meus: '/foods/mine' }[tab]).then((r) =>
-            setLists((l) => ({ ...l, [tab]: r.foods })),
-          )
+        : api<{ foods: FoodLite[]; recipes?: RecipeSummary[] }>({ recentes: '/foods/recent', favoritos: '/foods/favorites', meus: '/foods/mine' }[tab]).then((r) => {
+            setLists((l) => ({ ...l, [tab]: r.foods }))
+            if (tab === 'recentes') setRecentRecipes(r.recipes ?? [])
+          })
     req.catch((e: ApiError) => setError(e.message)).finally(() => setLoading(false))
   }, [tab, refreshKey])
 
@@ -134,8 +168,17 @@ export function FoodSearch({ withRecipes, onPickFood, onPickRecipe, onScan, onQu
           ) : (
             <>
               {loading && !foods && <ListSkeleton />}
-              {foods && foods.length > 0 && <FoodList foods={foods} onPick={(f) => onPickFood({ id: f.id })} onQuickAdd={tab === 'recentes' ? onQuickAdd : undefined} />}
-              {foods && foods.length === 0 && <Empty tab={tab} query={query} />}
+              {foods && (foods.length > 0 || (tab === 'recentes' && withRecipes && recentRecipes.length > 0)) && <FoodList
+                  foods={foods}
+                  recipes={tab === 'recentes' && withRecipes ? recentRecipes : []}
+                  onPick={(f) => onPickFood({ id: f.id })}
+                  onPickRecipe={onPickRecipe}
+                  onQuickAdd={tab === 'recentes' ? onQuickAdd : undefined}
+                  onQuickAddRecipe={onQuickAddRecipe}
+                  onToggleFavorite={toggleFavorite}
+                  plate={plate}
+                />}
+              {foods && foods.length === 0 && !(tab === 'recentes' && withRecipes && recentRecipes.length) && <Empty tab={tab} query={query} />}
               {!foods && !loading && tab === 'buscar' && (
                 <p className="py-8 text-center text-sm text-muted">Digite o nome do alimento ou toque no leitor para escanear o código de barras.</p>
               )}
@@ -179,32 +222,109 @@ export function FoodSearch({ withRecipes, onPickFood, onPickRecipe, onScan, onQu
   )
 }
 
-function FoodList({ foods, onPick, onQuickAdd }: { foods: FoodLite[]; onPick: (f: FoodLite) => void; onQuickAdd?: (f: FoodLite) => void }) {
+/** Lista de alimentos; em Recentes, as refeições prontas entram junto, na ordem de uso. */
+function FoodList({ foods, recipes = [], onPick, onPickRecipe, onQuickAdd, onQuickAddRecipe, onToggleFavorite, plate }: {
+  foods: FoodLite[]
+  recipes?: (RecipeSummary & { used_rank?: number })[]
+  onPick: (f: FoodLite) => void
+  onPickRecipe?: (r: RecipeSummary) => void
+  onQuickAdd?: (f: FoodLite) => void
+  onQuickAddRecipe?: (r: RecipeSummary) => void
+  onToggleFavorite: (f: FoodLite) => void
+  plate?: PlateControls
+}) {
+  const rows: ({ kind: 'food'; rank: number; food: FoodLite } | { kind: 'recipe'; rank: number; recipe: RecipeSummary })[] = [
+    ...foods.map((food, i) => ({ kind: 'food' as const, rank: food.used_rank ?? -i, food })),
+    ...recipes.map((recipe) => ({ kind: 'recipe' as const, rank: recipe.used_rank ?? 0, recipe })),
+  ]
+  if (recipes.length) rows.sort((a, b) => b.rank - a.rank)
+
   return (
     <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] bg-surface shadow-[0_2px_12px_-4px_rgba(31,23,36,0.08)]">
-      {foods.map((f) => {
-        const quick = onQuickAdd && f.last
-        return (
-          <li key={f.id} className="flex items-center">
-            <button onClick={() => onPick(f)} className="flex min-w-0 flex-1 items-center justify-between gap-3 px-4 py-3.5 text-left transition-colors active:bg-soft">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold">{f.display_name || f.name}</p>
-                <p className="truncate text-xs text-muted">
-                  {quick
-                    ? `Última vez: ${f.last!.unit_label.includes('(') ? `${f.last!.quantity} × ${f.last!.unit_label}` : `${f.last!.quantity} ${f.last!.unit_label}`}`
-                    : `${f.brand ? `${f.brand} · ` : ''}${baseLabel(f)} · ${f.user_id ? 'meu' : f.source === 'taco' ? 'TACO' : 'Open Food Facts'}`}
-                </p>
-              </div>
-              <span className="shrink-0 text-sm font-bold text-primary">{fmtKcal(quick ? f.last!.kcal : f.kcal)} kcal</span>
-            </button>
-            {quick && (
-              <button
-                onClick={() => onQuickAdd!(f)}
-                aria-label={`Adicionar ${f.display_name || f.name} de novo (mesma porção)`}
-                className="mr-3 flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-white shadow active:scale-90"
-              >
-                <Plus className="size-5" strokeWidth={2.75} />
+      {rows.map((row) => {
+        if (row.kind === 'recipe') {
+          const r = row.recipe
+          return (
+            <li key={`r-${r.id}`} className="flex items-center">
+              <button onClick={() => onPickRecipe?.(r)} className="flex min-w-0 flex-1 items-center justify-between gap-3 px-4 py-3.5 text-left active:bg-soft">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">{r.name}</p>
+                  <p className="flex items-center gap-1.5 truncate text-xs text-muted">
+                    <span className="rounded-full bg-orchid/15 px-1.5 py-px font-semibold text-primary">Refeição pronta</span>
+                    {r.last_quantity && r.last_quantity !== 1 ? `${fmt(r.last_quantity)} porções` : `${r.items_count} ${r.items_count === 1 ? 'item' : 'itens'}`}
+                  </p>
+                </div>
+                <span className="shrink-0 text-sm font-bold text-primary">{fmtKcal(r.per_serving.kcal * (r.last_quantity || 1))} kcal</span>
               </button>
+              {/* Mesmo espaço da estrela dos alimentos, para os + ficarem alinhados */}
+              <span className="size-10 shrink-0" aria-hidden />
+              {onQuickAddRecipe && (
+                <button
+                  onClick={() => onQuickAddRecipe(r)}
+                  aria-label={`Adicionar ${r.name} de novo (mesmas porções)`}
+                  className="mr-3 flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-white shadow active:scale-90"
+                >
+                  <Plus className="size-5" strokeWidth={2.75} />
+                </button>
+              )}
+            </li>
+          )
+        }
+        const f = row.food
+        const quick = onQuickAdd && f.last
+        const picked = plate?.items[f.id]
+        const name = f.display_name || f.name
+        return (
+          <li key={f.id} className={`transition-colors ${picked ? 'bg-orchid/10' : ''}`}>
+            <div className="flex items-center">
+              <button
+                onClick={() => (plate ? plate.toggle(f) : onPick(f))}
+                aria-pressed={plate ? !!picked : undefined}
+                className={`flex min-w-0 flex-1 items-center gap-3 py-3.5 pr-2 text-left transition-colors active:bg-soft ${plate ? 'pl-3' : 'pl-4'}`}
+              >
+                {plate && (
+                  <span className={`flex size-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${picked ? 'border-primary bg-primary text-white' : 'border-line'}`} aria-hidden>
+                    {picked && <Check className="size-3.5" strokeWidth={3.5} />}
+                  </span>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{name}</p>
+                  <p className="truncate text-xs text-muted">
+                    {picked
+                      ? plateQtyLabel(picked)
+                      : quick
+                        ? `Última vez: ${f.last!.unit_label.includes('(') ? `${f.last!.quantity} × ${f.last!.unit_label}` : `${f.last!.quantity} ${f.last!.unit_label}`}`
+                        : `${f.brand ? `${f.brand} · ` : ''}${baseLabel(f)} · ${f.user_id ? 'meu' : f.source === 'taco' ? 'TACO' : 'Open Food Facts'}`}
+                  </p>
+                </div>
+                <span className="shrink-0 text-sm font-bold text-primary">{fmtKcal(picked ? plateKcal(picked) : quick ? f.last!.kcal : f.kcal)} kcal</span>
+              </button>
+              <button
+                onClick={() => onToggleFavorite(f)}
+                aria-label={f.favorite ? `Tirar ${name} dos favoritos` : `Favoritar ${name}`}
+                aria-pressed={!!f.favorite}
+                className={`flex size-10 shrink-0 items-center justify-center rounded-full active:scale-90 ${quick && !picked ? '' : 'mr-1.5'}`}
+              >
+                <Star className={`size-5 ${f.favorite ? 'fill-amber-400 text-amber-400' : 'text-muted/70'}`} />
+              </button>
+              {quick && !picked && (
+                <button
+                  onClick={() => onQuickAdd!(f)}
+                  aria-label={`Adicionar ${name} de novo (mesma porção)`}
+                  className="mr-3 flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-white shadow active:scale-90"
+                >
+                  <Plus className="size-5" strokeWidth={2.75} />
+                </button>
+              )}
+            </div>
+            {/* No prato: quantidade ali mesmo (− e +); outras medidas na ficha */}
+            {picked && (
+              <div className="flex items-center gap-2 pr-4 pb-3 pl-12">
+                <button onClick={() => plate!.bump(f.id, -1)} aria-label={`Menos ${name}`} className="flex size-9 items-center justify-center rounded-xl bg-surface text-lg font-bold text-primary shadow-sm active:scale-90">−</button>
+                <span className="min-w-14 text-center text-base font-bold whitespace-nowrap">{picked.portion_id ? fmtQty(picked.quantity) : `${fmtQty(picked.quantity)} ${picked.unit_label}`}</span>
+                <button onClick={() => plate!.bump(f.id, 1)} aria-label={`Mais ${name}`} className="flex size-9 items-center justify-center rounded-xl bg-surface text-lg font-bold text-primary shadow-sm active:scale-90">+</button>
+                <button onClick={() => plate!.details(f)} className="ml-auto shrink-0 text-xs font-semibold whitespace-nowrap text-primary underline-offset-2 active:underline">Outras medidas</button>
+              </div>
             )}
           </li>
         )

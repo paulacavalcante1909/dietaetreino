@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Food;
+use App\Models\Recipe;
+use App\Models\User;
 use App\Services\OpenFoodFacts;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class FoodController extends Controller
@@ -72,19 +75,20 @@ class FoodController extends Controller
             ->limit(40)
             ->get();
 
-        return response()->json(['foods' => $foods]);
+        return response()->json(['foods' => $this->markFavorites($user, $foods)]);
     }
 
     /** Últimos alimentos usados (sem repetir). */
     public function recent(Request $request): JsonResponse
     {
-        $ids = $request->user()->entries()
+        $used = $request->user()->entries()
             ->whereNotNull('food_id')
             ->select('food_id', DB::raw('MAX(id) as last'))
             ->groupBy('food_id')
             ->orderByDesc('last')
             ->limit(30)
-            ->pluck('food_id');
+            ->pluck('last', 'food_id');
+        $ids = $used->keys();
 
         // Última porção usada de cada alimento (para "adicionar de novo" com 1 toque)
         $last = $request->user()->entries()->whereIn('food_id', $ids)
@@ -93,15 +97,37 @@ class FoodController extends Controller
 
         $foods = Food::whereIn('id', $ids)->select(self::LIST_COLUMNS)->get()
             ->sortBy(fn ($f) => $ids->search($f->id))->values()
-            ->map(fn ($f) => [...$f->toArray(), 'last' => $last->get($f->id)?->only('quantity', 'portion_id', 'unit_label', 'kcal')]);
+            ->map(fn ($f) => [...$f->toArray(), 'last' => $last->get($f->id)?->only('quantity', 'portion_id', 'unit_label', 'kcal'), 'used_rank' => (int) $used[$f->id]]);
 
-        return response()->json(['foods' => $foods]);
+        // Refeições prontas usadas recentemente (aparecem junto, na ordem de uso)
+        $recipeUsed = $request->user()->entries()
+            ->whereNotNull('recipe_id')
+            ->select('recipe_id', DB::raw('MAX(id) as last'))
+            ->groupBy('recipe_id')
+            ->orderByDesc('last')
+            ->limit(10)
+            ->pluck('last', 'recipe_id');
+        $recipes = Recipe::where('user_id', $request->user()->id)
+            ->whereIn('id', $recipeUsed->keys())
+            ->with('items.food', 'items.portion')
+            ->get()
+            ->map(fn (Recipe $r) => [
+                ...$r->summary(),
+                'used_rank' => (int) $recipeUsed[$r->id],
+                // Porções da última vez (para o "+" de 1 toque)
+                'last_quantity' => (float) $request->user()->entries()->whereKey($recipeUsed[$r->id])->value('quantity'),
+            ])
+            ->sortByDesc('used_rank')
+            ->values();
+
+        return response()->json(['foods' => $this->markFavorites($request->user(), $foods), 'recipes' => $recipes]);
     }
 
     public function favorites(Request $request): JsonResponse
     {
         $foods = $request->user()->favorites()->select(array_map(fn ($c) => "foods.$c", self::LIST_COLUMNS))
-            ->orderByDesc('favorites.created_at')->get()->makeHidden('pivot');
+            ->orderByDesc('favorites.created_at')->get()->makeHidden('pivot')
+            ->map(fn ($f) => [...$f->toArray(), 'favorite' => true]);
 
         return response()->json(['foods' => $foods]);
     }
@@ -110,7 +136,24 @@ class FoodController extends Controller
     {
         $foods = $request->user()->foods()->select(self::LIST_COLUMNS)->orderBy('name')->get();
 
-        return response()->json(['foods' => $foods]);
+        return response()->json(['foods' => $this->markFavorites($request->user(), $foods)]);
+    }
+
+    /**
+     * Marca os favoritos da usuária (estrela na lista).
+     *
+     * @param  Collection<int, Food|array<string, mixed>>  $foods
+     * @return list<array<string, mixed>>
+     */
+    private function markFavorites(User $user, Collection $foods): array
+    {
+        $favorites = $user->favorites()->pluck('foods.id')->flip();
+
+        return $foods->map(function ($f) use ($favorites) {
+            $row = $f instanceof Food ? $f->toArray() : $f;
+
+            return [...$row, 'favorite' => isset($favorites[$row['id']])];
+        })->values()->all();
     }
 
     public function show(Request $request, Food $food): JsonResponse

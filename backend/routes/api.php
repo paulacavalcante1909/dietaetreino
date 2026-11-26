@@ -63,6 +63,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/meals', [MealController::class, 'store']);
     Route::put('/meals/order', [MealController::class, 'reorder']);
     Route::put('/meals/{meal}', [MealController::class, 'update']);
+    Route::get('/meals/{meal}/suggestions', [MealController::class, 'suggestions']);
     Route::delete('/meals/{meal}', [MealController::class, 'destroy']);
 
     // Alimentos

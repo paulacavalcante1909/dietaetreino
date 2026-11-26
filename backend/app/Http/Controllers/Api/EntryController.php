@@ -105,14 +105,17 @@ class EntryController extends Controller
             throw ValidationException::withMessages(['from_date' => 'Não há itens nessa refeição para copiar.']);
         }
 
-        foreach ($source as $e) {
+        $copies = $source->map(function (DiaryEntry $e) use ($data) {
             $copy = $e->replicate(['created_at', 'updated_at']);
             $copy->date = $data['to_date'];
             $copy->meal_id = $data['to_meal_id'];
             $copy->save();
-        }
 
-        return response()->json(['copied' => $source->count()], 201);
+            return $copy;
+        });
+
+        // As cópias voltam para o app poder desfazer
+        return response()->json(['copied' => $copies->count(), 'entries' => $copies->values()], 201);
     }
 
     /** Escala proporcionalmente o snapshot existente para a nova quantidade. */

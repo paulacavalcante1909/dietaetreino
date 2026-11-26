@@ -56,6 +56,8 @@ export interface FoodLite extends Omit<Nutrients, 'fiber'> {
   base_unit: 'g' | 'ml'
   /** Última porção usada (aba Recentes) */
   last?: { quantity: number; portion_id: number | null; unit_label: string; kcal: number } | null
+  favorite?: boolean // marcado com estrela
+  used_rank?: number // Recentes: ordem de uso
 }
 
 export interface FoodDetail extends FoodLite {
@@ -78,6 +80,8 @@ export interface RecipeSummary {
   servings: number
   items_count: number
   per_serving: Nutrients & { amount: number }
+  used_rank?: number // Recentes: ordem de uso
+  last_quantity?: number // Recentes: porções da última vez
 }
 
 export interface RecipeItem {
