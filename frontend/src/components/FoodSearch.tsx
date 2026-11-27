@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useToast } from './Toast'
-import { fmt, fmtKcal } from './Ring'
+import { fmtKcal } from './Ring'
 import { Alert } from './ui'
 import { api, ApiError } from '../lib/api'
 import { baseLabel } from '../lib/nutrition'
@@ -37,7 +37,6 @@ const matches = (q: string) => {
 
 interface Sections {
   recent: FoodLite[]
-  recentRecipes: RecipeSummary[]
   favorites: FoodLite[]
   mine: FoodLite[]
   common: FoodLite[] | null // só para quem ainda não tem nada
@@ -69,18 +68,18 @@ export function FoodSearch({ withRecipes, onPickFood, onPickRecipe, onScan, onQu
     if (tab !== 'alimentos') return
     setError(null)
     Promise.all([
-      api<{ foods: FoodLite[]; recipes?: RecipeSummary[] }>(`/foods/recent${mealId ? `?meal_id=${mealId}` : ''}`),
+      api<{ foods: FoodLite[] }>(`/foods/recent${mealId ? `?meal_id=${mealId}` : ''}`),
       api<{ foods: FoodLite[] }>('/foods/favorites'),
       api<{ foods: FoodLite[] }>('/foods/mine'),
     ])
       .then(async ([r, f, m]) => {
-        const empty = !r.foods.length && !f.foods.length && !m.foods.length && !(r.recipes ?? []).length
+        const empty = !r.foods.length && !f.foods.length && !m.foods.length
         // Primeiros usos (nada registrado nem favoritado): alimentos comuns
         const common = empty ? (await api<{ foods: FoodLite[] }>('/foods/common').catch(() => ({ foods: [] as FoodLite[] }))).foods : null
-        setSections({ recent: r.foods.slice(0, 10), recentRecipes: withRecipes ? (r.recipes ?? []).slice(0, 5) : [], favorites: f.foods, mine: m.foods, common })
+        setSections({ recent: r.foods.slice(0, 10), favorites: f.foods, mine: m.foods, common })
       })
       .catch((e: ApiError) => setError(e.message))
-  }, [tab, refreshKey, mealId, withRecipes])
+  }, [tab, refreshKey, mealId])
 
   // Refeições completas: mais recentes primeiro (ordem do servidor)
   useEffect(() => {
@@ -148,7 +147,7 @@ export function FoodSearch({ withRecipes, onPickFood, onPickRecipe, onScan, onQu
   const mine = sections?.mine.filter((f) => !seen.has(f.id)) ?? []
   const shownRecipes = q && recipes ? recipes.filter((r) => matches(q)(r.name)) : recipes
   const notFound = tab === 'alimentos' && q.length >= 2 && !searching && results?.length === 0
-  const nothing = sections && !sections.recent.length && !sections.recentRecipes.length && !favorites.length && !mine.length && !sections.common?.length
+  const nothing = sections && !sections.recent.length && !favorites.length && !mine.length && !sections.common?.length
 
   return (
     <div>
@@ -250,9 +249,9 @@ export function FoodSearch({ withRecipes, onPickFood, onPickRecipe, onScan, onQu
           ) : (
             /* Sem busca: recentes desta refeição → favoritos → criados por você (ou comuns, nos primeiros usos) */
             <div>
-              {(sections.recent.length > 0 || sections.recentRecipes.length > 0) && (
+              {sections.recent.length > 0 && (
                 <Section title={mealName ? `Recentes no ${mealName.toLowerCase()}` : 'Recentes'}>
-                  <FoodList foods={sections.recent} recipes={sections.recentRecipes} onPick={(f) => onPickFood({ id: f.id })} onPickRecipe={onPickRecipe} onToggleFavorite={toggleFavorite} showLast />
+                  <FoodList foods={sections.recent} onPick={(f) => onPickFood({ id: f.id })} onToggleFavorite={toggleFavorite} showLast />
                 </Section>
               )}
               {favorites.length > 0 && (
@@ -288,45 +287,19 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   )
 }
 
-/** Lista de alimentos (em Recentes, as refeições completas entram junto, na ordem de uso). Tocar abre a ficha. */
-function FoodList({ foods, recipes = [], onPick, onPickRecipe, onToggleFavorite, showLast = false }: {
+/** Lista de alimentos (só alimentos). Tocar abre a ficha. */
+function FoodList({ foods, onPick, onToggleFavorite, showLast = false }: {
   foods: FoodLite[]
-  recipes?: (RecipeSummary & { used_rank?: number })[]
   onPick: (f: FoodLite) => void
-  onPickRecipe?: (r: RecipeSummary) => void
   onToggleFavorite: (f: FoodLite) => void
   showLast?: boolean
 }) {
-  const rows: ({ kind: 'food'; rank: number; food: FoodLite } | { kind: 'recipe'; rank: number; recipe: RecipeSummary })[] = [
-    ...foods.map((food, i) => ({ kind: 'food' as const, rank: food.used_rank ?? -i, food })),
-    ...recipes.map((recipe) => ({ kind: 'recipe' as const, rank: recipe.used_rank ?? 0, recipe })),
-  ]
-  if (recipes.length) rows.sort((a, b) => b.rank - a.rank)
-
   // Fecha o teclado ao escolher (a ficha e a barra do rodapé ficam visíveis)
   const blur = () => (document.activeElement as HTMLElement | null)?.blur()
 
   return (
     <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] bg-surface shadow-[0_2px_12px_-4px_rgba(31,23,36,0.08)]">
-      {rows.map((row) => {
-        if (row.kind === 'recipe') {
-          const r = row.recipe
-          return (
-            <li key={`r-${r.id}`}>
-              <button onClick={() => (blur(), onPickRecipe?.(r))} className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left active:bg-soft">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold">{r.name}</p>
-                  <p className="flex items-center gap-1.5 truncate text-xs text-muted">
-                    <span className="rounded-full bg-orchid/15 px-1.5 py-px font-semibold text-link">Refeição completa</span>
-                    {r.last_quantity && r.last_quantity !== 1 ? `${fmt(r.last_quantity)} porções` : `${r.items_count} ${r.items_count === 1 ? 'item' : 'itens'}`}
-                  </p>
-                </div>
-                <span className="shrink-0 text-sm font-bold text-link">{fmtKcal(r.per_serving.kcal * (r.last_quantity || 1))} kcal</span>
-              </button>
-            </li>
-          )
-        }
-        const f = row.food
+      {foods.map((f) => {
         const last = showLast && f.last
         const name = f.display_name || f.name
         return (
