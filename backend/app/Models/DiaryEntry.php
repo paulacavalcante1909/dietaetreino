@@ -14,6 +14,15 @@ class DiaryEntry extends Model
 
     protected $hidden = ['user_id', 'created_at', 'updated_at'];
 
+    /** @var list<string> */
+    protected $appends = ['time'];
+
+    /** Horário em que foi registrado ("12:34"), no fuso do app. */
+    public function getTimeAttribute(): ?string
+    {
+        return $this->created_at?->timezone(config('app.timezone'))->format('H:i');
+    }
+
     protected function casts(): array
     {
         return [

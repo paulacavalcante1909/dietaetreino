@@ -12,6 +12,7 @@ import { api, ApiError } from '../lib/api'
 import { addDays, isoDate, parseIso } from '../lib/date'
 import { num } from '../lib/nutrition'
 import type { Energy, Goal, Weight, WeightSummary } from '../lib/types'
+import { NUTRIENTS, RankBars, type FoodNutrients, type NutrientKey } from '../components/NutrientBreakdown'
 import { HIGH_LIMIT, inGoal as inGoalDay, LOW_LIMIT, modeOf, outlier, RANGE } from '../lib/goalDays'
 
 const RANGES = [
@@ -25,6 +26,120 @@ const kg = (n: number) => n.toLocaleString('pt-BR', { minimumFractionDigits: 1, 
 const signed = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${kg(Math.abs(n))} kg`
 const shortDate = (s: string) => parseIso(s).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }).replace('.', '')
 const longDate = (s: string) => parseIso(s).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' }).replace('.', '')
+
+/* ───────────────────────── Alimentos ───────────────────────── */
+
+const OF_YOUR: Record<NutrientKey, string> = {
+  kcal: 'das suas calorias',
+  carbs: 'dos seus carboidratos',
+  protein: 'das suas proteínas',
+  fat: 'das suas gorduras',
+  sodium: 'do seu sódio',
+  fiber: 'das suas fibras',
+}
+
+interface FoodStat extends FoodNutrients {
+  times: number
+  days: number
+}
+
+/**
+ * Aba Alimentos: o que mais pesa na dieta.
+ * Para cada nutriente, os alimentos que mais contribuíram no período; e os mais registrados.
+ */
+function FoodsTab() {
+  const [days, setDays] = useState<7 | 30>(30)
+  const [nutrient, setNutrient] = useState<NutrientKey>('kcal')
+  const [data, setData] = useState<{ foods: FoodStat[]; logged_days: number; totals: Record<NutrientKey, number> } | null>(null)
+
+  useEffect(() => {
+    setData(null)
+    api<{ foods: FoodStat[]; logged_days: number; totals: Record<NutrientKey, number> }>(`/stats/foods?days=${days}`)
+      .then(setData)
+      .catch(() => setData({ foods: [], logged_days: 0, totals: { kcal: 0, carbs: 0, protein: 0, fat: 0, sodium: 0, fiber: 0 } }))
+  }, [days])
+
+  const n = NUTRIENTS.find((x) => x.key === nutrient)!
+  const top = data?.foods.filter((f) => f[nutrient] > 0).sort((a, b) => b[nutrient] - a[nutrient])[0]
+  const topPct = top && data && data.totals[nutrient] > 0 ? Math.round((top[nutrient] / data.totals[nutrient]) * 100) : 0
+  const frequent = [...(data?.foods ?? [])].sort((a, b) => b.times - a.times).slice(0, 6)
+  const maxTimes = Math.max(1, ...frequent.map((f) => f.times))
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-1 rounded-2xl bg-soft p-1" role="tablist" aria-label="Período">
+        {([7, 30] as const).map((d) => (
+          <button key={d} role="tab" aria-selected={days === d} onClick={() => setDays(d)} className={`rounded-xl py-2 text-sm font-bold ${days === d ? 'bg-surface text-link shadow-sm' : 'text-muted'}`}>
+            Últimos {d} dias
+          </button>
+        ))}
+      </div>
+
+      {!data && <div className="h-64 animate-pulse rounded-[var(--radius-card)] bg-soft" />}
+      {data && data.foods.length === 0 && (
+        <Card>
+          <EmptyState title="Ainda sem dados" text="Registre suas refeições por alguns dias para ver quais alimentos mais pesam na sua dieta." />
+        </Card>
+      )}
+
+      {data && data.foods.length > 0 && (
+        <>
+          <Card className="space-y-4">
+            <div>
+              <h2 className="font-bold">O que mais pesa na sua dieta</h2>
+              <p className="text-sm text-muted">
+                {top ? (
+                  <>
+                    <strong className="text-ink">{top.name}</strong> responde por <strong className="text-ink">{topPct}%</strong> {OF_YOUR[nutrient]} em {data.logged_days} {data.logged_days === 1 ? 'dia registrado' : 'dias registrados'}.
+                  </>
+                ) : (
+                  `Nada de ${n.label.toLowerCase()} registrado no período.`
+                )}
+              </p>
+            </div>
+            {/* Nutriente: cada um com a cor das barras de macros */}
+            <div className="-mx-5 overflow-x-auto px-5 [scrollbar-width:none]">
+              <div className="flex gap-2" role="radiogroup" aria-label="Nutriente">
+                {NUTRIENTS.map((x) => (
+                  <button
+                    key={x.key}
+                    role="radio"
+                    aria-checked={nutrient === x.key}
+                    onClick={() => setNutrient(x.key)}
+                    className={`flex h-9 shrink-0 items-center gap-1.5 rounded-full border-2 px-3 text-sm font-semibold whitespace-nowrap ${nutrient === x.key ? 'border-primary bg-primary text-white' : 'border-line bg-surface text-ink'}`}
+                  >
+                    <span className="size-2 rounded-full" style={{ background: x.color }} aria-hidden />
+                    {x.short}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <RankBars rows={data.foods} nutrient={nutrient} limit={6} />
+          </Card>
+
+          <Card className="space-y-3">
+            <h2 className="font-bold">Mais registrados</h2>
+            <ul className="space-y-2.5">
+              {frequent.map((f) => (
+                <li key={f.name}>
+                  <div className="mb-1 flex items-baseline justify-between gap-3 text-sm">
+                    <span className="min-w-0 truncate font-semibold">{f.name}</span>
+                    <span className="shrink-0 text-muted">
+                      <span className="font-bold text-ink">{f.times}×</span> · em {f.days} {f.days === 1 ? 'dia' : 'dias'}
+                    </span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-soft" aria-hidden>
+                    <div className="h-full rounded-full bg-primary" style={{ width: `${(f.times / maxTimes) * 100}%` }} />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </>
+      )}
+    </div>
+  )
+}
 
 /** Aba Peso: peso atual, variação, gráfico por período e histórico. */
 function WeightTab() {
@@ -226,6 +341,7 @@ function WeightSheet({ weight, onClose, onSaved }: { weight: Weight | 'new' | nu
 const TABS = [
   ['semana', 'Semana'],
   ['treinos', 'Treinos'],
+  ['alimentos', 'Alimentos'],
   ['peso', 'Peso'],
 ] as const
 
@@ -247,7 +363,7 @@ export function ProgressPage() {
       </div>
       <AnimatePresence mode="wait" initial={false}>
         <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
-          {tab === 'semana' ? <WeekTab /> : tab === 'treinos' ? <WorkoutsTab /> : <WeightTab />}
+          {tab === 'semana' ? <WeekTab /> : tab === 'treinos' ? <WorkoutsTab /> : tab === 'alimentos' ? <FoodsTab /> : <WeightTab />}
         </motion.div>
       </AnimatePresence>
     </div>

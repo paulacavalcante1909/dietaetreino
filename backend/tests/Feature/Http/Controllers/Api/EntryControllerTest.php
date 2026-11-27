@@ -74,4 +74,15 @@ class EntryControllerTest extends TestCase
     {
         return ['date' => '2026-11-25', 'meal_id' => $user->meals()->value('id'), 'food_id' => $food->id, 'quantity' => $grams];
     }
+
+    public function test_entries_show_the_time_they_were_registered(): void
+    {
+        $this->travelTo('2026-11-25 12:34:00');
+        $user = User::factory()->create();
+        $food = Food::forceCreate(['source' => 'taco', 'name' => 'Arroz', 'base_qty' => 100, 'base_unit' => 'g', 'kcal' => 130, 'carbs' => 28, 'protein' => 2.5, 'fat' => 0.3, 'sodium' => 1]);
+
+        $this->actingAs($user)->postJson('/api/entries', ['date' => '2026-11-25', 'meal_id' => $user->meals()->first()->id, 'food_id' => $food->id, 'quantity' => 100])
+            ->assertCreated()
+            ->assertJsonPath('entry.time', '12:34');
+    }
 }

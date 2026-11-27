@@ -57,6 +57,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/stats/week', [StatsController::class, 'week']);
     Route::get('/stats/workouts', [StatsController::class, 'workouts']);
     Route::get('/stats/loads', [StatsController::class, 'loads']);
+    Route::get('/stats/foods', [StatsController::class, 'foods']);
 
     // Refeições
     Route::get('/meals', [MealController::class, 'index']);

@@ -91,6 +91,46 @@ class StatsController extends Controller
     }
 
     /** Treinos por semana (últimas N semanas): dias treinados, minutos e kcal. */
+    /**
+     * O que mais pesa na dieta: por alimento (ou refeição pronta), quantas vezes foi registrado
+     * e quanto somou de calorias, macros, sódio e fibras no período (7 ou 30 dias, até hoje).
+     */
+    public function foods(Request $request): JsonResponse
+    {
+        $days = (int) ($request->validate(['days' => ['sometimes', 'in:7,30']])['days'] ?? 30);
+        $from = now()->subDays($days - 1)->toDateString();
+
+        $rows = $request->user()->entries()
+            ->whereDate('date', '>=', $from)
+            ->whereDate('date', '<=', now()->toDateString())
+            ->get(['food_id', 'recipe_id', 'name', 'date', 'kcal', 'carbs', 'protein', 'fat', 'sodium', 'fiber']);
+
+        $sum = fn ($items, string $k) => round((float) $items->sum($k), 1);
+        $foods = $rows
+            ->groupBy(fn ($e) => $e->recipe_id ? 'r'.$e->recipe_id : ($e->food_id ? 'f'.$e->food_id : 'n'.mb_strtolower($e->name)))
+            ->map(fn ($items) => [
+                'name' => explode(',', $items->last()->name)[0],
+                'times' => $items->count(),
+                'days' => $items->pluck('date')->map(fn ($d) => substr((string) $d, 0, 10))->unique()->count(),
+                'kcal' => $sum($items, 'kcal'),
+                'carbs' => $sum($items, 'carbs'),
+                'protein' => $sum($items, 'protein'),
+                'fat' => $sum($items, 'fat'),
+                'sodium' => $sum($items, 'sodium'),
+                'fiber' => $sum($items, 'fiber'),
+            ])
+            ->sortByDesc('kcal')
+            ->take(60)
+            ->values();
+
+        return response()->json([
+            'days' => $days,
+            'logged_days' => $rows->pluck('date')->map(fn ($d) => substr((string) $d, 0, 10))->unique()->count(),
+            'foods' => $foods,
+            'totals' => collect(['kcal', 'carbs', 'protein', 'fat', 'sodium', 'fiber'])->mapWithKeys(fn ($k) => [$k => $sum($rows, $k)]),
+        ]);
+    }
+
     public function workouts(Request $request): JsonResponse
     {
         $weeks = (int) ($request->validate(['weeks' => ['nullable', 'integer', 'min:1', 'max:26']])['weeks'] ?? 8);

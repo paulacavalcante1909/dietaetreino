@@ -1,51 +1,52 @@
-import { api } from './api'
+import type { RecipeAdjustment } from '../components/RecipeSheet'
 import { fmtQty, pluralize } from './nutrition'
-import type { FoodDetail, FoodLite } from './types'
+import type { FoodDetail, RecipeSummary } from './types'
 
 /**
- * "Montar o prato": alimentos escolhidos na lista, com a quantidade ajustada ali mesmo (− e +),
- * registrados juntos com um toque.
+ * "Prato": o que vai entrar na refeição. Cada alimento (ou refeição pronta) é escolhido
+ * na ficha ("Usar no prato") e tudo é registrado junto no fim.
  */
-export interface PlateItem {
-  food: FoodLite
-  quantity: number // em porções (portion_id) ou em g/ml
-  portion_id: number | null
-  unit_label: string // "unidade (50 g)", "g"…
-  kcalPerUnit: number
-}
+export type PlateItem =
+  | {
+      key: string
+      kind: 'food'
+      food: FoodDetail
+      quantity: number // em porções (portion_id) ou em g/ml
+      portion_id: number | null
+      unit_label: string // "1 unidade média (50 g)", "g"…
+      kcalPerUnit: number
+    }
+  | {
+      key: string
+      kind: 'recipe'
+      recipe: RecipeSummary
+      servings: number
+      items: RecipeAdjustment[] | null // ingredientes ajustados só para este registro
+    }
 
-/** Passo do − e +: meia porção caseira, ou 10 g/ml */
-export const plateStep = (i: PlateItem) => (i.portion_id ? 0.5 : 10)
+export const plateName = (i: PlateItem) => (i.kind === 'food' ? (i.food.display_name || i.food.name).split(',')[0] : i.recipe.name)
 
-export const plateKcal = (i: PlateItem) => i.quantity * i.kcalPerUnit
+export const plateKcal = (i: PlateItem) => (i.kind === 'food' ? i.quantity * i.kcalPerUnit : i.recipe.per_serving.kcal * i.servings)
 
-/** "2 unidade média", "1,5 × fatia" ou "150 g" */
+/** "2 unidades médias", "1,5 × fatia", "150 g" ou "1 porção (ajustada)" */
 export function plateQtyLabel(i: PlateItem) {
+  if (i.kind === 'recipe') return `${fmtQty(i.servings)} ${i.servings > 1 ? 'porções' : 'porção'}${i.items ? ' (ajustada)' : ''}`
   if (!i.portion_id) return `${fmtQty(i.quantity)} ${i.unit_label}`
   const label = i.unit_label.replace(/\s*\(.*\)$/, '')
-  // "1 unidade média" → "1,5 unidade média"
   const m = label.match(/^1\s+(.+)$/)
   return m ? `${fmtQty(i.quantity)} ${i.quantity > 1 ? pluralize(m[1]) : m[1]}` : `${fmtQty(i.quantity)} × ${label}`
 }
 
-/**
- * Quantidade inicial: a da última vez; sem histórico, 1 medida caseira (ex.: 1 unidade)
- * ou a porção de referência (100 g).
- */
-export async function newPlateItem(food: FoodLite): Promise<PlateItem> {
-  if (food.last && food.last.quantity > 0)
-    return { food, quantity: food.last.quantity, portion_id: food.last.portion_id, unit_label: food.last.unit_label, kcalPerUnit: food.last.kcal / food.last.quantity }
-
-  const detail = await api<{ food: FoodDetail }>(`/foods/${food.id}`).then((r) => r.food).catch(() => null)
-  const portion = detail?.portions[0]
-  if (portion) return { food, quantity: 1, portion_id: portion.id, unit_label: `${portion.label} (${fmtQty(portion.qty)} ${food.base_unit})`, kcalPerUnit: (food.kcal * portion.qty) / food.base_qty }
-  return { food, quantity: food.base_qty, portion_id: null, unit_label: food.base_unit, kcalPerUnit: food.kcal / food.base_qty }
-}
-
-/** Depois de escolher outra medida na ficha do alimento */
-export function plateItemFrom(food: FoodDetail, quantity: number, portionId: number | null): PlateItem {
+/** Item de alimento a partir da ficha (quantidade e medida escolhidas) */
+export function foodPlateItem(food: FoodDetail, quantity: number, portionId: number | null): PlateItem {
   const portion = food.portions.find((p) => p.id === portionId)
   return portion
-    ? { food, quantity, portion_id: portion.id, unit_label: `${portion.label} (${fmtQty(portion.qty)} ${food.base_unit})`, kcalPerUnit: (food.kcal * portion.qty) / food.base_qty }
-    : { food, quantity, portion_id: null, unit_label: food.base_unit, kcalPerUnit: food.kcal / food.base_qty }
+    ? { key: `f-${food.id}`, kind: 'food', food, quantity, portion_id: portion.id, unit_label: `${portion.label} (${fmtQty(portion.qty)} ${food.base_unit})`, kcalPerUnit: (food.kcal * portion.qty) / food.base_qty }
+    : { key: `f-${food.id}`, kind: 'food', food, quantity, portion_id: null, unit_label: food.base_unit, kcalPerUnit: food.kcal / food.base_qty }
 }
+
+/** Corpo do registro no diário */
+export const entryBody = (i: PlateItem) =>
+  i.kind === 'food'
+    ? { food_id: i.food.id, quantity: i.quantity, portion_id: i.portion_id }
+    : { recipe_id: i.recipe.id, quantity: i.servings, ...(i.items ? { items: i.items } : {}) }

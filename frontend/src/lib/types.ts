@@ -114,6 +114,7 @@ export interface Entry extends Nutrients {
   unit_label: string
   amount: number
   base_unit: 'g' | 'ml'
+  time?: string | null // horário em que foi registrado ("12:34")
 }
 
 export interface Meal {

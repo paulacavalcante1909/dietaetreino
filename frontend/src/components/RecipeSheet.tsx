@@ -20,13 +20,15 @@ interface Props {
   /** items = ingredientes ajustados só para este registro (null = receita como está). */
   onConfirm: (servings: number, items: RecipeAdjustment[] | null) => Promise<void>
   onEdit: (id: number) => void
+  /** Texto do botão (padrão "Adicionar") */
+  confirmLabel?: string
 }
 
 /**
  * Adicionar refeição pronta ao dia: escolhe porções e, se quiser, ajusta os ingredientes
  * só para este registro (a refeição pronta original não muda).
  */
-export function RecipeSheet({ recipe, onClose, onConfirm, onEdit }: Props) {
+export function RecipeSheet({ recipe, onClose, onConfirm, onEdit, confirmLabel = 'Adicionar' }: Props) {
   const [detail, setDetail] = useState<RecipeDetail | null>(null)
   const [items, setItems] = useState<RecipeItem[]>([])
   const [adjusting, setAdjusting] = useState(false)
@@ -136,7 +138,7 @@ export function RecipeSheet({ recipe, onClose, onConfirm, onEdit }: Props) {
           </div>
 
           <Button onClick={confirm} loading={saving} disabled={!(num(value.quantity) > 0) || items.length === 0}>
-            {changed ? 'Adicionar com ajustes' : 'Adicionar'}
+            {changed ? `${confirmLabel} (com ajustes)` : confirmLabel}
           </Button>
           <button onClick={() => onEdit(recipe.id)} className="w-full py-2 text-sm font-medium text-link">
             Editar a refeição pronta salva

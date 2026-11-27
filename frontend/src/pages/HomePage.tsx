@@ -1,11 +1,13 @@
-import { animate, AnimatePresence, motion, useMotionValue, type PanInfo } from 'framer-motion'
-import { ChevronDown, ChevronLeft, ChevronRight, Droplet, Dumbbell, Flame, Pencil, Plus, RotateCcw, Scale, Trash2, Utensils } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { ChevronDown, ChevronLeft, ChevronRight, Droplet, Dumbbell, Flame, Pencil, Scale, Utensils } from 'lucide-react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Avatar } from '../components/Avatar'
 import { DeficitCard } from '../components/DeficitCard'
 import { FirstSteps } from '../components/FirstSteps'
 import { EntrySheet } from '../components/EntrySheet'
+import { MealCard } from '../components/MealCard'
+import { fmtAmount, groupByName, NUTRIENTS, RankBars } from '../components/NutrientBreakdown'
 import { openTrain, QuickTile } from '../components/Layout'
 import { Bar, Ring, fmt, fmtKcal } from '../components/Ring'
 import { Sheet } from '../components/Sheet'
@@ -14,10 +16,10 @@ import { Alert, Button, Card, Field } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { addDays, dayLabel, isoDate, parseIso } from '../lib/date'
-import { entryQtyLabel, num } from '../lib/nutrition'
+import { num } from '../lib/nutrition'
 import { mealForNow } from '../lib/meals'
 import { useTheme } from '../lib/theme'
-import type { DayData, DayMeal, Entry, WaterLog, WeightSummary } from '../lib/types'
+import type { DayData, Entry, WaterLog, WeightSummary } from '../lib/types'
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } }
 const item = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0, transition: { duration: 0.28 } } }
@@ -36,6 +38,7 @@ export function HomePage() {
   const [direction, setDirection] = useState(0)
   const [macrosOpen, setMacrosOpen] = useState(() => localStorage.getItem(MACROS_KEY) === '1')
   const [weekRefresh, setWeekRefresh] = useState(0)
+  const [breakdownOpen, setBreakdownOpen] = useState(false)
 
   const load = useCallback(() => {
     setError(null)
@@ -131,8 +134,8 @@ export function HomePage() {
 
               <motion.div variants={item}>
                 <Card className="flex flex-col items-center gap-5">
-                  <Ring value={t.kcal} max={target} color="var(--color-orchid)">
-                    <span className="text-4xl font-extrabold">{fmtKcal(Math.abs(target - t.kcal))}</span>
+                  <Ring value={t.kcal} max={target} size={140} stroke={11} color="var(--color-orchid)">
+                    <span className="text-3xl font-extrabold">{fmtKcal(Math.abs(target - t.kcal))}</span>
                     <span className="text-sm text-muted">{t.kcal > target ? 'kcal acima' : 'kcal restantes'}</span>
                   </Ring>
                   <div className="grid w-full grid-cols-3 text-center text-sm">
@@ -162,13 +165,19 @@ export function HomePage() {
                     <AnimatePresence initial={false}>
                       {macrosOpen && (
                         <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                          <div className="space-y-3 pt-3">
+                          {/* Tocar nas barras abre de onde vieram os nutrientes do dia */}
+                          <button onClick={() => setBreakdownOpen(true)} className="block w-full space-y-3 rounded-2xl pt-3 text-left active:bg-soft/50">
                             <Bar label="Carboidratos" value={t.carbs} max={goal.carbs_g} unit="g" color="var(--color-lavender)" />
                             <Bar label="Proteínas" value={t.protein} max={goal.protein_g} unit="g" color="var(--color-pink)" />
                             <Bar label="Gorduras" value={t.fat} max={goal.fat_g} unit="g" color="var(--color-violet)" />
                             <Bar label="Sódio" value={t.sodium} max={goal.sodium_mg} unit="mg" color="var(--color-coral)" />
                             <Bar label="Fibras" value={t.fiber} max={goal.fiber_g || 25} unit="g" color="var(--color-fiber)" atLeast />
-                          </div>
+                            {t.kcal > 0 && (
+                              <span className="flex items-center justify-center gap-1 pt-1 text-sm font-semibold text-link">
+                                Ver de onde vieram <ChevronRight className="size-4" />
+                              </span>
+                            )}
+                          </button>
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -214,7 +223,37 @@ export function HomePage() {
         )}
       </AnimatePresence>
 
+      <Sheet open={breakdownOpen && !!day} onClose={() => setBreakdownOpen(false)} title="De onde vieram seus nutrientes">
+        {day && <DayBreakdown day={day} />}
+      </Sheet>
       <EntrySheet entry={editing} meals={day?.meals ?? []} onClose={() => setEditing(null)} onChanged={load} />
+    </div>
+  )
+}
+
+/* ───────────── De onde vieram os nutrientes do dia ───────────── */
+
+function DayBreakdown({ day }: { day: DayData }) {
+  const rows = groupByName(day.meals.flatMap((m) => m.entries))
+  if (rows.length === 0) return <p className="py-6 text-center text-sm text-muted">Registre uma refeição para ver de onde vêm seus nutrientes.</p>
+  return (
+    <div className="space-y-6">
+      <p className="-mt-1 text-sm text-muted">Quais alimentos mais pesaram em cada nutriente hoje.</p>
+      {NUTRIENTS.map((n) => {
+        const total = rows.reduce((a, r) => a + (r[n.key] || 0), 0)
+        return (
+          <section key={n.key}>
+            <div className="mb-2 flex items-baseline justify-between">
+              <h3 className="flex items-center gap-2 text-sm font-bold">
+                <span className="size-2.5 rounded-full" style={{ background: n.color }} aria-hidden />
+                {n.label}
+              </h3>
+              <span className="text-sm font-semibold text-muted">{fmtAmount(total, n.unit)}</span>
+            </div>
+            <RankBars rows={rows} nutrient={n.key} limit={3} />
+          </section>
+        )
+      })}
     </div>
   )
 }
@@ -434,143 +473,5 @@ function WaterCard({ date, total, goal, logs, onChange }: { date: string; total:
         </form>
       </Sheet>
     </Card>
-  )
-}
-
-/* ───────────── Refeição ───────────── */
-
-function MealCard({ meal, date, onEdit, onChange }: { meal: DayMeal; date: string; onEdit: (e: Entry) => void; onChange: () => void }) {
-  const navigate = useNavigate()
-  const toast = useToast()
-  const [copying, setCopying] = useState(false)
-
-  const copyYesterday = async () => {
-    setCopying(true)
-    try {
-      const r = await api<{ copied: number }>('/entries/copy', {
-        method: 'POST',
-        body: { from_date: addDays(date, -1), from_meal_id: meal.id, to_date: date, to_meal_id: meal.id },
-      })
-      onChange()
-      toast({ text: `${r.copied} ${r.copied === 1 ? 'item copiado' : 'itens copiados'} de ontem` })
-    } catch (e) {
-      toast({ text: (e as ApiError).field('from_date') ?? (e as ApiError).message })
-    } finally {
-      setCopying(false)
-    }
-  }
-
-  const remove = async (e: Entry) => {
-    await api(`/entries/${e.id}`, { method: 'DELETE' }).catch(() => {})
-    onChange()
-    toast({ text: `${e.name.split(',')[0]} removido` })
-  }
-
-  const add = () => navigate(`/adicionar?data=${date}&refeicao=${meal.id}`)
-  const empty = meal.entries.length === 0
-
-  return (
-    <Card className="!p-0">
-      {/* Refeição vazia: linha compacta (nome + adicionar); com itens: cabeçalho com o total */}
-      <div className={`flex items-center justify-between gap-3 px-5 ${empty ? 'py-2.5' : 'py-4'}`}>
-        {empty ? (
-          <button onClick={add} className="min-w-0 flex-1 py-1 text-left font-semibold text-muted">
-            {meal.name}
-          </button>
-        ) : (
-          <div className="min-w-0">
-            <p className="font-bold">{meal.name}</p>
-            <p className="text-sm text-muted">{fmtKcal(meal.kcal)} kcal</p>
-          </div>
-        )}
-        <div className="flex shrink-0 items-center gap-2">
-          {empty && meal.yesterday_count > 0 && (
-            <button onClick={copyYesterday} disabled={copying} className="flex items-center gap-1 rounded-full bg-soft px-3 py-2 text-xs font-bold text-link active:scale-95 disabled:opacity-50">
-              <RotateCcw className="size-3.5" /> Repetir de ontem
-            </button>
-          )}
-          <button
-            onClick={add}
-            aria-label={`Adicionar em ${meal.name}`}
-            className={`flex items-center justify-center rounded-full transition-transform active:scale-90 ${empty ? 'size-9 bg-soft text-link' : 'size-10 bg-primary text-white shadow-md'}`}
-          >
-            <Plus className="size-5" strokeWidth={2.75} />
-          </button>
-        </div>
-      </div>
-
-      <AnimatePresence initial={false}>
-        {!empty && (
-          <motion.ul initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden border-t border-line">
-            <AnimatePresence initial={false}>
-              {meal.entries.map((e) => (
-                <motion.li key={e.id} layout initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, height: 0 }}>
-                  <SwipeRow onTap={() => onEdit(e)} onDelete={() => remove(e)} label={e.name}>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold">{e.name}</p>
-                      <p className="truncate text-xs text-muted">{entryQtyLabel(e)}</p>
-                    </div>
-                    <span className="shrink-0 text-sm text-muted">{fmtKcal(e.kcal)} kcal</span>
-                  </SwipeRow>
-                </motion.li>
-              ))}
-            </AnimatePresence>
-          </motion.ul>
-        )}
-      </AnimatePresence>
-    </Card>
-  )
-}
-
-/**
- * Linha que desliza para a esquerda e revela "Excluir". Toque abre a edição.
- * Só desliza com gesto claramente horizontal (rolar a tela não mexe na linha)
- * e sempre volta para o lugar: aberta ou fechada, nunca "presa" no meio.
- */
-function SwipeRow({ children, onTap, onDelete, label }: { children: ReactNode; onTap: () => void; onDelete: () => void; label: string }) {
-  const [open, setOpen] = useState(false)
-  const dragged = useRef(false)
-  const x = useMotionValue(0)
-
-  const settle = (next: boolean) => {
-    setOpen(next)
-    animate(x, next ? -96 : 0, { type: 'spring', stiffness: 500, damping: 40 })
-  }
-
-  const onDragEnd = (_: unknown, info: PanInfo) => {
-    settle(info.offset.x < -60 || info.velocity.x < -500)
-    setTimeout(() => (dragged.current = false), 0)
-  }
-
-  return (
-    <div className="relative overflow-hidden">
-      <button
-        onClick={onDelete}
-        tabIndex={open ? 0 : -1}
-        aria-label={`Excluir ${label}`}
-        className="absolute inset-y-0 right-0 flex w-24 items-center justify-center gap-1 bg-coral text-sm font-bold text-white"
-      >
-        <Trash2 className="size-4" /> Excluir
-      </button>
-      <motion.button
-        style={{ x }}
-        drag="x"
-        dragDirectionLock
-        dragConstraints={{ left: -96, right: 0 }}
-        dragElastic={0.05}
-        dragMomentum={false}
-        onDragStart={() => (dragged.current = true)}
-        onDragEnd={onDragEnd}
-        onPointerCancel={() => settle(open)}
-        onClick={() => {
-          if (dragged.current) return
-          if (open) settle(false)
-          else onTap()
-        }}
-        className="relative flex w-full touch-pan-y items-center justify-between gap-3 bg-surface px-5 py-3 text-left"
-      >
-        {children}
-      </motion.button>
-    </div>
   )
 }
