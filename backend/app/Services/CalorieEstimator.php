@@ -74,6 +74,25 @@ class CalorieEstimator
         return (int) round($cardioKcal + $strengthKcal);
     }
 
+    /**
+     * Duração real do treino. Se o tempo medido (início → fim no app) é menor que o cardio feito,
+     * o cardio aconteceu fora do cronômetro (ex.: marcado como feito sem rodar o tempo): soma os dois.
+     *
+     * @param  array<int, array{sets: int, reps: string, done: bool}>  $exercises
+     */
+    public function effectiveDuration(array $exercises, int $measuredSeconds): int
+    {
+        $cardio = 0;
+        foreach ($exercises as $e) {
+            $minutes = $this->timedMinutes($e);
+            if ($minutes !== null && $e['done']) {
+                $cardio += $minutes * 60;
+            }
+        }
+
+        return $measuredSeconds < $cardio ? min($measuredSeconds + $cardio, 6 * 3600) : $measuredSeconds;
+    }
+
     /** "40 min" com 1 série = exercício por tempo */
     private function timedMinutes(array $e): ?int
     {

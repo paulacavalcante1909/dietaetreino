@@ -193,7 +193,14 @@ class WorkoutSessionController extends Controller
     {
         $weight = Weight::where('user_id', $session->user_id)->whereDate('date', '<=', $session->date->toDateString())->orderByDesc('date')->value('kg');
         $kg = $weight ? (float) $weight : CalorieEstimator::DEFAULT_WEIGHT;
-        $session->kcal_burned = app(CalorieEstimator::class)->estimate($session->exercises, $session->duration_seconds, $kg);
+        $estimator = app(CalorieEstimator::class);
+        // Cardio feito fora do cronômetro entra no tempo total (e a musculação não fica com 0 kcal)
+        $duration = $estimator->effectiveDuration($session->exercises, (int) $session->duration_seconds);
+        if ($duration !== (int) $session->duration_seconds) {
+            $session->duration_seconds = $duration;
+            $session->started_at = $session->finished_at->copy()->subSeconds($duration);
+        }
+        $session->kcal_burned = $estimator->estimate($session->exercises, $session->duration_seconds, $kg);
         $session->weight_kg = $kg;
         $session->weight_estimated = $weight === null;
     }

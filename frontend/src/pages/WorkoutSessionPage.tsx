@@ -693,7 +693,8 @@ function FinishedView({ run, setRun }: { run: RunState; setRun: SetRun }) {
   const toast = useToast()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const seconds = Math.round(((run.finishedAt ?? Date.now()) - (run.startedAt ?? Date.now())) / 1000)
+  // Depois de salvo, usa a duração do servidor (soma o cardio feito fora do cronômetro)
+  const seconds = run.durationSeconds ?? Math.round(((run.finishedAt ?? Date.now()) - (run.startedAt ?? Date.now())) / 1000)
   const done = run.items.filter((i) => i.done && i.setsDone > 0)
   const totalSets = run.items.filter((i) => !isTimed(i)).reduce((a, i) => a + i.setsDone, 0)
 
@@ -725,7 +726,7 @@ function FinishedView({ run, setRun }: { run: RunState; setRun: SetRun }) {
     }
     try {
       const r = await api<{ session: WorkoutSessionData }>('/workout-sessions', { method: 'POST', body })
-      setRun((s) => ({ ...s, sessionId: r.session.id, kcalBurned: r.session.kcal_burned, weightEstimated: r.session.weight_estimated }))
+      setRun((s) => ({ ...s, sessionId: r.session.id, kcalBurned: r.session.kcal_burned, weightEstimated: r.session.weight_estimated, durationSeconds: r.session.duration_seconds }))
     } catch (e) {
       if (isOffline(e)) {
         // Sem internet: guarda o treino na fila e envia quando a conexão voltar

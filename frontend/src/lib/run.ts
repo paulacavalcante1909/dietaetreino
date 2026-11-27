@@ -32,6 +32,7 @@ export interface RunState {
   sessionId: number | null // salvo no servidor
   sessionRef?: string | null // salvo na fila offline (enviado quando a internet voltar)
   kcalBurned?: number | null // estimativa calculada pelo servidor
+  durationSeconds?: number | null // duração salva (inclui cardio feito fora do cronômetro)
   weightEstimated?: boolean
   timerKey?: string | null // cardio: exercício com cronômetro ativo/pausado
   timerEndsAt?: number | null // cardio: fim do cronômetro em andamento

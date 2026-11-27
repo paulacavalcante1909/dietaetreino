@@ -156,6 +156,26 @@ class WorkoutSessionControllerTest extends TestCase
         ]);
     }
 
+    public function test_cardio_done_off_the_clock_is_added_to_the_duration_and_strength_still_counts(): void
+    {
+        $user = User::factory()->create();
+
+        $session = $this->actingAs($user)->postJson('/api/workout-sessions', [
+            'workout_name' => 'Costas',
+            'started_at' => '2026-11-25T10:00:00-03:00',
+            'finished_at' => '2026-11-25T10:28:00-03:00',
+            'exercises' => [
+                ['name' => 'Puxada frontal', 'sets' => 3, 'reps' => '12', 'sets_done' => 3, 'done' => true],
+                ['name' => 'Bicicleta ergométrica', 'sets' => 1, 'reps' => '30 min', 'sets_done' => 1, 'done' => true],
+            ],
+        ])->assertCreated()->json('session');
+
+        // 28 min medidos + 30 min de cardio fora do cronômetro
+        $this->assertSame(58 * 60, $session['duration_seconds']);
+        // Musculação 28 min (MET 5) + bicicleta 30 min (MET 6,8), 65 kg: ~152 + ~221
+        $this->assertSame(373, $session['kcal_burned']);
+    }
+
     private function appWorkout(User $user, string $date): WorkoutSession
     {
         return WorkoutSession::forceCreate([
