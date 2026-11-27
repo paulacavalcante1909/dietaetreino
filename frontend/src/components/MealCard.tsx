@@ -62,36 +62,27 @@ export function MealHistory({ meal, onEdit, onChange }: { meal: DayMeal; onEdit:
     toast({ text: `${e.name.split(',')[0]} removido` })
   }
 
-  if (empty)
-    return (
-      <div className="flex flex-col items-center py-2 text-center">
-        {/* "zz Z": a refeição ainda está dormindo */}
-        <svg viewBox="0 0 64 40" className="h-9 w-14 text-link" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <path d="M6 30h8l-8 8h8" opacity={0.45} />
-          <path d="M22 20h10L22 30h10" opacity={0.7} />
-          <path d="M40 4h16L40 20h16" />
-        </svg>
-        <p className="mt-1 text-sm text-muted">Nada registrado no {meal.name.toLowerCase()} hoje.</p>
-      </div>
-    )
+  if (empty) return null
 
   return (
     <Card className="!p-0">
-      <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left">
-        <span className="min-w-0">
-          <span className="block text-sm font-bold">
-            Você já comeu no {meal.name.toLowerCase()}: {fmtKcal(meal.kcal)} kcal
-          </span>
-          <MacroLine entries={meal.entries} className="mt-0.5" />
+      {/* Uma linha: quanto já comeu nesta refeição; toque para ver os itens (e as macros) */}
+      <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex w-full items-center gap-2 px-4 py-3 text-left">
+        <span className="min-w-0 flex-1 truncate text-sm">
+          Você já comeu <strong>{fmtKcal(meal.kcal)} kcal</strong> no {meal.name.toLowerCase()} · {meal.entries.length} {meal.entries.length === 1 ? 'item' : 'itens'}
         </span>
-        <span className="flex shrink-0 items-center gap-1 text-xs font-semibold text-muted">
-          {meal.entries.length} {meal.entries.length === 1 ? 'item' : 'itens'}
-          <motion.span animate={{ rotate: open ? 180 : 0 }}>
-            <ChevronDown className="size-5" />
-          </motion.span>
-        </span>
+        <motion.span animate={{ rotate: open ? 180 : 0 }} className="shrink-0 text-muted">
+          <ChevronDown className="size-5" />
+        </motion.span>
       </button>
-      <AnimatePresence initial={false}>{open && <EntryList meal={meal} onEdit={onEdit} onRemove={remove} />}</AnimatePresence>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
+            <MacroLine entries={meal.entries} className="px-4 pb-2" />
+            <EntryList meal={meal} onEdit={onEdit} onRemove={remove} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </Card>
   )
 }

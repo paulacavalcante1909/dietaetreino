@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { fmt } from './Ring'
+import { fmt, fmtKcal } from './Ring'
 import { fmtQty, nutrientsFor, num, portionLabel } from '../lib/nutrition'
 import type { FoodLite, Portion } from '../lib/types'
 
@@ -70,19 +70,19 @@ export function QuantityPicker({ food, portions, value, onChange, hideGrams }: P
         </StepButton>
       </div>
 
-      <motion.div layout className="grid grid-cols-6 gap-1 rounded-2xl bg-soft p-3 text-center">
-        <Nut label="kcal" value={Math.round(n.kcal)} color="text-link" strong />
-        <Nut label="carb" value={n.carbs} unit="g" color="text-lavender" />
-        <Nut label="prot" value={n.protein} unit="g" color="text-pink" />
-        <Nut label="gord" value={n.fat} unit="g" color="text-violet" />
-        <Nut label="sódio" value={n.sodium} unit="mg" color="text-coral" />
-        <Nut label="fibras" value={n.fiber} unit="g" color="text-fiber" />
-      </motion.div>
-      {portion && (
-        <p className="-mt-2 text-center text-xs text-muted">
-          Total: {fmt(amount)} {food.base_unit}
+      {/* Resultado: kcal em destaque e os nutrientes numa linha discreta (siglas, como na tela inicial) */}
+      <motion.div layout className="rounded-2xl bg-soft px-4 py-3 text-center">
+        <p className="text-2xl font-extrabold">
+          {fmtKcal(n.kcal)} <span className="text-base font-semibold text-muted">kcal</span>
         </p>
-      )}
+        <p className="mt-0.5 flex flex-wrap justify-center gap-x-2.5 text-xs font-medium text-muted">
+          <span>C {fmt(n.carbs)}g</span>
+          <span>P {fmt(n.protein)}g</span>
+          <span>G {fmt(n.fat)}g</span>
+          <span>Na {fmtKcal(n.sodium)}mg</span>
+          <span>Fib {fmt(n.fiber)}g</span>
+        </p>
+      </motion.div>
     </div>
   )
 }
@@ -104,17 +104,5 @@ function StepButton({ onClick, label, children }: { onClick: () => void; label: 
     <button type="button" aria-label={label} onClick={onClick} className="flex size-14 items-center justify-center rounded-2xl bg-soft text-2xl font-semibold text-link transition-transform active:scale-90">
       {children}
     </button>
-  )
-}
-
-function Nut({ label, value, unit = '', color, strong }: { label: string; value: number; unit?: string; color: string; strong?: boolean }) {
-  return (
-    <div>
-      <p className={`${strong ? 'text-lg' : 'text-base'} font-bold ${color}`}>
-        {fmt(value)}
-        <span className="text-xs font-medium">{unit}</span>
-      </p>
-      <p className="text-xs text-muted">{label}</p>
-    </div>
   )
 }

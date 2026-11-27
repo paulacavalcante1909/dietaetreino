@@ -212,13 +212,13 @@ export function AddFoodPage() {
                 role="radio"
                 aria-checked={active}
                 onClick={() => setMealId(m.id)}
-                className={`flex h-10 shrink-0 items-center gap-1.5 rounded-full border-2 px-4 text-sm font-bold whitespace-nowrap transition-colors ${
-                  active ? 'border-primary bg-primary text-white' : 'border-line bg-surface text-ink active:bg-soft'
+                className={`flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-sm whitespace-nowrap transition-colors ${
+                  active ? 'bg-primary font-bold text-white' : 'font-semibold text-muted active:bg-soft'
                 }`}
               >
                 {active && <Check className="size-4" strokeWidth={3} />}
                 {m.name}
-                {m.time && <span className={`font-medium ${active ? 'text-white/80' : 'text-muted'}`}>{m.time}</span>}
+                {m.time && <span className={`font-medium ${active ? 'text-white/80' : 'text-muted/70'}`}>{m.time}</span>}
               </button>
             )
           })}
@@ -226,7 +226,7 @@ export function AddFoodPage() {
       </div>
 
       {/* O que já foi registrado nesta refeição hoje (recolhido) */}
-      {dayMeal && !searching && (
+      {dayMeal && dayMeal.entries.length > 0 && !searching && (
         <div className="mb-4">
           <MealHistory meal={dayMeal} onEdit={setEditing} onChange={() => setRefreshKey((k) => k + 1)} />
         </div>

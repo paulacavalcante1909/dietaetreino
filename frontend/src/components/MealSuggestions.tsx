@@ -60,26 +60,19 @@ export function MealSuggestions({ mealId, mealName, date, refreshKey, onAdded, o
     }
   }
 
+  // Uma linha só, estilo secundário: o único botão cheio da tela é o "Registrar" do prato
   return (
-    <section className="mb-5">
-      <p className="mb-2 px-1 text-xs font-bold tracking-wider text-muted uppercase">Seu {mealName.toLowerCase()} de sempre</p>
-
-      {(
-        <div className="flex items-center gap-3 rounded-[var(--radius-card)] bg-surface p-4 shadow-[0_2px_12px_-4px_rgba(31,23,36,0.08)]">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-orchid/15 text-link">
-            <RotateCcw className="size-5" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold">Igual a {dayName(data.last.date, isoDate())}</p>
-            <p className="truncate text-xs text-muted">{data.last.items.map(short).join(' · ')}</p>
-            <p className="text-xs font-semibold text-link">{fmtKcal(data.last.kcal)} kcal</p>
-          </div>
-          <button onClick={repeatLast} disabled={!!busy} className="h-10 shrink-0 rounded-xl bg-primary px-4 text-sm font-bold text-white active:scale-95 disabled:opacity-60">
-            {busy === 'last' ? '…' : 'Registrar'}
-          </button>
-        </div>
-      )}
-
-    </section>
+    <button
+      onClick={repeatLast}
+      disabled={!!busy}
+      title={data.last.items.map(short).join(' · ')}
+      className="mb-4 flex w-full items-center gap-3 rounded-2xl border-2 border-dashed border-line px-4 py-3 text-left active:bg-soft disabled:opacity-60"
+    >
+      <RotateCcw className="size-5 shrink-0 text-link" />
+      <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+        {busy === 'last' ? 'Repetindo…' : `Repetir o ${mealName.toLowerCase()} de ${dayName(data.last.date, isoDate())}`}
+      </span>
+      <span className="shrink-0 text-sm text-muted">{fmtKcal(data.last.kcal)} kcal</span>
+    </button>
   )
 }

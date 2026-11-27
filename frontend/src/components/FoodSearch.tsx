@@ -152,11 +152,12 @@ export function FoodSearch({ withRecipes, onPickFood, onPickRecipe, onScan, onQu
   return (
     <div>
       {withRecipes && (
-        <div className="mb-3 grid grid-cols-2 gap-1 rounded-full bg-soft p-1" role="tablist" aria-label="O que registrar">
+        <div className="mb-3 flex gap-6 border-b border-line px-1" role="tablist" aria-label="O que registrar">
+          {/* Abas em texto com sublinhado: mais leves que pílulas (a busca é o destaque) */}
           {([['alimentos', 'Alimentos'], ['refeicoes', 'Refeições completas']] as const).map(([k, l]) => (
-            <button key={k} role="tab" aria-selected={tab === k} onClick={() => switchTab(k)} className="relative rounded-full py-2.5 text-sm font-semibold">
-              {tab === k && <motion.span layoutId="food-tab" className="absolute inset-0 rounded-full bg-primary" transition={{ type: 'spring', stiffness: 500, damping: 38 }} />}
-              <span className={`relative ${tab === k ? 'text-white' : 'text-muted'}`}>{l}</span>
+            <button key={k} role="tab" aria-selected={tab === k} onClick={() => switchTab(k)} className={`relative pt-1 pb-2.5 text-sm font-bold transition-colors ${tab === k ? 'text-ink' : 'text-muted'}`}>
+              {l}
+              {tab === k && <motion.span layoutId="food-tab" className="absolute inset-x-0 -bottom-px h-[3px] rounded-full bg-primary" transition={{ type: 'spring', stiffness: 500, damping: 38 }} />}
             </button>
           ))}
         </div>
@@ -309,19 +310,19 @@ function FoodList({ foods, onPick, onToggleFavorite, showLast = false }: {
                 <p className="truncate text-sm font-semibold">{name}</p>
                 <p className="truncate text-xs text-muted">
                   {last
-                    ? `Última vez: ${f.last!.unit_label.includes('(') ? `${f.last!.quantity} × ${f.last!.unit_label}` : `${f.last!.quantity} ${f.last!.unit_label}`}`
+                    ? `${f.last!.unit_label.includes('(') ? `${f.last!.quantity} × ${f.last!.unit_label.replace(/^1\s+/, '')}` : `${f.last!.quantity} ${f.last!.unit_label}`} da última vez`
                     : `${f.brand ? `${f.brand} · ` : ''}${baseLabel(f)} · ${f.user_id ? 'meu' : f.source === 'taco' ? 'TACO' : 'Open Food Facts'}`}
                 </p>
               </div>
-              <span className="shrink-0 text-sm font-bold text-link">{fmtKcal(last ? f.last!.kcal : f.kcal)} kcal</span>
+              <span className="shrink-0 text-sm font-semibold text-ink">{fmtKcal(last ? f.last!.kcal : f.kcal)} kcal</span>
             </button>
             <button
               onClick={() => onToggleFavorite(f)}
               aria-label={f.favorite ? `Tirar ${name} dos favoritos` : `Favoritar ${name}`}
               aria-pressed={!!f.favorite}
-              className="mr-1.5 flex size-10 shrink-0 items-center justify-center rounded-full active:scale-90"
+              className="mr-1 flex size-10 shrink-0 items-center justify-center rounded-full active:scale-90"
             >
-              <Star className={`size-5 ${f.favorite ? 'fill-amber-400 text-amber-400' : 'text-muted/70'}`} />
+              <Star className={`size-4 ${f.favorite ? 'fill-amber-400 text-amber-400' : 'text-muted/40'}`} />
             </button>
           </li>
         )
@@ -349,7 +350,7 @@ function RecipeList({ recipes, filtered, onPick }: { recipes: RecipeSummary[] | 
                 {r.items_count} {r.items_count === 1 ? 'item' : 'itens'} · por porção
               </p>
             </div>
-            <span className="shrink-0 text-sm font-bold text-link">{fmtKcal(r.per_serving.kcal)} kcal</span>
+            <span className="shrink-0 text-sm font-semibold text-ink">{fmtKcal(r.per_serving.kcal)} kcal</span>
           </button>
         </li>
       ))}
