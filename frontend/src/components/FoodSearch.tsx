@@ -144,7 +144,29 @@ export function FoodSearch({ withRecipes, onPickFood, onPickRecipe, onScan, onQu
 
   return (
     <div>
-      <div className="mb-3 flex gap-2">
+      {/* Abas: rolam de lado se não couberem */}
+      <div className="-mx-5 mb-3 flex overflow-x-auto px-5 [scrollbar-width:none]">
+        <div className="flex w-max min-w-full shrink-0 gap-1 rounded-full bg-soft p-1" role="tablist" aria-label="Onde procurar">
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              role="tab"
+              aria-selected={tab === t.key}
+              onClick={(e) => {
+                setTab(t.key)
+                // Aba meio escondida: rola a fileira até ela aparecer inteira
+                e.currentTarget.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' })
+              }} className="relative flex-1 shrink-0 rounded-full px-3 py-2 text-[13px] font-semibold whitespace-nowrap">
+              {tab === t.key && <motion.span layoutId="food-tab" className="absolute inset-0 rounded-full bg-primary" transition={{ type: 'spring', stiffness: 500, damping: 38 }} />}
+              <span className={`relative block ${tab === t.key ? 'text-white' : 'text-muted'}`}>{t.label}</span>
+            </button>
+          ))}
+        </div>
+        {/* Respiro no fim da fileira (o padding da direita some em listas que rolam) */}
+        <span className="w-5 shrink-0" aria-hidden />
+      </div>
+
+      <div className="mb-4 flex gap-2">
         <div className="relative flex-1">
           <input
             ref={searchInput}
@@ -165,18 +187,6 @@ export function FoodSearch({ withRecipes, onPickFood, onPickRecipe, onScan, onQu
             <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10 8v8M13 8v8M17 8v8" />
           </svg>
         </button>
-      </div>
-
-      {/* Abas: rolam de lado se não couberem */}
-      <div className="-mx-5 mb-4 overflow-x-auto px-5 [scrollbar-width:none]">
-        <div className="flex min-w-full gap-1 rounded-full bg-soft p-1" role="tablist" aria-label="Onde procurar">
-          {tabs.map((t) => (
-            <button key={t.key} role="tab" aria-selected={tab === t.key} onClick={() => setTab(t.key)} className="relative flex-1 shrink-0 rounded-full px-3 py-2 text-[13px] font-semibold whitespace-nowrap">
-              {tab === t.key && <motion.span layoutId="food-tab" className="absolute inset-0 rounded-full bg-primary" transition={{ type: 'spring', stiffness: 500, damping: 38 }} />}
-              <span className={`relative block ${tab === t.key ? 'text-white' : 'text-muted'}`}>{t.label}</span>
-            </button>
-          ))}
-        </div>
       </div>
 
       {error && <Alert>{error}</Alert>}

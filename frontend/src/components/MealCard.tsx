@@ -62,7 +62,18 @@ export function MealHistory({ meal, onEdit, onChange }: { meal: DayMeal; onEdit:
     toast({ text: `${e.name.split(',')[0]} removido` })
   }
 
-  if (empty) return <p className="px-1 text-sm text-muted">Nada registrado no {meal.name.toLowerCase()} hoje.</p>
+  if (empty)
+    return (
+      <div className="flex flex-col items-center py-2 text-center">
+        {/* "zz Z": a refeição ainda está dormindo */}
+        <svg viewBox="0 0 64 40" className="h-9 w-14 text-link" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M6 30h8l-8 8h8" opacity={0.45} />
+          <path d="M22 20h10L22 30h10" opacity={0.7} />
+          <path d="M40 4h16L40 20h16" />
+        </svg>
+        <p className="mt-1 text-sm text-muted">Nada registrado no {meal.name.toLowerCase()} hoje.</p>
+      </div>
+    )
 
   return (
     <Card className="!p-0">
