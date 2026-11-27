@@ -152,7 +152,7 @@ export function FoodSearch({ withRecipes, onPickFood, onPickRecipe, onScan, onQu
   return (
     <div>
       {withRecipes && (
-        <div className="mb-3 flex gap-6 border-b border-line px-1" role="tablist" aria-label="O que registrar">
+        <div className="mb-3 flex justify-center gap-8 border-b border-line px-1" role="tablist" aria-label="O que registrar">
           {/* Abas em texto com sublinhado: mais leves que pílulas (a busca é o destaque) */}
           {([['alimentos', 'Alimentos'], ['refeicoes', 'Refeições completas']] as const).map(([k, l]) => (
             <button key={k} role="tab" aria-selected={tab === k} onClick={() => switchTab(k)} className={`relative pt-1 pb-2.5 text-sm font-bold transition-colors ${tab === k ? 'text-ink' : 'text-muted'}`}>
