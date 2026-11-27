@@ -8,11 +8,13 @@ interface RingProps {
   size?: number
   stroke?: number
   color: string
+  /** cor do fundo do anel */
+  track?: string
   children?: ReactNode
 }
 
 /** Anel de progresso animado. Passa de 100% → cor de alerta. */
-export function Ring({ value, max, size = 180, stroke = 14, color, children }: RingProps) {
+export function Ring({ value, max, size = 180, stroke = 14, color, track = 'var(--color-soft)', children }: RingProps) {
   const r = (size - stroke) / 2
   const c = 2 * Math.PI * r
   const pct = max > 0 ? Math.min(value / max, 1) : 0
@@ -21,7 +23,7 @@ export function Ring({ value, max, size = 180, stroke = 14, color, children }: R
   return (
     <div className="relative" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--color-soft)" strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={track} strokeWidth={stroke} />
         <motion.circle
           cx={size / 2}
           cy={size / 2}

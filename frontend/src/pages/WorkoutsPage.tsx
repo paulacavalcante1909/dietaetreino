@@ -90,53 +90,81 @@ export function WorkoutsPage() {
 
       {/* Semana + Treinar */}
       <Card className="overflow-hidden !p-0">
-        <div className="relative bg-gradient-to-br from-orchid to-primary p-5 text-white">
-          {stats && (
-            <button
-              onClick={() => setGoalOpen(true)}
-              aria-label={`Editar meta da semana (${stats.weekly_goal} ${stats.weekly_goal === 1 ? 'treino' : 'treinos'})`}
-              title="Editar meta da semana"
-              className="absolute top-3 right-3 flex size-9 items-center justify-center rounded-full bg-white/20 active:bg-white/30"
-            >
-              <Pencil className="size-4" />
-            </button>
-          )}
-          <div className="flex items-center gap-4 pr-8">
+        <div className="bg-gradient-to-br from-orchid to-primary px-5 pt-4 pb-5 text-white">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-xs font-bold tracking-wider text-white/80 uppercase">Esta semana</p>
             {stats && (
-              <Ring value={weekDone} max={stats.weekly_goal} size={88} stroke={9} color="#ffffff">
-                <span className="text-xl leading-none font-extrabold text-white">
-                  {stats.week_days}/{stats.weekly_goal}
-                </span>
-                <span className="text-xs text-white/85">na semana</span>
+              <button
+                onClick={() => setGoalOpen(true)}
+                aria-label={`Editar meta da semana (${stats.weekly_goal} ${stats.weekly_goal === 1 ? 'treino' : 'treinos'})`}
+                title="Editar meta da semana"
+                className="-mr-1 flex size-8 items-center justify-center rounded-full bg-white/15 active:bg-white/30"
+              >
+                <Pencil className="size-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-4">
+            {stats && (
+              <Ring value={weekDone} max={stats.weekly_goal} size={92} stroke={7} color="#ffffff" track="rgba(255,255,255,0.25)">
+                <span className="font-display text-3xl leading-none font-semibold text-white">{stats.week_days}</span>
+                <span className="mt-0.5 text-xs text-white/80">de {stats.weekly_goal}</span>
               </Ring>
             )}
             <div className="min-w-0 flex-1">
-              <p className="text-sm text-white/85">{todayCheckin ? 'Treinou hoje 💪' : stats && stats.week_days >= stats.weekly_goal ? 'Meta da semana batida! 🎉' : 'Bora treinar?'}</p>
-              <p className="truncate text-xl font-extrabold">{todayCheckin ? todayCheckin.workout_name : stats ? `Faltam ${Math.max(0, stats.weekly_goal - stats.week_days)} na semana` : 'Treino de hoje'}</p>
+              <p className="text-lg leading-snug font-bold">
+                {todayCheckin ? 'Treinou hoje 💪' : stats && stats.week_days >= stats.weekly_goal ? 'Meta batida! 🎉' : 'Bora treinar?'}
+              </p>
+              <p className="truncate text-sm text-white/85">
+                {todayCheckin
+                  ? todayCheckin.workout_name
+                  : stats
+                    ? stats.week_days >= stats.weekly_goal
+                      ? 'Tudo que vier agora é bônus'
+                      : `${stats.weekly_goal - stats.week_days === 1 ? 'Falta 1 treino' : `Faltam ${stats.weekly_goal - stats.week_days} treinos`} para a meta`
+                    : ''}
+              </p>
             </div>
             {todayCheckin?.photo_url && <img src={todayCheckin.photo_url} alt="Foto do treino de hoje" className="size-14 shrink-0 rounded-2xl border-2 border-white/70 object-cover" />}
           </div>
+
+          {/* Números: o total leva ao histórico (destacado como botão) */}
           {stats && (
-            <p className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-semibold text-white/90">
-              <span className="flex items-center gap-1.5"><Flame className="size-4" /> {stats.streak} {stats.streak === 1 ? 'dia seguido' : 'dias seguidos'}</span>
-              <span className="flex items-center gap-1.5"><Calendar className="size-4" /> {stats.month_count} no mês</span>
-              <span className="flex items-center gap-1.5"><Trophy className="size-4" /> {stats.total_count} no total</span>
-            </p>
+            <div className="mt-5 grid grid-cols-3 gap-2 text-center">
+              <div className="py-2">
+                <p className="flex items-center justify-center gap-1 font-display text-lg leading-none font-semibold"><Flame className="size-4" />{stats.streak}</p>
+                <p className="mt-1 text-xs text-white/80">{stats.streak === 1 ? 'dia seguido' : 'dias seguidos'}</p>
+              </div>
+              <div className="py-2">
+                <p className="flex items-center justify-center gap-1 font-display text-lg leading-none font-semibold"><Calendar className="size-4" />{stats.month_count}</p>
+                <p className="mt-1 text-xs text-white/80">no mês</p>
+              </div>
+              {stats.total_count > 0 ? (
+                <Link to="/historico-treinos" aria-label={`Ver os ${stats.total_count} treinos feitos`} className="rounded-2xl bg-white/15 py-2 ring-1 ring-white/30 transition-colors active:bg-white/25">
+                  <p className="flex items-center justify-center gap-1 font-display text-lg leading-none font-semibold"><Trophy className="size-4" />{stats.total_count}</p>
+                  <p className="mt-1 flex items-center justify-center text-xs font-semibold">
+                    ver todos <ChevronRight className="size-3.5" />
+                  </p>
+                </Link>
+              ) : (
+                <div className="py-2">
+                  <p className="flex items-center justify-center gap-1 font-display text-lg leading-none font-semibold"><Trophy className="size-4" />0</p>
+                  <p className="mt-1 text-xs text-white/80">no total</p>
+                </div>
+              )}
+            </div>
           )}
         </div>
-        <div className="flex gap-2 p-3">
-          <button onClick={openTrain} className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-primary font-bold text-white active:scale-[0.98]">
+        <div className="p-3">
+          <button onClick={openTrain} className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary font-bold text-white active:scale-[0.98]">
             <Zap className="size-5" /> Treinar
           </button>
-          <Link to="/historico-treinos" className="flex h-12 items-center justify-center rounded-xl bg-soft px-4 font-bold text-link">
-            Feitos
-          </Link>
         </div>
       </Card>
 
       <div className="flex items-center justify-between px-1 pt-2">
         <h2 className="text-xs font-bold tracking-wider text-muted uppercase">Minha ficha</h2>
-        {workouts && workouts.length > 1 && <span className="text-xs text-muted">segure e arraste para reordenar</span>}
       </div>
 
       {!workouts && <div className="h-32 animate-pulse rounded-2xl bg-soft" />}
