@@ -1,3 +1,4 @@
+import { useBottomInset } from '../lib/viewport'
 import { Camera, Flame, X } from 'lucide-react'
 import { enqueue, flush, isOffline, newRef } from '../lib/outbox'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -60,6 +61,7 @@ export function CheckinPage() {
   const [error, setError] = useState<ApiError | null>(null)
   const [celebrate, setCelebrate] = useState<number | null>(null)
   const camera = useRef<HTMLInputElement>(null)
+  const bottomInset = useBottomInset()
   const gallery = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -368,7 +370,7 @@ export function CheckinPage() {
         </label>
 
         {/* Ação principal sempre visível no rodapé */}
-        <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/90 backdrop-blur-lg">
+        <div style={{ bottom: bottomInset }} className="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/90 backdrop-blur-lg">
           <div className="mx-auto max-w-lg px-5 py-3">
             <Button onClick={submit} loading={sending} disabled={!canSubmit}>
               {submitLabel}

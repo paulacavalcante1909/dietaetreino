@@ -300,7 +300,12 @@ function FoodList({ foods, recipes = [], onPick, onPickRecipe, onQuickAdd, onQui
           <li key={f.id} className={`transition-colors ${picked ? 'bg-soft shadow-[inset_3px_0_0_var(--color-primary)]' : ''}`}>
             <div className="flex items-center">
               <button
-                onClick={() => (plate ? plate.toggle(f) : onPick(f))}
+                onClick={() => {
+                  // Fecha o teclado: a barra "Registrar" do rodapé fica visível
+                  ;(document.activeElement as HTMLElement | null)?.blur()
+                  if (plate) plate.toggle(f)
+                  else onPick(f)
+                }}
                 aria-pressed={plate ? !!picked : undefined}
                 className={`flex min-w-0 flex-1 items-center gap-3 py-3.5 pr-2 text-left transition-colors active:bg-soft ${plate ? 'pl-3' : 'pl-4'}`}
               >

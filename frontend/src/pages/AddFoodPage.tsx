@@ -15,6 +15,7 @@ import { isoDate } from '../lib/date'
 import { fmtKcal } from '../components/Ring'
 import { Check } from 'lucide-react'
 import { mealForNow } from '../lib/meals'
+import { useBottomInset } from '../lib/viewport'
 import type { Entry, FoodDetail, FoodLite, Meal, RecipeSummary } from '../lib/types'
 
 /**
@@ -48,6 +49,8 @@ export function AddFoodPage() {
   const [scanning, setScanning] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const query = useRef('')
+  // Teclado aberto ou barra do Safari: a barra do rodapé sobe junto (sempre dá para registrar/concluir)
+  const bottomInset = useBottomInset()
   // Fileira de refeições: centraliza a escolhida (só rola a fileira, não a página)
   const mealChips = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -338,6 +341,7 @@ export function AddFoodPage() {
             animate={{ y: 0 }}
             exit={{ y: 100 }}
             transition={{ type: 'spring', stiffness: 400, damping: 36 }}
+            style={{ bottom: bottomInset }}
             className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 backdrop-blur-lg"
           >
             <div className="mx-auto flex max-w-lg items-center gap-3 px-5 py-3">
@@ -363,6 +367,7 @@ export function AddFoodPage() {
             animate={{ y: 0 }}
             exit={{ y: 100 }}
             transition={{ type: 'spring', stiffness: 400, damping: 36 }}
+            style={{ bottom: bottomInset }}
             className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 backdrop-blur-lg"
           >
             <div className="mx-auto flex max-w-lg items-center gap-3 px-5 py-3">

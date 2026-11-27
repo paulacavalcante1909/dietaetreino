@@ -1,3 +1,4 @@
+import { useBottomInset } from '../lib/viewport'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Check, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -30,6 +31,7 @@ export function SessionEditor({ session, open, onClose, onSaved }: { session: Wo
   const [picking, setPicking] = useState(false)
   const [editing, setEditing] = useState<{ row: Row; index: number | null } | null>(null)
   const [saving, setSaving] = useState(false)
+  const bottomInset = useBottomInset()
   const [error, setError] = useState<ApiError | null>(null)
 
   useEffect(() => {
@@ -117,7 +119,7 @@ export function SessionEditor({ session, open, onClose, onSaved }: { session: Wo
             <p className="mt-3 text-center text-xs text-muted">As calorias gastas são recalculadas ao salvar.</p>
           </div>
 
-          <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/90 backdrop-blur-lg">
+          <div style={{ bottom: bottomInset }} className="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/90 backdrop-blur-lg">
             <div className="mx-auto max-w-lg px-5 py-3">
               <Button onClick={save} loading={saving} disabled={rows.length === 0}>Salvar alterações</Button>
             </div>
