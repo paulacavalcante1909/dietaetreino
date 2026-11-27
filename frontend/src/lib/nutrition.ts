@@ -11,9 +11,28 @@ export const num = (s: string) => Number(s.replace(',', '.'))
 
 export const fmtQty = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 2 })
 
-/** Plural simples da primeira palavra: unidade→unidades, colher→colheres. */
-function pluralize(label: string): string {
-  return label.replace(/^(\S+)/, (w) => (/[sS]$/.test(w) ? w : /[rzRZ]$/.test(w) ? `${w}es` : `${w}s`))
+/** Plural de uma palavra em português: porção→porções, colher→colheres, unidade→unidades. */
+function pluralWord(w: string): string {
+  if (/[sx]$/i.test(w) || !/[a-zà-ú]$/i.test(w) || w.length <= 2 || /^(und|kcal)$/i.test(w)) return w // já no plural, número ou abreviação (g, ml, kg, un)
+  if (/ão$/i.test(w)) return w.replace(/ão$/i, 'ões')
+  if (/[rz]$/i.test(w)) return `${w}es`
+  if (/al$/i.test(w)) return w.replace(/al$/i, 'ais')
+  if (/el$/i.test(w)) return w.replace(/el$/i, 'éis')
+  if (/ol$/i.test(w)) return w.replace(/ol$/i, 'óis')
+  if (/m$/i.test(w)) return w.replace(/m$/i, 'ns')
+  return `${w}s`
+}
+
+const PREPOSITIONS = new Set(['de', 'da', 'do', 'das', 'dos', 'com', 'sem', 'em', 'para', 'p/', 'c/'])
+
+/**
+ * Plural de uma medida caseira: as palavras até a primeira preposição.
+ * "unidade média" → "unidades médias", "fatia de pão" → "fatias de pão", "porção" → "porções".
+ */
+export function pluralize(label: string): string {
+  const words = label.split(/\s+/)
+  const stop = words.findIndex((w) => PREPOSITIONS.has(w.toLowerCase()))
+  return words.map((w, i) => (stop === -1 || i < stop ? pluralWord(w) : w)).join(' ')
 }
 
 /** "1,5 unidade · 75 g", "2 fatias · 50 g" ou "150 g". */

@@ -1,5 +1,5 @@
 import { api } from './api'
-import { fmtQty } from './nutrition'
+import { fmtQty, pluralize } from './nutrition'
 import type { FoodDetail, FoodLite } from './types'
 
 /**
@@ -25,7 +25,7 @@ export function plateQtyLabel(i: PlateItem) {
   const label = i.unit_label.replace(/\s*\(.*\)$/, '')
   // "1 unidade média" → "1,5 unidade média"
   const m = label.match(/^1\s+(.+)$/)
-  return m ? `${fmtQty(i.quantity)} ${m[1]}` : `${fmtQty(i.quantity)} × ${label}`
+  return m ? `${fmtQty(i.quantity)} ${i.quantity > 1 ? pluralize(m[1]) : m[1]}` : `${fmtQty(i.quantity)} × ${label}`
 }
 
 /**

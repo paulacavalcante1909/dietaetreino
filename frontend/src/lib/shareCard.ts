@@ -29,11 +29,13 @@ export function sessionStats(s: WorkoutSessionData) {
  */
 export async function renderShareCard(session: WorkoutSessionData, photoUrl: string | null, appName: string, mascotUrl?: string): Promise<Blob> {
   await document.fonts?.ready
+  await document.fonts?.load('800 72px Sora').catch(() => {})
   const canvas = document.createElement('canvas')
   canvas.width = W
   canvas.height = H
   const c = canvas.getContext('2d')!
   const font = (weight: number, size: number) => `${weight} ${size}px Nunito, system-ui, sans-serif`
+  const display = (weight: number, size: number) => `${weight} ${size}px Sora, Nunito, system-ui, sans-serif`
 
   // Fundo: foto em "cover" ou gradiente do tema
   let photo: HTMLImageElement | null = null
@@ -63,19 +65,20 @@ export async function renderShareCard(session: WorkoutSessionData, photoUrl: str
   c.fillStyle = '#fff'
   c.textBaseline = 'alphabetic'
 
-  // Estatísticas (até 3 colunas)
-  const cols: [string, string][] = [[st.duration, 'tempo']]
-  if (st.km > 0) cols.push([`${fmtKm(st.km)} km`, 'distância'])
-  cols.push([st.kcal > 0 ? `${st.kcal}` : '—', 'kcal gastas'])
-  if (cols.length < 3) cols.push([st.sets > 0 ? `${st.sets}` : `${st.done}`, st.sets > 0 ? 'séries' : st.done === 1 ? 'exercício' : 'exercícios'])
+  // Estatísticas (até 3 colunas), com ícone ao lado do rótulo
+  const cols: [string, string, Icon][] = [[st.duration, 'tempo', 'timer']]
+  if (st.km > 0) cols.push([`${fmtKm(st.km)} km`, 'distância', 'route'])
+  cols.push([st.kcal > 0 ? `${st.kcal}` : '—', 'kcal gastas', 'flame'])
+  if (cols.length < 3) cols.push([st.sets > 0 ? `${st.sets}` : `${st.done}`, st.sets > 0 ? 'séries' : st.done === 1 ? 'exercício' : 'exercícios', 'dumbbell'])
   const colW = (W - pad * 2) / cols.length
-  cols.forEach(([v, l], i) => {
+  cols.forEach(([v, l, icon], i) => {
     const x = pad + i * colW
-    c.font = font(800, 76)
+    c.font = display(800, 72)
     c.fillText(v, x, H - pad - 56, colW - 16)
+    drawIcon(c, icon, x, H - pad - 40, 38)
     c.font = font(600, 34)
     c.globalAlpha = 0.85
-    c.fillText(l, x, H - pad - 8)
+    c.fillText(l, x + 50, H - pad - 8)
     c.globalAlpha = 1
   })
 
@@ -86,7 +89,7 @@ export async function renderShareCard(session: WorkoutSessionData, photoUrl: str
   c.globalAlpha = 0.9
   c.fillText(date.charAt(0).toUpperCase() + date.slice(1), pad, H - pad - 196)
   c.globalAlpha = 1
-  c.font = font(800, 72)
+  c.font = display(800, 66)
   const name = session.workout_name.length > 28 ? `${session.workout_name.slice(0, 27)}…` : session.workout_name
   c.fillText(name, pad, H - pad - 250, W - pad * 2)
 
@@ -121,6 +124,45 @@ export async function renderShareCard(session: WorkoutSessionData, photoUrl: str
   drawExercises(c, session, font)
 
   return new Promise((resolve) => canvas.toBlob((b) => resolve(b!), 'image/jpeg', 0.9))
+}
+
+type Icon = 'timer' | 'route' | 'flame' | 'dumbbell'
+
+/** Ícones (contorno, grade 24×24, os mesmos do app) desenhados em branco */
+const ICONS: Record<Icon, (p: Path2D) => void> = {
+  timer: (p) => {
+    p.addPath(new Path2D('M10 2h4 M12 14l3-3'))
+    p.moveTo(20, 14)
+    p.arc(12, 14, 8, 0, Math.PI * 2)
+  },
+  route: (p) => {
+    p.moveTo(9, 19)
+    p.arc(6, 19, 3, 0, Math.PI * 2)
+    p.addPath(new Path2D('M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15'))
+    p.moveTo(21, 5)
+    p.arc(18, 5, 3, 0, Math.PI * 2)
+  },
+  flame: (p) => {
+    p.addPath(new Path2D('M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z'))
+  },
+  dumbbell: (p) => {
+    p.addPath(new Path2D('M14.4 14.4 9.6 9.6 M18.657 21.485a2 2 0 1 1-2.829-2.828l-1.767 1.768a2 2 0 1 1-2.829-2.829l6.364-6.364a2 2 0 1 1 2.829 2.829l-1.768 1.767a2 2 0 1 1 2.828 2.829z M21.5 21.5l-1.4-1.4 M3.9 3.9 2.5 2.5 M6.404 12.768a2 2 0 1 1-2.829-2.829l1.768-1.767a2 2 0 1 1-2.828-2.829l2.828-2.828a2 2 0 1 1 2.829 2.828l1.767-1.768a2 2 0 1 1 2.829 2.829z'))
+  },
+}
+
+function drawIcon(c: CanvasRenderingContext2D, icon: Icon, x: number, y: number, size: number) {
+  const p = new Path2D()
+  ICONS[icon](p)
+  c.save()
+  c.translate(x, y)
+  c.scale(size / 24, size / 24)
+  c.strokeStyle = '#fff'
+  c.globalAlpha = 0.9
+  c.lineWidth = 2.5
+  c.lineCap = 'round'
+  c.lineJoin = 'round'
+  c.stroke(p)
+  c.restore()
 }
 
 /** "3×12 · 40 kg", "30 min · 5 km" */
