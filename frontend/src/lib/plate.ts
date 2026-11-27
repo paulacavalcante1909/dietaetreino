@@ -3,7 +3,7 @@ import { fmtQty, pluralize } from './nutrition'
 import type { FoodDetail, RecipeSummary } from './types'
 
 /**
- * "Prato": o que vai entrar na refeição. Cada alimento (ou refeição pronta) é escolhido
+ * "Prato": o que vai entrar na refeição. Cada alimento (ou refeição completa) é escolhido
  * na ficha ("Usar no prato") e tudo é registrado junto no fim.
  */
 export type PlateItem =

@@ -23,7 +23,6 @@ class MealControllerTest extends TestCase
         $add('2026-11-23', $egg, 100);
         $add('2026-11-24', $egg, 150);
         $add('2026-11-24', $bread, 50);
-        $add('2026-11-25', $bread, 50); // parte da refeição já registrada hoje: ainda sugere
 
         $this->actingAs($user)->getJson("/api/meals/{$meal->id}/suggestions?date=2026-11-25")
             ->assertOk()
@@ -31,8 +30,8 @@ class MealControllerTest extends TestCase
             ->assertJsonPath('last.items', ['Ovo cozido', 'Pão francês'])
             ->assertJsonMissingPath('frequent');
 
-        // Depois de repetir a refeição inteira, ela não aparece mais como sugestão
-        $add('2026-11-25', $egg, 150);
+        // Com qualquer item já registrado na refeição hoje, não sugere repetir
+        $add('2026-11-25', $bread, 50);
         $this->actingAs($user)->getJson("/api/meals/{$meal->id}/suggestions?date=2026-11-25")->assertJsonPath('last', null);
     }
 

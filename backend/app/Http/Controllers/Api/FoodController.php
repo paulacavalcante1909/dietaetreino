@@ -11,7 +11,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class FoodController extends Controller
 {
@@ -78,10 +80,49 @@ class FoodController extends Controller
         return response()->json(['foods' => $this->markFavorites($user, $foods)]);
     }
 
+    /** Alimentos comuns (TACO) para quem ainda não registrou nada: primeiros usos. */
+    private const COMMON = [
+        'arroz tipo 1 cozido', 'feijao carioca cozido', 'ovo galinha inteiro cozido', 'pao trigo frances', 'cafe infusao',
+        'leite vaca integral', 'banana prata', 'frango peito sem pele grelhado', 'carne bovina patinho grelhado', 'maca fuji',
+        'batata inglesa cozida', 'batata doce cozida', 'alface crespa', 'tomate com semente', 'queijo minas frescal',
+        'iogurte natural', 'aveia flocos', 'mamao papaia', 'cuscuz milho cozido', 'azeite oliva',
+    ];
+
+    public function common(Request $request): JsonResponse
+    {
+        $ids = Cache::remember('foods.common.v1', now()->addDay(), function () {
+            return collect(self::COMMON)->map(function (string $term) {
+                $q = Food::whereNull('user_id')->where('source', 'taco');
+                foreach ($this->searchWords($term) as $w) {
+                    $q->where('search_name', 'like', '%'.$w.'%');
+                }
+
+                return $q->orderByRaw('CHAR_LENGTH(name)')->value('id');
+            })->filter()->unique()->values()->all();
+        });
+
+        $foods = Food::whereIn('id', $ids)->select(self::LIST_COLUMNS)->get()
+            ->sortBy(fn ($f) => array_search($f->id, $ids, true))->values();
+
+        return response()->json(['foods' => $this->markFavorites($request->user(), $foods)]);
+    }
+
+    /** Palavras da busca, com radical simples ("cozido"/"cozida" → "cozid"). */
+    private function searchWords(string $text): array
+    {
+        $words = array_values(array_filter(explode(' ', Food::normalize($text)), fn ($w) => mb_strlen($w) >= 2));
+
+        return array_map(fn ($w) => mb_strlen($w) >= 5 ? preg_replace('/(os|as|o|a|s)$/', '', $w) : $w, $words);
+    }
+
     /** Últimos alimentos usados (sem repetir). */
     public function recent(Request $request): JsonResponse
     {
-        $used = $request->user()->entries()
+        // Com meal_id: só o que já foi registrado naquela refeição (café da manhã não mostra o jantar)
+        $mealId = $request->validate(['meal_id' => ['sometimes', 'integer', Rule::exists('meals', 'id')->where('user_id', $request->user()->id)]])['meal_id'] ?? null;
+        $entries = fn () => $request->user()->entries()->when($mealId, fn ($q) => $q->where('meal_id', $mealId));
+
+        $used = $entries()
             ->whereNotNull('food_id')
             ->select('food_id', DB::raw('MAX(id) as last'))
             ->groupBy('food_id')
@@ -91,7 +132,7 @@ class FoodController extends Controller
         $ids = $used->keys();
 
         // Última porção usada de cada alimento (para "adicionar de novo" com 1 toque)
-        $last = $request->user()->entries()->whereIn('food_id', $ids)
+        $last = $entries()->whereIn('food_id', $ids)
             ->orderByDesc('id')->get(['food_id', 'quantity', 'portion_id', 'unit_label', 'kcal'])
             ->unique('food_id')->keyBy('food_id');
 
@@ -100,7 +141,7 @@ class FoodController extends Controller
             ->map(fn ($f) => [...$f->toArray(), 'last' => $last->get($f->id)?->only('quantity', 'portion_id', 'unit_label', 'kcal'), 'used_rank' => (int) $used[$f->id]]);
 
         // Refeições prontas usadas recentemente (aparecem junto, na ordem de uso)
-        $recipeUsed = $request->user()->entries()
+        $recipeUsed = $entries()
             ->whereNotNull('recipe_id')
             ->select('recipe_id', DB::raw('MAX(id) as last'))
             ->groupBy('recipe_id')
@@ -115,7 +156,7 @@ class FoodController extends Controller
                 ...$r->summary(),
                 'used_rank' => (int) $recipeUsed[$r->id],
                 // Porções da última vez (para o "+" de 1 toque)
-                'last_quantity' => (float) $request->user()->entries()->whereKey($recipeUsed[$r->id])->value('quantity'),
+                'last_quantity' => (float) $entries()->whereKey($recipeUsed[$r->id])->value('quantity'),
             ])
             ->sortByDesc('used_rank')
             ->values();

@@ -77,7 +77,7 @@ class MealController extends Controller
 
     /**
      * Sugestão para registrar uma refeição rápido: o que foi registrado nela da última vez
-     * (`last`, para repetir inteira com 1 toque).
+     * (`last`, para repetir inteira com 1 toque). Some quando a refeição já tem registro no dia.
      */
     public function suggestions(Request $request, Meal $meal): JsonResponse
     {
@@ -87,15 +87,11 @@ class MealController extends Controller
 
         $lastDate = (clone $entries)->whereDate('date', '<', $date)->whereDate('date', '>=', CarbonImmutable::parse($date)->subDays(30)->toDateString())
             ->max('date');
-        $today = (clone $entries)->whereDate('date', $date)->get(['food_id', 'recipe_id']);
+        // Refeição já registrada hoje (qualquer item): não sugere repetir
         $last = null;
-        if ($lastDate) {
-            $items = (clone $entries)->whereDate('date', $lastDate)->orderBy('id')->get(['name', 'kcal', 'food_id', 'recipe_id']);
-            // Já repetida hoje (tudo dela já está registrado): não sugere de novo
-            $alreadyToday = $items->every(fn ($i) => $today->contains(fn ($t) => $t->food_id === $i->food_id && $t->recipe_id === $i->recipe_id));
-            if (! $alreadyToday) {
-                $last = ['date' => substr((string) $lastDate, 0, 10), 'kcal' => round($items->sum('kcal')), 'items' => $items->pluck('name')->all()];
-            }
+        if ($lastDate && ! (clone $entries)->whereDate('date', $date)->exists()) {
+            $items = (clone $entries)->whereDate('date', $lastDate)->orderBy('id')->get(['name', 'kcal']);
+            $last = ['date' => substr((string) $lastDate, 0, 10), 'kcal' => round($items->sum('kcal')), 'items' => $items->pluck('name')->all()];
         }
 
         return response()->json(['last' => $last]);

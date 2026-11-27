@@ -1,6 +1,6 @@
 import { ChevronRight, Plus, Star } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useToast } from './Toast'
 import { fmt, fmtKcal } from './Ring'
@@ -10,9 +10,10 @@ import { baseLabel } from '../lib/nutrition'
 import type { FoodLite, OffProduct, RecipeSummary } from '../lib/types'
 import type { FoodTarget } from './FoodSheet'
 
-type Tab = 'buscar' | 'recentes' | 'favoritos' | 'receitas' | 'meus'
+type Tab = 'alimentos' | 'refeicoes'
 
 interface Props {
+  /** Mostra a aba "Refeições completas" */
   withRecipes?: boolean
   onPickFood: (t: FoodTarget) => void
   onPickRecipe?: (r: RecipeSummary) => void
@@ -20,102 +21,87 @@ interface Props {
   onQueryChange?: (q: string) => void
   /** Nada encontrado na busca: cadastrar o alimento (recebe o que foi digitado). */
   onCreateFood?: (query: string) => void
-  /** Incrementar para recarregar as abas (ex.: após registrar). */
+  /** Incrementar para recarregar as listas (ex.: após registrar). */
   refreshKey?: number
+  /** Recentes só desta refeição (café da manhã não mostra o jantar) */
+  mealId?: number
+  mealName?: string
 }
 
-const PLACEHOLDER: Record<Tab, string> = {
-  buscar: 'Buscar alimento ou produto',
-  recentes: 'Buscar nos recentes',
-  receitas: 'Buscar nas refeições prontas',
-  favoritos: 'Buscar nos favoritos',
-  meus: 'Buscar nos meus alimentos',
-}
-
-/** Sem acento e minúsculo, para filtrar as listas das abas */
+/** Sem acento e minúsculo, para filtrar listas */
 const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 const matches = (q: string) => {
   const words = norm(q).split(/\s+/).filter(Boolean)
   return (name: string) => words.every((w) => norm(name).includes(w))
 }
 
+interface Sections {
+  recent: FoodLite[]
+  recentRecipes: RecipeSummary[]
+  favorites: FoodLite[]
+  mine: FoodLite[]
+  common: FoodLite[] | null // só para quem ainda não tem nada
+}
+
 /**
- * Busca de alimentos com abas. A busca vale dentro da aba aberta (em Favoritos, só favoritos…);
- * em "Buscar", procura na base toda + produtos de marca (Open Food Facts).
+ * Escolher o que comer, em duas abas:
+ * - Alimentos: sem busca, Recentes (desta refeição) → Favoritos → Criados por você
+ *   (primeiros usos: alimentos comuns); com busca, a base toda + produtos de marca, e cadastrar se não achar.
+ * - Refeições completas: as usadas mais recentemente primeiro, com busca e o botão de criar.
  * Tocar num item abre a ficha (quantidade e medida).
  */
-export function FoodSearch({ withRecipes, onPickFood, onPickRecipe, onScan, onQueryChange, onCreateFood, refreshKey = 0 }: Props) {
-  const tabs: { key: Tab; label: string }[] = [
-    { key: 'buscar', label: 'Buscar' },
-    { key: 'recentes', label: 'Recentes' },
-    ...(withRecipes ? [{ key: 'receitas' as Tab, label: 'Refeições prontas' }] : []),
-    { key: 'favoritos', label: 'Favoritos' },
-    { key: 'meus', label: 'Meus' },
-  ]
-  const [tab, setTab] = useState<Tab>('recentes')
+export function FoodSearch({ withRecipes, onPickFood, onPickRecipe, onScan, onQueryChange, onCreateFood, refreshKey = 0, mealId, mealName }: Props) {
+  const [tab, setTab] = useState<Tab>('alimentos')
   const [query, setQuery] = useState('')
-  const [lists, setLists] = useState<Partial<Record<Tab, FoodLite[]>>>({})
+  const [sections, setSections] = useState<Sections | null>(null)
+  const [results, setResults] = useState<FoodLite[] | null>(null)
   const [recipes, setRecipes] = useState<RecipeSummary[] | null>(null)
-  const [recentRecipes, setRecentRecipes] = useState<RecipeSummary[]>([])
   const [off, setOff] = useState<OffProduct[] | null>(null)
   const [offLoading, setOffLoading] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [searching, setSearching] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const toast = useToast()
-  const searchInput = useRef<HTMLInputElement>(null)
-  const firstLoad = useRef(false)
+  const input = useRef<HTMLInputElement>(null)
+  const q = query.trim()
 
-  // Favoritar direto na lista (otimista); desfazer pelo aviso
-  const toggleFavorite = async (f: FoodLite) => {
-    const on = !f.favorite
-    const apply = (v: boolean) =>
-      setLists((all) => Object.fromEntries(Object.entries(all).map(([k, list]) => [k, list?.map((x) => (x.id === f.id ? { ...x, favorite: v } : x))])))
-    apply(on)
-    try {
-      await api(`/foods/${f.id}/favorite`, { method: on ? 'POST' : 'DELETE' })
-      toast({ text: on ? '★ Adicionado aos favoritos' : 'Tirado dos favoritos', action: { label: 'Desfazer', run: () => toggleFavorite({ ...f, favorite: on }) } })
-    } catch {
-      apply(!on)
-    }
-  }
-
-  // Abas de lista: carregam ao abrir
+  // Alimentos sem busca: recentes desta refeição, favoritos e os criados pela usuária
   useEffect(() => {
-    if (tab === 'buscar') return
-    setLoading(true)
+    if (tab !== 'alimentos') return
     setError(null)
-    const req =
-      tab === 'receitas'
-        ? api<{ recipes: RecipeSummary[] }>('/recipes').then((r) => setRecipes(r.recipes))
-        : api<{ foods: FoodLite[]; recipes?: RecipeSummary[] }>({ recentes: '/foods/recent', favoritos: '/foods/favorites', meus: '/foods/mine' }[tab]).then((r) => {
-            setLists((l) => ({ ...l, [tab]: r.foods }))
-            if (tab === 'recentes') setRecentRecipes(r.recipes ?? [])
-            // Primeira vez (nada recente): vai direto para a busca, com o teclado aberto
-            if (tab === 'recentes' && !firstLoad.current && r.foods.length === 0 && !(r.recipes ?? []).length) {
-              setTab('buscar')
-              searchInput.current?.focus()
-            }
-            firstLoad.current = true
-          })
-    req.catch((e: ApiError) => setError(e.message)).finally(() => setLoading(false))
+    Promise.all([
+      api<{ foods: FoodLite[]; recipes?: RecipeSummary[] }>(`/foods/recent${mealId ? `?meal_id=${mealId}` : ''}`),
+      api<{ foods: FoodLite[] }>('/foods/favorites'),
+      api<{ foods: FoodLite[] }>('/foods/mine'),
+    ])
+      .then(async ([r, f, m]) => {
+        const empty = !r.foods.length && !f.foods.length && !m.foods.length && !(r.recipes ?? []).length
+        // Primeiros usos (nada registrado nem favoritado): alimentos comuns
+        const common = empty ? (await api<{ foods: FoodLite[] }>('/foods/common').catch(() => ({ foods: [] as FoodLite[] }))).foods : null
+        setSections({ recent: r.foods.slice(0, 10), recentRecipes: withRecipes ? (r.recipes ?? []).slice(0, 5) : [], favorites: f.foods, mine: m.foods, common })
+      })
+      .catch((e: ApiError) => setError(e.message))
+  }, [tab, refreshKey, mealId, withRecipes])
+
+  // Refeições completas: mais recentes primeiro (ordem do servidor)
+  useEffect(() => {
+    if (tab !== 'refeicoes') return
+    api<{ recipes: RecipeSummary[] }>('/recipes').then((r) => setRecipes(r.recipes)).catch((e: ApiError) => setError(e.message))
   }, [tab, refreshKey])
 
-  // Aba "Buscar": base local (rápida) + produtos de marca (mais lenta)
+  // Alimentos com busca: base toda (inclui os criados por ela) + produtos de marca
   useEffect(() => {
-    const q = query.trim()
     onQueryChange?.(q)
-    if (tab !== 'buscar') return
-    if (q.length < 2) {
-      setLists((l) => ({ ...l, buscar: undefined }))
+    if (tab !== 'alimentos' || q.length < 2) {
+      setResults(null)
       setOff(null)
       return
     }
-    setLoading(true)
+    setSearching(true)
     const local = setTimeout(() => {
       api<{ foods: FoodLite[] }>(`/foods/search?q=${encodeURIComponent(q)}`)
-        .then((r) => setLists((l) => ({ ...l, buscar: r.foods })))
+        .then((r) => setResults(r.foods))
         .catch((e: ApiError) => setError(e.message))
-        .finally(() => setLoading(false))
+        .finally(() => setSearching(false))
     }, 250)
     const remote =
       q.length >= 3
@@ -131,48 +117,59 @@ export function FoodSearch({ withRecipes, onPickFood, onPickRecipe, onScan, onQu
       clearTimeout(local)
       clearTimeout(remote)
     }
-  }, [query, tab, onQueryChange])
+  }, [q, tab, onQueryChange])
 
-  // Nas outras abas, a busca filtra a lista da própria aba
-  const q = query.trim()
-  const filter = q && tab !== 'buscar' ? matches(q) : null
-  const rawFoods = tab === 'buscar' ? lists.buscar : lists[tab]
-  const foods = filter ? rawFoods?.filter((f) => filter(f.display_name || f.name)) : rawFoods
-  const shownRecipes = filter ? recipes?.filter((r) => filter(r.name)) ?? null : recipes
-  const shownRecent = tab === 'recentes' && withRecipes ? (filter ? recentRecipes.filter((r) => filter(r.name)) : recentRecipes) : []
-  const notFound = tab === 'buscar' && q.length >= 2 && !loading && foods?.length === 0
+  // Favoritar direto na lista (otimista); desfazer pelo aviso
+  const toggleFavorite = async (f: FoodLite) => {
+    const on = !f.favorite
+    const set = (v: boolean) => {
+      const mark = (list: FoodLite[]) => list.map((x) => (x.id === f.id ? { ...x, favorite: v } : x))
+      setSections((s) => s && { ...s, recent: mark(s.recent), favorites: mark(s.favorites), mine: mark(s.mine), common: s.common && mark(s.common) })
+      setResults((r) => r && mark(r))
+    }
+    set(on)
+    try {
+      await api(`/foods/${f.id}/favorite`, { method: on ? 'POST' : 'DELETE' })
+      toast({ text: on ? '★ Adicionado aos favoritos' : 'Tirado dos favoritos', action: { label: 'Desfazer', run: () => toggleFavorite({ ...f, favorite: on }) } })
+    } catch {
+      set(!on)
+    }
+  }
+
+  const switchTab = (t: Tab) => {
+    setTab(t)
+    setQuery('')
+  }
+
+  // Sem repetir: quem já está em Recentes não aparece de novo em Favoritos/Criados
+  const seen = new Set(sections?.recent.map((f) => f.id))
+  const favorites = sections?.favorites.filter((f) => !seen.has(f.id)) ?? []
+  favorites.forEach((f) => seen.add(f.id))
+  const mine = sections?.mine.filter((f) => !seen.has(f.id)) ?? []
+  const shownRecipes = q && recipes ? recipes.filter((r) => matches(q)(r.name)) : recipes
+  const notFound = tab === 'alimentos' && q.length >= 2 && !searching && results?.length === 0
+  const nothing = sections && !sections.recent.length && !sections.recentRecipes.length && !favorites.length && !mine.length && !sections.common?.length
 
   return (
     <div>
-      {/* Abas: rolam de lado se não couberem */}
-      <div className="-mx-5 mb-3 flex overflow-x-auto px-5 [scrollbar-width:none]">
-        <div className="flex w-max min-w-full shrink-0 gap-1 rounded-full bg-soft p-1" role="tablist" aria-label="Onde procurar">
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              role="tab"
-              aria-selected={tab === t.key}
-              onClick={(e) => {
-                setTab(t.key)
-                // Aba meio escondida: rola a fileira até ela aparecer inteira
-                e.currentTarget.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' })
-              }} className="relative flex-1 shrink-0 rounded-full px-3 py-2 text-[13px] font-semibold whitespace-nowrap">
-              {tab === t.key && <motion.span layoutId="food-tab" className="absolute inset-0 rounded-full bg-primary" transition={{ type: 'spring', stiffness: 500, damping: 38 }} />}
-              <span className={`relative block ${tab === t.key ? 'text-white' : 'text-muted'}`}>{t.label}</span>
+      {withRecipes && (
+        <div className="mb-3 grid grid-cols-2 gap-1 rounded-full bg-soft p-1" role="tablist" aria-label="O que registrar">
+          {([['alimentos', 'Alimentos'], ['refeicoes', 'Refeições completas']] as const).map(([k, l]) => (
+            <button key={k} role="tab" aria-selected={tab === k} onClick={() => switchTab(k)} className="relative rounded-full py-2.5 text-sm font-semibold">
+              {tab === k && <motion.span layoutId="food-tab" className="absolute inset-0 rounded-full bg-primary" transition={{ type: 'spring', stiffness: 500, damping: 38 }} />}
+              <span className={`relative ${tab === k ? 'text-white' : 'text-muted'}`}>{l}</span>
             </button>
           ))}
         </div>
-        {/* Respiro no fim da fileira (o padding da direita some em listas que rolam) */}
-        <span className="w-5 shrink-0" aria-hidden />
-      </div>
+      )}
 
       <div className="mb-4 flex gap-2">
         <div className="relative flex-1">
           <input
-            ref={searchInput}
+            ref={input}
             type="search"
-            placeholder={PLACEHOLDER[tab]}
-            aria-label={PLACEHOLDER[tab]}
+            placeholder={tab === 'alimentos' ? 'Buscar alimento ou produto' : 'Buscar refeição completa'}
+            aria-label={tab === 'alimentos' ? 'Buscar alimento ou produto' : 'Buscar refeição completa'}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="h-12 w-full rounded-2xl border border-line bg-surface pr-4 pl-11 outline-none focus:border-orchid focus:ring-4 focus:ring-orchid/15"
@@ -182,36 +179,31 @@ export function FoodSearch({ withRecipes, onPickFood, onPickRecipe, onScan, onQu
             <path d="m20 20-3.5-3.5" strokeLinecap="round" />
           </svg>
         </div>
-        <button onClick={onScan} aria-label="Ler código de barras" className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-white shadow-md transition-transform active:scale-90">
-          <svg className="size-6" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" viewBox="0 0 24 24">
-            <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10 8v8M13 8v8M17 8v8" />
-          </svg>
-        </button>
+        {tab === 'alimentos' && (
+          <button onClick={onScan} aria-label="Ler código de barras" className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-white shadow-md transition-transform active:scale-90">
+            <svg className="size-6" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" viewBox="0 0 24 24">
+              <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10 8v8M13 8v8M17 8v8" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {error && <Alert>{error}</Alert>}
 
       <AnimatePresence mode="wait">
         <motion.div key={tab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
-          {tab === 'receitas' ? (
+          {tab === 'refeicoes' ? (
             <>
-              <RecipeList recipes={shownRecipes} loading={loading} filtered={!!filter} onPick={onPickRecipe} />
+              <RecipeList recipes={shownRecipes} filtered={!!q} onPick={onPickRecipe} />
               <Link to="/receitas/nova" className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-line text-sm font-bold text-link active:bg-soft">
-                <Plus className="size-4" /> Criar refeição pronta
+                <Plus className="size-4" /> Criar refeição completa
               </Link>
             </>
-          ) : (
+          ) : q.length >= 2 ? (
+            /* Com busca */
             <>
-              {loading && !foods && <ListSkeleton />}
-              {foods && (foods.length > 0 || shownRecent.length > 0) && (
-                <FoodList foods={foods} recipes={shownRecent} onPick={(f) => onPickFood({ id: f.id })} onPickRecipe={onPickRecipe} onToggleFavorite={toggleFavorite} showLast={tab === 'recentes'} />
-              )}
-              {foods && foods.length === 0 && shownRecent.length === 0 && !notFound && <Empty tab={tab} filtered={!!filter} />}
-              {!foods && !loading && tab === 'buscar' && (
-                <p className="py-8 text-center text-sm text-muted">Digite o nome do alimento ou toque no leitor para escanear o código de barras.</p>
-              )}
-
-              {/* Não achou na base: cadastrar (só aparece quando nada foi encontrado) */}
+              {searching && !results && <ListSkeleton />}
+              {results && results.length > 0 && <FoodList foods={results} onPick={(f) => onPickFood({ id: f.id })} onToggleFavorite={toggleFavorite} />}
               {notFound && (
                 <div className="rounded-[var(--radius-card)] bg-surface p-4 text-center shadow-[0_2px_12px_-4px_rgba(31,23,36,0.08)]">
                   <p className="text-sm text-muted">Não encontramos “{q}” na nossa base{off && off.length > 0 ? '. Veja os produtos de marca abaixo ou cadastre.' : '.'}</p>
@@ -222,39 +214,64 @@ export function FoodSearch({ withRecipes, onPickFood, onPickRecipe, onScan, onQu
                   )}
                 </div>
               )}
-
-              {tab === 'buscar' && q.length >= 3 && (
-                <div className="mt-5">
-                  <p className="mb-2 px-1 text-xs font-semibold tracking-wider text-muted uppercase">Produtos de marca · Open Food Facts</p>
+              {q.length >= 3 && (
+                <Section title="Produtos de marca · Open Food Facts">
                   {offLoading && !off && <ListSkeleton rows={3} />}
                   {off && off.length === 0 && <p className="px-1 text-sm text-muted">Nenhum produto encontrado.</p>}
                   {off && off.length > 0 && (
-                    <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] bg-surface shadow-[0_2px_12px_-4px_rgba(31,23,36,0.08)]">
-                      {off.slice(0, 15).map((p) => (
-                        <li key={p.code}>
-                          <button onClick={() => onPickFood({ ean: p.code, name: p.name })} className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left active:bg-soft">
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-medium">{p.name}</p>
-                              <p className="truncate text-xs text-muted">{p.brand ?? 'Sem marca'}</p>
-                            </div>
-                            <ChevronRight className="size-5 shrink-0 text-muted" aria-hidden />
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
+                    <>
+                      <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] bg-surface shadow-[0_2px_12px_-4px_rgba(31,23,36,0.08)]">
+                        {off.slice(0, 15).map((p) => (
+                          <li key={p.code}>
+                            <button onClick={() => onPickFood({ ean: p.code, name: p.name })} className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left active:bg-soft">
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-medium">{p.name}</p>
+                                <p className="truncate text-xs text-muted">{p.brand ?? 'Sem marca'}</p>
+                              </div>
+                              <ChevronRight className="size-5 shrink-0 text-muted" aria-hidden />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="mt-2 px-1 text-xs text-muted">
+                        Dados da{' '}
+                        <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener noreferrer" className="underline">
+                          Open Food Facts
+                        </a>{' '}
+                        (ODbL). Confira o rótulo.
+                      </p>
+                    </>
                   )}
-                  {off && off.length > 0 && (
-                    <p className="mt-2 px-1 text-xs text-muted">
-                      Dados da{' '}
-                      <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener noreferrer" className="underline">
-                        Open Food Facts
-                      </a>{' '}
-                      (ODbL). Confira o rótulo.
-                    </p>
-                  )}
-                </div>
+                </Section>
               )}
             </>
+          ) : !sections ? (
+            <ListSkeleton />
+          ) : (
+            /* Sem busca: recentes desta refeição → favoritos → criados por você (ou comuns, nos primeiros usos) */
+            <div>
+              {(sections.recent.length > 0 || sections.recentRecipes.length > 0) && (
+                <Section title={mealName ? `Recentes no ${mealName.toLowerCase()}` : 'Recentes'}>
+                  <FoodList foods={sections.recent} recipes={sections.recentRecipes} onPick={(f) => onPickFood({ id: f.id })} onPickRecipe={onPickRecipe} onToggleFavorite={toggleFavorite} showLast />
+                </Section>
+              )}
+              {favorites.length > 0 && (
+                <Section title="Favoritos">
+                  <FoodList foods={favorites} onPick={(f) => onPickFood({ id: f.id })} onToggleFavorite={toggleFavorite} />
+                </Section>
+              )}
+              {mine.length > 0 && (
+                <Section title="Criados por você">
+                  <FoodList foods={mine} onPick={(f) => onPickFood({ id: f.id })} onToggleFavorite={toggleFavorite} />
+                </Section>
+              )}
+              {sections.common && sections.common.length > 0 && (
+                <Section title="Alimentos comuns">
+                  <FoodList foods={sections.common} onPick={(f) => onPickFood({ id: f.id })} onToggleFavorite={toggleFavorite} />
+                </Section>
+              )}
+              {nothing && <p className="py-6 text-center text-sm text-muted">Busque um alimento acima ou leia o código de barras.</p>}
+            </div>
           )}
         </motion.div>
       </AnimatePresence>
@@ -262,14 +279,23 @@ export function FoodSearch({ withRecipes, onPickFood, onPickRecipe, onScan, onQu
   )
 }
 
-/** Lista de alimentos; em Recentes, as refeições prontas entram junto, na ordem de uso. Tocar abre a ficha. */
-function FoodList({ foods, recipes = [], onPick, onPickRecipe, onToggleFavorite, showLast }: {
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="mt-5 first:mt-0">
+      <h3 className="mb-2 px-1 text-xs font-bold tracking-wider text-muted uppercase">{title}</h3>
+      {children}
+    </section>
+  )
+}
+
+/** Lista de alimentos (em Recentes, as refeições completas entram junto, na ordem de uso). Tocar abre a ficha. */
+function FoodList({ foods, recipes = [], onPick, onPickRecipe, onToggleFavorite, showLast = false }: {
   foods: FoodLite[]
   recipes?: (RecipeSummary & { used_rank?: number })[]
   onPick: (f: FoodLite) => void
   onPickRecipe?: (r: RecipeSummary) => void
   onToggleFavorite: (f: FoodLite) => void
-  showLast: boolean
+  showLast?: boolean
 }) {
   const rows: ({ kind: 'food'; rank: number; food: FoodLite } | { kind: 'recipe'; rank: number; recipe: RecipeSummary })[] = [
     ...foods.map((food, i) => ({ kind: 'food' as const, rank: food.used_rank ?? -i, food })),
@@ -291,7 +317,7 @@ function FoodList({ foods, recipes = [], onPick, onPickRecipe, onToggleFavorite,
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold">{r.name}</p>
                   <p className="flex items-center gap-1.5 truncate text-xs text-muted">
-                    <span className="rounded-full bg-orchid/15 px-1.5 py-px font-semibold text-link">Refeição pronta</span>
+                    <span className="rounded-full bg-orchid/15 px-1.5 py-px font-semibold text-link">Refeição completa</span>
                     {r.last_quantity && r.last_quantity !== 1 ? `${fmt(r.last_quantity)} porções` : `${r.items_count} ${r.items_count === 1 ? 'item' : 'itens'}`}
                   </p>
                 </div>
@@ -331,12 +357,12 @@ function FoodList({ foods, recipes = [], onPick, onPickRecipe, onToggleFavorite,
   )
 }
 
-function RecipeList({ recipes, loading, filtered, onPick }: { recipes: RecipeSummary[] | null; loading: boolean; filtered: boolean; onPick?: (r: RecipeSummary) => void }) {
-  if (loading && !recipes) return <ListSkeleton />
-  if (!recipes?.length)
+function RecipeList({ recipes, filtered, onPick }: { recipes: RecipeSummary[] | null; filtered: boolean; onPick?: (r: RecipeSummary) => void }) {
+  if (!recipes) return <ListSkeleton />
+  if (!recipes.length)
     return (
       <p className="py-6 text-center text-sm text-muted">
-        {filtered ? 'Nenhuma refeição pronta com esse nome.' : 'Salve combinações que você repete (ex.: “Café padrão”) e registre com um toque.'}
+        {filtered ? 'Nenhuma refeição completa com esse nome.' : 'Salve combinações que você repete (ex.: “Café padrão”) e registre com um toque.'}
       </p>
     )
   return (
@@ -356,19 +382,6 @@ function RecipeList({ recipes, loading, filtered, onPick }: { recipes: RecipeSum
       ))}
     </ul>
   )
-}
-
-function Empty({ tab, filtered }: { tab: Tab; filtered: boolean }) {
-  const text = filtered
-    ? 'Nada com esse nome nesta aba. Tente em Buscar.'
-    : {
-        buscar: '',
-        recentes: 'Os alimentos que você registrar aparecem aqui.',
-        favoritos: 'Toque na estrela de um alimento para favoritar.',
-        receitas: '',
-        meus: 'Você ainda não cadastrou alimentos.',
-      }[tab]
-  return <p className="py-8 text-center text-sm text-muted">{text}</p>
 }
 
 function ListSkeleton({ rows = 6 }: { rows?: number }) {

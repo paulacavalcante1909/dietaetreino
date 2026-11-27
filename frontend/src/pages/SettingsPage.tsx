@@ -160,7 +160,7 @@ export function SettingsPage() {
       <WeeklyGoalSheet open={goalOpen} onClose={() => setGoalOpen(false)} value={user?.weekly_workout_goal ?? 3} />
 
       <Group title="Refeições">
-        <LinkRow to="/receitas" icon={BookOpen} title="Refeições prontas" hint="Combinações para registrar com 1 toque" />
+        <LinkRow to="/receitas" icon={BookOpen} title="Refeições completas" hint="Combinações para registrar com 1 toque" />
         <LinkRow to="/refeicoes" icon={ListOrdered} title="Refeições do dia" hint="Renomear, reordenar, ocultar ou criar" />
       </Group>
 

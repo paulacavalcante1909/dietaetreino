@@ -25,8 +25,8 @@ interface Props {
 }
 
 /**
- * Adicionar refeição pronta ao dia: escolhe porções e, se quiser, ajusta os ingredientes
- * só para este registro (a refeição pronta original não muda).
+ * Adicionar refeição completa ao dia: escolhe porções e, se quiser, ajusta os ingredientes
+ * só para este registro (a refeição completa original não muda).
  */
 export function RecipeSheet({ recipe, onClose, onConfirm, onEdit, confirmLabel = 'Adicionar' }: Props) {
   const [detail, setDetail] = useState<RecipeDetail | null>(null)
@@ -94,7 +94,7 @@ export function RecipeSheet({ recipe, onClose, onConfirm, onEdit, confirmLabel =
     <>
       <Sheet open onClose={onClose} title={recipe.name}>
         <p className="-mt-1 mb-4 text-sm text-muted">
-          Refeição pronta · {detail ? items.length : recipe.items_count} {(detail ? items.length : recipe.items_count) === 1 ? 'ingrediente' : 'ingredientes'}
+          Refeição completa · {detail ? items.length : recipe.items_count} {(detail ? items.length : recipe.items_count) === 1 ? 'ingrediente' : 'ingredientes'}
           {changed && <span className="ml-1 font-semibold text-link">· ajustada</span>}
         </p>
         <div className="space-y-4">
@@ -112,7 +112,7 @@ export function RecipeSheet({ recipe, onClose, onConfirm, onEdit, confirmLabel =
             <button onClick={() => setAdjusting((a) => !a)} className="flex w-full items-center justify-between text-left" aria-expanded={adjusting} disabled={!detail}>
               <span>
                 <span className="block text-sm font-semibold">Ajustar ingredientes</span>
-                <span className="block text-xs text-muted">Muda só este registro, não a refeição pronta salva</span>
+                <span className="block text-xs text-muted">Muda só este registro, não a refeição completa salva</span>
               </span>
               <motion.span animate={{ rotate: adjusting ? 90 : 0 }} className="text-xl text-link">›</motion.span>
             </button>
@@ -141,7 +141,7 @@ export function RecipeSheet({ recipe, onClose, onConfirm, onEdit, confirmLabel =
             {changed ? `${confirmLabel} (com ajustes)` : confirmLabel}
           </Button>
           <button onClick={() => onEdit(recipe.id)} className="w-full py-2 text-sm font-medium text-link">
-            Editar a refeição pronta salva
+            Editar a refeição completa salva
           </button>
         </div>
       </Sheet>

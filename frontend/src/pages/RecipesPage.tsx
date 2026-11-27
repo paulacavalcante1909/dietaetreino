@@ -19,7 +19,7 @@ export function RecipesPage() {
     <div className="safe-top mx-auto max-w-lg px-5 pt-4 pb-10">
       <header className="mb-5 flex items-center gap-3">
         <BackButton onClick={() => navigate(-1)} />
-        <h1 className="text-xl font-bold">Refeições prontas</h1>
+        <h1 className="text-xl font-bold">Refeições completas</h1>
       </header>
 
       {!recipes && <div className="h-40 animate-pulse rounded-2xl bg-soft" />}
@@ -51,7 +51,7 @@ export function RecipesPage() {
       </div>
 
       <Link to="/receitas/nova" className="mt-6 block rounded-2xl bg-primary py-4 text-center font-semibold text-white shadow-[0_6px_20px_-8px_rgba(155,63,168,0.7)] active:scale-[0.98]">
-        + Nova refeição pronta
+        + Nova refeição completa
       </Link>
     </div>
   )

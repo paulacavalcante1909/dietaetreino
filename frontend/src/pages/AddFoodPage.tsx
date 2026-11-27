@@ -22,7 +22,7 @@ import type { DayData, Entry, FoodDetail, Meal, RecipeSummary } from '../lib/typ
 import { useBottomInset } from '../lib/viewport'
 
 /**
- * "Salvar como pronta" só aparece quando o mesmo prato (mesmos alimentos) já foi registrado antes.
+ * "Salvar refeição" só aparece quando o mesmo prato (mesmos alimentos) já foi registrado antes.
  * Guarda no aparelho os pratos registrados (até 30).
  */
 const PLATES_KEY = 'dt_plates_seen'
@@ -119,11 +119,11 @@ export function AddFoodPage() {
     else setRecipe(i.recipe)
   }
 
-  // Salvar o prato como refeição pronta (só alimentos; para repetir com 1 toque)
+  // Salvar o prato como refeição completa (só alimentos; para repetir com 1 toque)
   const savePlate = async (items: PlateItem[]) => {
     const foods = items.filter((i): i is Extract<PlateItem, { kind: 'food' }> => i.kind === 'food')
     const name = await askText({
-      title: 'Salvar como refeição pronta',
+      title: 'Salvar como refeição completa',
       text: 'Na próxima vez, registre tudo com um toque.',
       input: { label: 'Nome', value: `${mealName} de sempre`, maxLength: 120 },
       confirmLabel: 'Salvar',
@@ -131,7 +131,7 @@ export function AddFoodPage() {
     if (!name) return
     try {
       await api('/recipes', { method: 'POST', body: { name, servings: 1, items: foods.map((i) => ({ food_id: i.food.id, quantity: i.quantity, portion_id: i.portion_id })) } })
-      toast({ text: `“${name}” salva em Refeições prontas ✓` })
+      toast({ text: `“${name}” salva em Refeições completas ✓` })
     } catch (e) {
       toast({ text: (e as ApiError).message })
     }
@@ -160,7 +160,7 @@ export function AddFoodPage() {
                 .catch(() => {})
             },
           },
-          ...(canSave ? [{ label: 'Salvar como pronta', run: () => savePlate(items) }] : []),
+          ...(canSave ? [{ label: 'Salvar refeição', run: () => savePlate(items) }] : []),
         ],
       })
       goHome()
@@ -232,13 +232,17 @@ export function AddFoodPage() {
         </div>
       )}
 
-      {!searching && mealId > 0 && (
+      {/* "Igual a ontem" só enquanto a refeição de hoje ainda está vazia */}
+      {!searching && mealId > 0 && day && !dayMeal?.entries.length && (
         <MealSuggestions mealId={mealId} mealName={mealName} date={date} refreshKey={refreshKey} onAdded={() => setRefreshKey((k) => k + 1)} onRemoved={() => setRefreshKey((k) => k + 1)} />
       )}
 
-      <FoodSearch
+      {mealId === 0 && <div className="h-40 animate-pulse rounded-[var(--radius-card)] bg-soft" />}
+      {mealId > 0 && <FoodSearch
         withRecipes
         refreshKey={refreshKey}
+        mealId={mealId || undefined}
+        mealName={mealName}
         onPickFood={(t) => {
           setReplacing(null)
           setTarget(t)
@@ -250,7 +254,7 @@ export function AddFoodPage() {
         onScan={() => setScanning(true)}
         onQueryChange={onQueryChange}
         onCreateFood={(q) => navigate(`/alimentos/novo?${new URLSearchParams({ data: date, refeicao: String(mealId), ...(q ? { nome: q } : {}) })}`)}
-      />
+      />}
 
       <FoodSheet
         target={target}

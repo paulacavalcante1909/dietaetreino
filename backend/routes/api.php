@@ -72,6 +72,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/foods/search-off', [FoodController::class, 'searchOff'])->middleware('throttle:20,1');
     Route::get('/foods/barcode/{ean}', [FoodController::class, 'barcode'])->middleware('throttle:60,1');
     Route::get('/foods/recent', [FoodController::class, 'recent']);
+    Route::get('/foods/common', [FoodController::class, 'common']);
     Route::get('/foods/favorites', [FoodController::class, 'favorites']);
     Route::get('/foods/mine', [FoodController::class, 'mine']);
     Route::post('/foods', [FoodController::class, 'store']);

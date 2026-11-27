@@ -49,7 +49,7 @@ export function RecipeEditorPage() {
         items: items.map((i) => ({ food_id: i.food_id, portion_id: i.portion_id, quantity: i.quantity })),
       }
       await api(id ? `/recipes/${id}` : '/recipes', { method: id ? 'PUT' : 'POST', body })
-      toast({ text: id ? 'Refeição pronta atualizada ✓' : 'Refeição pronta criada ✓' })
+      toast({ text: id ? 'Refeição completa atualizada ✓' : 'Refeição completa criada ✓' })
       navigate(-1)
     } catch (e) {
       setError(e as ApiError)
@@ -65,7 +65,7 @@ export function RecipeEditorPage() {
   }
 
   const remove = async () => {
-    if (!(await ask({ title: 'Excluir esta refeição pronta?', text: 'O que você já registrou no diário continua no histórico.', confirmLabel: 'Excluir', danger: true }))) return
+    if (!(await ask({ title: 'Excluir esta refeição completa?', text: 'O que você já registrou no diário continua no histórico.', confirmLabel: 'Excluir', danger: true }))) return
     await api(`/recipes/${id}`, { method: 'DELETE' })
     toast({ text: 'Excluída' })
     navigate(-1)
@@ -77,7 +77,7 @@ export function RecipeEditorPage() {
     <div className="safe-top mx-auto max-w-lg px-5 pt-4 pb-10">
       <header className="mb-5 flex items-center gap-3">
         <BackButton onClick={() => navigate(-1)} />
-        <h1 className="text-xl font-bold">{id ? 'Editar refeição pronta' : 'Nova refeição pronta'}</h1>
+        <h1 className="text-xl font-bold">{id ? 'Editar refeição completa' : 'Nova refeição completa'}</h1>
       </header>
 
       <div className="space-y-4">
@@ -109,7 +109,7 @@ export function RecipeEditorPage() {
         </div>
 
         <Button onClick={save} loading={saving} disabled={!name.trim() || items.length === 0}>
-          {id ? 'Salvar' : 'Criar refeição pronta'}
+          {id ? 'Salvar' : 'Criar refeição completa'}
         </Button>
         {id && (
           <div className="grid grid-cols-2 gap-3">
@@ -119,7 +119,7 @@ export function RecipeEditorPage() {
         )}
       </div>
 
-      <IngredientPicker open={picking} onClose={() => setPicking(false)} onAdd={(it) => setItems((l) => [...l, it])} confirmLabel="Adicionar à refeição pronta" />
+      <IngredientPicker open={picking} onClose={() => setPicking(false)} onAdd={(it) => setItems((l) => [...l, it])} confirmLabel="Adicionar à refeição completa" />
       <ItemSheet
         item={editIndex !== null ? items[editIndex] : null}
         onClose={() => setEditIndex(null)}

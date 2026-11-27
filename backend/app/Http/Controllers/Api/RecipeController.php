@@ -14,10 +14,15 @@ class RecipeController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
+        // Mais recentes primeiro (último registro no diário); as nunca usadas depois, por nome
+        $lastUsed = $request->user()->entries()->whereNotNull('recipe_id')
+            ->selectRaw('recipe_id, MAX(id) as last')->groupBy('recipe_id')->pluck('last', 'recipe_id');
         $recipes = Recipe::where('user_id', $request->user()->id)
             ->with('items.food', 'items.portion')
             ->orderBy('name')
             ->get()
+            ->sortByDesc(fn (Recipe $r) => (int) ($lastUsed[$r->id] ?? 0))
+            ->values()
             ->map->summary();
 
         return response()->json(['recipes' => $recipes]);
